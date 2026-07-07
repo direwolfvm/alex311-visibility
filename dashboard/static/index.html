@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alex311 Visibility</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2733; --muted: #64748b;
+    --accent: #1d4ed8; --open: #d97706; --closed: #059669; --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--ink); }
+  header { display: flex; align-items: baseline; gap: 16px; padding: 14px 20px;
+           background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .stats { margin-left: auto; display: flex; gap: 18px; font-size: 13px; }
+  .stats b { font-size: 16px; }
+  .wrap { display: grid; grid-template-columns: 250px 1fr; gap: 14px; padding: 14px 20px; }
+  .filters { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+             padding: 14px; align-self: start; position: sticky; top: 14px; }
+  .filters label { display: block; font-size: 11px; text-transform: uppercase;
+                   letter-spacing: .04em; color: var(--muted); margin: 12px 0 4px; }
+  .filters label:first-child { margin-top: 0; }
+  .filters input:not([type=checkbox]), .filters select { width: 100%; padding: 6px 8px; border: 1px solid var(--border);
+                                    border-radius: 6px; font: inherit; background: #fff; }
+  #categories { max-height: 260px; overflow-y: auto; border: 1px solid var(--border);
+                border-radius: 6px; padding: 6px; }
+  #categories div { display: flex; gap: 6px; align-items: center; padding: 2px 0; font-size: 13px; }
+  #categories .count { margin-left: auto; color: var(--muted); font-size: 11px; }
+  .main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+  .card h2 { font-size: 13px; margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--border);
+             color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  #map { height: 420px; border-radius: 0 0 10px 10px; }
+  #trendbox { padding: 10px 14px; height: 260px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 14px; border-top: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; border-top: none; }
+  tbody tr:hover { background: #f1f5f9; }
+  a { color: var(--accent); text-decoration: none; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11px;
+           font-weight: 600; color: #fff; text-transform: capitalize; }
+  .badge.open { background: var(--open); } .badge.closed { background: var(--closed); }
+  .badge.other { background: var(--muted); }
+  .thumb { height: 34px; width: 34px; object-fit: cover; border-radius: 4px; margin-right: 3px; }
+  .popup-desc { max-height: 90px; overflow-y: auto; margin: 6px 0; }
+  .popup-thumbs img { height: 56px; border-radius: 4px; margin: 2px; }
+  #loadmore { margin: 10px 14px; padding: 6px 14px; border: 1px solid var(--border);
+              border-radius: 6px; background: #fff; cursor: pointer; font: inherit; }
+  .foot { color: var(--muted); font-size: 12px; padding: 0 20px 16px; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } .filters { position: static; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Alex311 Visibility</h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <div class="stats">
+    <span>Total <b id="stat-total">–</b></span>
+    <span>Open <b id="stat-open">–</b></span>
+    <span>Shown <b id="stat-shown">–</b></span>
+    <span class="sub" id="stat-ingest"></span>
+  </div>
+</header>
+
+<div class="wrap">
+  <aside class="filters">
+    <label>From</label><input type="date" id="f-start">
+    <label>To</label><input type="date" id="f-end">
+    <label>Status</label>
+    <select id="f-status">
+      <option value="all">All</option><option value="open">Open</option>
+      <option value="closed">Closed</option>
+    </select>
+    <label>Search (address / description / case #)</label>
+    <input type="search" id="f-q" placeholder="e.g. King St">
+    <label>Categories</label>
+    <div id="categories"></div>
+  </aside>
+
+  <div class="main">
+    <div class="card"><h2>Map</h2><div id="map"></div></div>
+    <div class="card"><h2>Requests per week by category</h2>
+      <div id="trendbox"><canvas id="trend"></canvas></div></div>
+    <div class="card"><h2>Requests</h2>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Case</th><th>Requested</th><th>Category</th><th>Status</th>
+               <th>Address</th><th>Photos</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <button id="loadmore" hidden>Load more</button>
+    </div>
+  </div>
+</div>
+<p class="foot">Data ingested from the public Alex311 portal. Case links open the official
+city record. This is not an official City of Alexandria service.</p>
+
+<script>
+const $ = id => document.getElementById(id);
+const state = { offset: 0, limit: 300, rows: [] };
+let map, layer, chart;
+
+const PALETTE = ['#1d4ed8','#d97706','#059669','#dc2626','#7c3aed','#0891b2',
+                 '#be185d','#65a30d','#64748b'];
+
+function params(extra = {}) {
+  const p = new URLSearchParams();
+  if ($('f-start').value) p.set('start', $('f-start').value + 'T00:00:00Z');
+  if ($('f-end').value) p.set('end', $('f-end').value + 'T23:59:59Z');
+  const st = $('f-status').value; if (st !== 'all') p.set('status', st);
+  const q = $('f-q').value.trim(); if (q) p.set('q', q);
+  document.querySelectorAll('#categories input:checked')
+    .forEach(cb => p.append('category', cb.value));
+  Object.entries(extra).forEach(([k, v]) => p.set(k, v));
+  return p;
+}
+
+function badge(status) {
+  const cls = ['open', 'closed'].includes((status || '').toLowerCase())
+    ? status.toLowerCase() : 'other';
+  return `<span class="badge ${cls}">${status || '?'}</span>`;
+}
+
+function popupHtml(r) {
+  const thumbs = (r.media_ids || []).slice(0, 4)
+    .map(id => `<a href="/api/media/${id}" target="_blank"><img src="/api/media/${id}"></a>`)
+    .join('');
+  return `<b><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></b>
+    ${badge(r.status)}<br>${r.service_name || ''}<br>
+    <small>${r.address || ''} · ${(r.requested_datetime || '').slice(0, 10)}</small>
+    ${r.description ? `<div class="popup-desc">${r.description}</div>` : ''}
+    <div class="popup-thumbs">${thumbs}</div>`;
+}
+
+function renderMap() {
+  layer.clearLayers();
+  state.rows.filter(r => r.lat && r.long).forEach(r => {
+    const color = (r.status || '').toLowerCase() === 'open' ? '#d97706' : '#059669';
+    L.circleMarker([r.lat, r.long], {
+      radius: 6, weight: 1, color: '#fff', fillColor: color, fillOpacity: .85,
+    }).bindPopup(popupHtml(r), { maxWidth: 320 }).addTo(layer);
+  });
+  // fit to in-city points only; the occasional mis-geocoded outlier still
+  // gets a marker but must not drag the viewport out of Alexandria
+  const pts = state.rows.filter(r => r.lat && r.long &&
+    r.lat > 38.75 && r.lat < 38.88 && r.long > -77.17 && r.long < -77.01);
+  if (pts.length) map.fitBounds(pts.map(r => [r.lat, r.long]), { maxZoom: 14, padding: [20, 20] });
+}
+
+function renderRows(append) {
+  const html = state.rows.slice(append ? -state.lastCount : 0).map(r => `
+    <tr><td><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></td>
+    <td>${(r.requested_datetime || '').slice(0, 10)}</td>
+    <td>${r.service_name || ''}</td><td>${badge(r.status)}</td>
+    <td>${r.address || ''}</td>
+    <td>${(r.media_ids || []).slice(0, 3).map(id =>
+        `<a href="/api/media/${id}" target="_blank"><img class="thumb" loading="lazy" src="/api/media/${id}"></a>`)
+      .join('')}${r.media_count > 3 ? ' +' + (r.media_count - 3) : (r.media_ids || []).length ? '' : (r.media_count || '')}</td></tr>`).join('');
+  if (append) $('rows').insertAdjacentHTML('beforeend', html);
+  else $('rows').innerHTML = html;
+}
+
+async function loadRows(append = false) {
+  if (!append) state.offset = 0;
+  const p = params({ limit: state.limit, offset: state.offset });
+  const data = await (await fetch('/api/requests?' + p)).json();
+  state.lastCount = data.rows.length;
+  state.rows = append ? state.rows.concat(data.rows) : data.rows;
+  state.offset += data.rows.length;
+  $('stat-shown').textContent = state.rows.length + ' / ' + data.total;
+  $('loadmore').hidden = state.rows.length >= data.total;
+  renderRows(append);
+  renderMap();
+}
+
+async function loadTrend() {
+  const data = await (await fetch('/api/trend?' + params({ interval: 'week' }))).json();
+  const periods = [...new Set(data.rows.map(r => r.period))].sort();
+  const cats = [...new Set(data.rows.map(r => r.category))];
+  cats.sort((a, b) => (a === 'Other') - (b === 'Other'));
+  const bag = {};
+  data.rows.forEach(r => bag[r.category + '|' + r.period] = r.n);
+  const datasets = cats.map((c, i) => ({
+    label: c, data: periods.map(p => bag[c + '|' + p] || 0),
+    backgroundColor: PALETTE[i % PALETTE.length],
+  }));
+  if (chart) chart.destroy();
+  chart = new Chart($('trend'), {
+    type: 'bar',
+    data: { labels: periods.map(p => p.slice(0, 10)), datasets },
+    options: {
+      maintainAspectRatio: false, responsive: true,
+      scales: { x: { stacked: true }, y: { stacked: true } },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+    },
+  });
+}
+
+async function loadMeta() {
+  const m = await (await fetch('/api/meta')).json();
+  $('stat-total').textContent = m.total;
+  $('stat-open').textContent = m.open;
+  if (m.last_ingest) {
+    $('stat-ingest').textContent = 'updated ' + m.last_ingest.finished_at.slice(0, 16).replace('T', ' ') + 'Z'
+      + (m.last_ingest.ok ? '' : ' (LAST INGEST FAILED)');
+  }
+  if (m.min_date) $('f-start').value = m.min_date.slice(0, 10);
+  if (m.max_date) $('f-end').value = m.max_date.slice(0, 10);
+  $('categories').innerHTML = m.categories.map(c => `
+    <div><input type="checkbox" value="${c.service_name}" id="c-${c.service_name}">
+    <label for="c-${c.service_name}" style="all:unset;cursor:pointer;flex:1">${c.service_name}</label>
+    <span class="count">${c.n}</span></div>`).join('');
+  document.querySelectorAll('#categories input')
+    .forEach(cb => cb.addEventListener('change', refresh));
+}
+
+function refresh() { loadRows(); loadTrend(); }
+
+let qTimer;
+$('f-q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(refresh, 350); });
+['f-start', 'f-end', 'f-status'].forEach(id => $(id).addEventListener('change', refresh));
+$('loadmore').addEventListener('click', () => loadRows(true));
+
+map = L.map('map').setView([38.82, -77.08], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
+}).addTo(map);
+layer = L.layerGroup().addTo(map);
+
+loadMeta().then(refresh);
+</script>
+</body>
+</html>
