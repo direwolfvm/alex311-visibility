@@ -41,12 +41,34 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Alex311 Visibility", lifespan=lifespan)
 
 
+def _parse_polygon(spec: str) -> str:
+    """'lng,lat;lng,lat;...' -> a Postgres polygon literal.
+
+    Uses the built-in geometric polygon type (point <@ polygon), so no
+    PostGIS extension is needed on the shared Cloud SQL instance.
+    """
+    try:
+        pts = []
+        for pair in spec.split(";"):
+            lng_s, lat_s = pair.split(",")
+            lng, lat = float(lng_s), float(lat_s)
+            if not (-180.0 <= lng <= 180.0 and -90.0 <= lat <= 90.0):
+                raise ValueError(pair)
+            pts.append((lng, lat))
+    except ValueError:
+        raise HTTPException(400, "polygon must be 'lng,lat;lng,lat;...'")
+    if not 3 <= len(pts) <= 200:
+        raise HTTPException(400, "polygon needs 3 to 200 vertices")
+    return "(" + ",".join(f"({lng},{lat})" for lng, lat in pts) + ")"
+
+
 def _filters(
     start: datetime | None,
     end: datetime | None,
     category: list[str] | None,
     status: str | None,
     q: str | None,
+    polygon: str | None = None,
 ):
     where, params = ["TRUE"], []
     if start:
@@ -65,6 +87,10 @@ def _filters(
         where.append("(address ILIKE %s OR description ILIKE %s OR service_request_id = %s)")
         like = f"%{q}%"
         params.extend([like, like, q])
+    if polygon:
+        where.append("lat IS NOT NULL AND long IS NOT NULL "
+                     "AND point(long, lat) <@ %s::polygon")
+        params.append(_parse_polygon(polygon))
     return " AND ".join(where), params
 
 
@@ -105,10 +131,11 @@ def requests_list(
     category: list[str] | None = Query(None),
     status: str | None = None,
     q: str | None = None,
+    polygon: str | None = None,
     limit: int = Query(500, le=2000),
     offset: int = 0,
 ):
-    where, params = _filters(start, end, category, status, q)
+    where, params = _filters(start, end, category, status, q, polygon)
     with pool.connection() as conn:
         rows = conn.execute(
             f"""SELECT sr.service_request_id, sr.status, sr.service_name,
@@ -142,12 +169,13 @@ def trend(
     category: list[str] | None = Query(None),
     status: str | None = None,
     q: str | None = None,
+    polygon: str | None = None,
     interval: str = "week",
     top: int = Query(8, le=15),
 ):
     if interval not in ("day", "week", "month"):
         raise HTTPException(400, "interval must be day|week|month")
-    where, params = _filters(start, end, category, status, q)
+    where, params = _filters(start, end, category, status, q, polygon)
     with pool.connection() as conn:
         rows = conn.execute(
             f"""WITH filtered AS (
