@@ -44,6 +44,11 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 14px; border-top: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 600; font-size: 12px; border-top: none; }
+  th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+  th[data-sort]:hover { color: var(--ink); }
+  th[data-sort]::after { content: ' ↕'; opacity: .35; }
+  th[data-sort].asc::after { content: ' ▲'; opacity: 1; }
+  th[data-sort].desc::after { content: ' ▼'; opacity: 1; }
   tbody tr:hover { background: #f1f5f9; }
   a { color: var(--accent); text-decoration: none; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11px;
@@ -95,8 +100,15 @@
       <div id="trendbox"><canvas id="trend"></canvas></div></div>
     <div class="card"><h2>Requests</h2>
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>Case</th><th>Requested</th><th>Category</th><th>Status</th>
-               <th>Address</th><th>Photos</th></tr></thead>
+        <thead><tr>
+          <th data-sort="case">Case</th>
+          <th data-sort="requested">Requested</th>
+          <th data-sort="updated">Updated</th>
+          <th data-sort="category">Category</th>
+          <th data-sort="status">Status</th>
+          <th data-sort="address">Address</th>
+          <th data-sort="photos">Photos</th>
+        </tr></thead>
         <tbody id="rows"></tbody>
       </table></div>
       <button id="loadmore" hidden>Load more</button>
@@ -108,7 +120,8 @@ city record. This is not an official City of Alexandria service.</p>
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { offset: 0, limit: 300, rows: [], polygon: null };
+const state = { offset: 0, limit: 300, rows: [], polygon: null,
+                sort: 'requested', dir: 'desc' };
 let map, layer, chart;
 
 const PALETTE = ['#1d4ed8','#d97706','#059669','#dc2626','#7c3aed','#0891b2',
@@ -165,6 +178,7 @@ function renderRows(append) {
   const html = state.rows.slice(append ? -state.lastCount : 0).map(r => `
     <tr><td><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></td>
     <td>${(r.requested_datetime || '').slice(0, 10)}</td>
+    <td>${(r.last_updated_datetime || '').slice(0, 10)}</td>
     <td>${r.service_name || ''}</td><td>${badge(r.status)}</td>
     <td>${r.address || ''}</td>
     <td>${(r.media_ids || []).slice(0, 3).map(id =>
@@ -176,7 +190,8 @@ function renderRows(append) {
 
 async function loadRows(append = false) {
   if (!append) state.offset = 0;
-  const p = params({ limit: state.limit, offset: state.offset });
+  const p = params({ limit: state.limit, offset: state.offset,
+                     sort: state.sort, dir: state.dir });
   const data = await (await fetch('/api/requests?' + p)).json();
   state.lastCount = data.rows.length;
   state.rows = append ? state.rows.concat(data.rows) : data.rows;
@@ -218,8 +233,16 @@ async function loadMeta() {
     $('stat-ingest').textContent = 'updated ' + m.last_ingest.finished_at.slice(0, 16).replace('T', ' ') + 'Z'
       + (m.last_ingest.ok ? '' : ' (LAST INGEST FAILED)');
   }
-  if (m.min_date) $('f-start').value = m.min_date.slice(0, 10);
-  if (m.max_date) $('f-end').value = m.max_date.slice(0, 10);
+  // default window: trailing 3 months (clamped to the data's actual start)
+  if (m.max_date) {
+    const end = m.max_date.slice(0, 10);
+    const d = new Date(end + 'T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() - 3);
+    let start = d.toISOString().slice(0, 10);
+    if (m.min_date && start < m.min_date.slice(0, 10)) start = m.min_date.slice(0, 10);
+    $('f-start').value = start;
+    $('f-end').value = end;
+  }
   $('categories').innerHTML = m.categories.map(c => `
     <div><input type="checkbox" value="${c.service_name}" id="c-${c.service_name}">
     <label for="c-${c.service_name}" style="all:unset;cursor:pointer;flex:1">${c.service_name}</label>
@@ -229,6 +252,22 @@ async function loadMeta() {
 }
 
 function refresh() { loadRows(); loadTrend(); }
+
+function renderSortIndicators() {
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.classList.toggle('asc', th.dataset.sort === state.sort && state.dir === 'asc');
+    th.classList.toggle('desc', th.dataset.sort === state.sort && state.dir === 'desc');
+  });
+}
+
+document.querySelectorAll('th[data-sort]').forEach(th => th.addEventListener('click', () => {
+  const key = th.dataset.sort;
+  if (state.sort === key) state.dir = state.dir === 'desc' ? 'asc' : 'desc';
+  else { state.sort = key; state.dir = ['case', 'requested', 'updated', 'photos'].includes(key) ? 'desc' : 'asc'; }
+  renderSortIndicators();
+  loadRows();
+}));
+renderSortIndicators();
 
 let qTimer;
 $('f-q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(refresh, 350); });

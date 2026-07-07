@@ -124,6 +124,18 @@ def meta():
     }
 
 
+# whitelist: sort key from the UI -> real column (never interpolate user input)
+SORT_COLUMNS = {
+    "case": "service_request_id",
+    "requested": "requested_datetime",
+    "updated": "last_updated_datetime",
+    "category": "service_name",
+    "status": "status",
+    "address": "address",
+    "photos": "media_count",
+}
+
+
 @app.get("/api/requests")
 def requests_list(
     start: datetime | None = None,
@@ -132,15 +144,23 @@ def requests_list(
     status: str | None = None,
     q: str | None = None,
     polygon: str | None = None,
+    sort: str = "requested",
+    dir: str = "desc",
     limit: int = Query(500, le=2000),
     offset: int = 0,
 ):
+    if sort not in SORT_COLUMNS:
+        raise HTTPException(400, f"sort must be one of {sorted(SORT_COLUMNS)}")
+    if dir not in ("asc", "desc"):
+        raise HTTPException(400, "dir must be asc|desc")
+    order = f"{SORT_COLUMNS[sort]} {dir.upper()} NULLS LAST, service_request_id DESC"
     where, params = _filters(start, end, category, status, q, polygon)
     with pool.connection() as conn:
         rows = conn.execute(
             f"""SELECT sr.service_request_id, sr.status, sr.service_name,
                        sr.lat, sr.long, sr.address, sr.requested_datetime,
-                       sr.closed_datetime, sr.description, sr.media_count,
+                       sr.last_updated_datetime, sr.closed_datetime,
+                       sr.description, sr.media_count,
                        COALESCE(m.media_ids, '{{}}') AS media_ids
                 FROM service_requests sr
                 LEFT JOIN (
@@ -150,7 +170,7 @@ def requests_list(
                     GROUP BY service_request_id
                 ) m USING (service_request_id)
                 WHERE {where}
-                ORDER BY requested_datetime DESC
+                ORDER BY {order}
                 LIMIT %s OFFSET %s""",
             params + [limit, offset],
         ).fetchall()
@@ -203,12 +223,12 @@ def trend(
 def media(media_id: str):
     with pool.connection() as conn:
         row = conn.execute(
-            "SELECT stored_path, mime_type FROM media WHERE media_id = %s AND downloaded_at IS NOT NULL",
+            "SELECT stored_path, mime_type, stored_mime FROM media WHERE media_id = %s AND downloaded_at IS NOT NULL",
             (media_id,),
         ).fetchone()
     if not row or not row["stored_path"]:
         raise HTTPException(404, "media not stored")
-    mime = row["mime_type"] or "application/octet-stream"
+    mime = row["stored_mime"] or row["mime_type"] or "application/octet-stream"
     cache = {"Cache-Control": "public, max-age=86400"}
     store = store_from_env()
     if isinstance(store, LocalMediaStore):

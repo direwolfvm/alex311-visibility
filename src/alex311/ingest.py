@@ -12,7 +12,9 @@ past enriched_at, so re-runs converge instead of re-fetching everything.
 from __future__ import annotations
 
 import argparse
+import io
 import logging
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -23,6 +25,40 @@ from .client import Alex311Client
 from .media_store import object_name, store_from_env
 
 log = logging.getLogger("alex311.ingest")
+
+HEIC_MIMES = {"image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"}
+HEIC_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"heif", b"mif1", b"msf1"}
+
+
+def is_heic(mime: str | None, file_name: str | None, data: bytes) -> bool:
+    if mime and mime.split(";")[0].strip().lower() in HEIC_MIMES:
+        return True
+    if file_name and re.search(r"\.hei[cf]$", file_name, re.IGNORECASE):
+        return True
+    return len(data) > 12 and data[4:8] == b"ftyp" and data[8:12] in HEIC_BRANDS
+
+
+def heic_to_jpeg(data: bytes) -> bytes:
+    """Convert HEIC/HEIF bytes to JPEG (most browsers can't render HEIC).
+
+    Baking the orientation and re-saving also drops EXIF — including any
+    GPS tags a reporter's phone embedded, which we'd rather not republish.
+    """
+    from PIL import Image, ImageOps
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    img = Image.open(io.BytesIO(data))
+    img = ImageOps.exif_transpose(img)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+    out = io.BytesIO()
+    img.save(out, format="JPEG", quality=88)
+    return out.getvalue()
+
+
+def _jpeg_name(name: str) -> str:
+    return re.sub(r"(\.[^./]+)?$", ".jpg", name, count=1)
 
 # Refetch this much history on every incremental run, on top of --days.
 # Covers records whose activity timestamps drift during pagination.
@@ -59,6 +95,8 @@ def run_ingest(
         details = enrich(conn, client, max_details)
         if download_media:
             downloaded = fetch_pending_media(conn, client, max_media)
+            # self-heal: convert any HEIC stored by older code paths
+            convert_stored_heic(conn, max_media)
 
         db.finish_run(conn, run_id, ok=True, records_seen=seen,
                       records_upserted=upserted, details_fetched=details,
@@ -101,8 +139,12 @@ def fetch_pending_media(conn, client: Alex311Client, limit: int) -> int:
         name = object_name(m["service_request_id"], m["media_id"], m["file_name"])
         try:
             data, ctype = client.fetch_media(m["source_url"])
-            store.put(name, data, ctype or m["mime_type"] or "")
-            db.mark_media_downloaded(conn, m["media_id"], name, len(data))
+            mime = (ctype or m["mime_type"] or "").split(";")[0].strip()
+            if is_heic(mime, m["file_name"], data):
+                data = heic_to_jpeg(data)
+                name, mime = _jpeg_name(name), "image/jpeg"
+            store.put(name, data, mime)
+            db.mark_media_downloaded(conn, m["media_id"], name, len(data), mime)
             done += 1
         except httpx.HTTPStatusError as e:
             code = e.response.status_code
@@ -116,6 +158,33 @@ def fetch_pending_media(conn, client: Alex311Client, limit: int) -> int:
             db.mark_media_failed(conn, m["media_id"], f"{type(e).__name__}: {e}")
             log.warning("media %s failed: %s", m["media_id"], e)
     log.info("downloaded %d media files", done)
+    return done
+
+
+def convert_stored_heic(conn, limit: int) -> int:
+    """One-off/maintenance pass: convert already-stored HEIC files to JPEG."""
+    store = store_from_env()
+    done = 0
+    for m in db.select_stored_heic(conn, limit):
+        old_path = m["stored_path"]
+        try:
+            data = store.get(old_path)
+            if not is_heic(m["stored_mime"] or m["mime_type"], m["file_name"], data):
+                # mislabelled (e.g. an iPhone upload that was already JPEG) — just record reality
+                db.update_media_stored(conn, m["media_id"], old_path, len(data),
+                                       m["mime_type"] or "application/octet-stream")
+                continue
+            jpeg = heic_to_jpeg(data)
+            new_path = _jpeg_name(old_path)
+            store.put(new_path, jpeg, "image/jpeg")
+            db.update_media_stored(conn, m["media_id"], new_path, len(jpeg), "image/jpeg")
+            if new_path != old_path:
+                store.delete(old_path)
+            done += 1
+        except Exception as e:
+            log.warning("heic conversion failed for %s (%s): %s",
+                        m["media_id"], old_path, e)
+    log.info("converted %d stored HEIC files", done)
     return done
 
 
@@ -136,6 +205,10 @@ def main(argv: list[str] | None = None) -> int:
     back.add_argument("--start", required=True, help="YYYY-MM-DD (UTC)")
     back.add_argument("--end", help="YYYY-MM-DD (UTC), default now")
 
+    conv = sub.add_parser("convert-heic",
+                          help="convert already-stored HEIC media to JPEG")
+    conv.add_argument("--limit", type=int, default=100000)
+
     for cmd in (inc, back):
         cmd.add_argument("--max-details", type=int, default=500)
         cmd.add_argument("--max-media", type=int, default=500)
@@ -147,6 +220,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "init-db":
         db.apply_schema(conn)
         print("schema applied")
+        return 0
+
+    if args.cmd == "convert-heic":
+        convert_stored_heic(conn, args.limit)
         return 0
 
     now = datetime.now(timezone.utc)

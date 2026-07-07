@@ -22,7 +22,9 @@ def object_name(service_request_id: str, media_id: str, file_name: str | None) -
 
 class MediaStore(Protocol):
     def put(self, name: str, data: bytes, content_type: str) -> str: ...
+    def get(self, name: str) -> bytes: ...
     def exists(self, name: str) -> bool: ...
+    def delete(self, name: str) -> None: ...
 
 
 class LocalMediaStore:
@@ -36,8 +38,14 @@ class LocalMediaStore:
         path.write_bytes(data)
         return name
 
+    def get(self, name: str) -> bytes:
+        return (self.root / name).read_bytes()
+
     def exists(self, name: str) -> bool:
         return (self.root / name).exists()
+
+    def delete(self, name: str) -> None:
+        (self.root / name).unlink(missing_ok=True)
 
     def open_path(self, name: str) -> Path:
         return self.root / name
@@ -64,6 +72,11 @@ class GcsMediaStore:
 
     def get(self, name: str) -> bytes:
         return self._blob(name).download_as_bytes()
+
+    def delete(self, name: str) -> None:
+        blob = self._blob(name)
+        if blob.exists():
+            blob.delete()
 
 
 def store_from_env() -> MediaStore:
