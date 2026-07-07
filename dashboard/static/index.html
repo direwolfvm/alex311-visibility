@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Alex311 Visibility</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -42,6 +44,11 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 14px; border-top: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 600; font-size: 12px; border-top: none; }
+  th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+  th[data-sort]:hover { color: var(--ink); }
+  th[data-sort]::after { content: ' ↕'; opacity: .35; }
+  th[data-sort].asc::after { content: ' ▲'; opacity: 1; }
+  th[data-sort].desc::after { content: ' ▼'; opacity: 1; }
   tbody tr:hover { background: #f1f5f9; }
   a { color: var(--accent); text-decoration: none; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11px;
@@ -85,13 +92,23 @@
   </aside>
 
   <div class="main">
-    <div class="card"><h2>Map</h2><div id="map"></div></div>
+    <div class="card"><h2>Map
+      <span id="area-state" style="float:right;text-transform:none;letter-spacing:0">
+        draw a shape (⬠ / ▭ tools, top-left) to filter by area</span></h2>
+      <div id="map"></div></div>
     <div class="card"><h2>Requests per week by category</h2>
       <div id="trendbox"><canvas id="trend"></canvas></div></div>
     <div class="card"><h2>Requests</h2>
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>Case</th><th>Requested</th><th>Category</th><th>Status</th>
-               <th>Address</th><th>Photos</th></tr></thead>
+        <thead><tr>
+          <th data-sort="case">Case</th>
+          <th data-sort="requested">Requested</th>
+          <th data-sort="updated">Updated</th>
+          <th data-sort="category">Category</th>
+          <th data-sort="status">Status</th>
+          <th data-sort="address">Address</th>
+          <th data-sort="photos">Photos</th>
+        </tr></thead>
         <tbody id="rows"></tbody>
       </table></div>
       <button id="loadmore" hidden>Load more</button>
@@ -103,7 +120,8 @@ city record. This is not an official City of Alexandria service.</p>
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { offset: 0, limit: 300, rows: [] };
+const state = { offset: 0, limit: 300, rows: [], polygon: null,
+                sort: 'requested', dir: 'desc' };
 let map, layer, chart;
 
 const PALETTE = ['#1d4ed8','#d97706','#059669','#dc2626','#7c3aed','#0891b2',
@@ -115,6 +133,7 @@ function params(extra = {}) {
   if ($('f-end').value) p.set('end', $('f-end').value + 'T23:59:59Z');
   const st = $('f-status').value; if (st !== 'all') p.set('status', st);
   const q = $('f-q').value.trim(); if (q) p.set('q', q);
+  if (state.polygon) p.set('polygon', state.polygon);
   document.querySelectorAll('#categories input:checked')
     .forEach(cb => p.append('category', cb.value));
   Object.entries(extra).forEach(([k, v]) => p.set(k, v));
@@ -147,7 +166,9 @@ function renderMap() {
     }).bindPopup(popupHtml(r), { maxWidth: 320 }).addTo(layer);
   });
   // fit to in-city points only; the occasional mis-geocoded outlier still
-  // gets a marker but must not drag the viewport out of Alexandria
+  // gets a marker but must not drag the viewport out of Alexandria.
+  // With an area filter active, leave the viewport where the user drew.
+  if (state.polygon) return;
   const pts = state.rows.filter(r => r.lat && r.long &&
     r.lat > 38.75 && r.lat < 38.88 && r.long > -77.17 && r.long < -77.01);
   if (pts.length) map.fitBounds(pts.map(r => [r.lat, r.long]), { maxZoom: 14, padding: [20, 20] });
@@ -157,6 +178,7 @@ function renderRows(append) {
   const html = state.rows.slice(append ? -state.lastCount : 0).map(r => `
     <tr><td><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></td>
     <td>${(r.requested_datetime || '').slice(0, 10)}</td>
+    <td>${(r.last_updated_datetime || '').slice(0, 10)}</td>
     <td>${r.service_name || ''}</td><td>${badge(r.status)}</td>
     <td>${r.address || ''}</td>
     <td>${(r.media_ids || []).slice(0, 3).map(id =>
@@ -168,7 +190,8 @@ function renderRows(append) {
 
 async function loadRows(append = false) {
   if (!append) state.offset = 0;
-  const p = params({ limit: state.limit, offset: state.offset });
+  const p = params({ limit: state.limit, offset: state.offset,
+                     sort: state.sort, dir: state.dir });
   const data = await (await fetch('/api/requests?' + p)).json();
   state.lastCount = data.rows.length;
   state.rows = append ? state.rows.concat(data.rows) : data.rows;
@@ -210,8 +233,16 @@ async function loadMeta() {
     $('stat-ingest').textContent = 'updated ' + m.last_ingest.finished_at.slice(0, 16).replace('T', ' ') + 'Z'
       + (m.last_ingest.ok ? '' : ' (LAST INGEST FAILED)');
   }
-  if (m.min_date) $('f-start').value = m.min_date.slice(0, 10);
-  if (m.max_date) $('f-end').value = m.max_date.slice(0, 10);
+  // default window: trailing 3 months (clamped to the data's actual start)
+  if (m.max_date) {
+    const end = m.max_date.slice(0, 10);
+    const d = new Date(end + 'T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() - 3);
+    let start = d.toISOString().slice(0, 10);
+    if (m.min_date && start < m.min_date.slice(0, 10)) start = m.min_date.slice(0, 10);
+    $('f-start').value = start;
+    $('f-end').value = end;
+  }
   $('categories').innerHTML = m.categories.map(c => `
     <div><input type="checkbox" value="${c.service_name}" id="c-${c.service_name}">
     <label for="c-${c.service_name}" style="all:unset;cursor:pointer;flex:1">${c.service_name}</label>
@@ -221,6 +252,22 @@ async function loadMeta() {
 }
 
 function refresh() { loadRows(); loadTrend(); }
+
+function renderSortIndicators() {
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.classList.toggle('asc', th.dataset.sort === state.sort && state.dir === 'asc');
+    th.classList.toggle('desc', th.dataset.sort === state.sort && state.dir === 'desc');
+  });
+}
+
+document.querySelectorAll('th[data-sort]').forEach(th => th.addEventListener('click', () => {
+  const key = th.dataset.sort;
+  if (state.sort === key) state.dir = state.dir === 'desc' ? 'asc' : 'desc';
+  else { state.sort = key; state.dir = ['case', 'requested', 'updated', 'photos'].includes(key) ? 'desc' : 'asc'; }
+  renderSortIndicators();
+  loadRows();
+}));
+renderSortIndicators();
 
 let qTimer;
 $('f-q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(refresh, 350); });
@@ -232,6 +279,35 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
 }).addTo(map);
 layer = L.layerGroup().addTo(map);
+
+// --- draw-to-filter: one polygon/rectangle at a time ---
+const drawnItems = new L.FeatureGroup().addTo(map);
+map.addControl(new L.Control.Draw({
+  draw: {
+    polygon: { allowIntersection: false, shapeOptions: { color: '#1d4ed8', weight: 2 } },
+    rectangle: { shapeOptions: { color: '#1d4ed8', weight: 2 } },
+    polyline: false, circle: false, marker: false, circlemarker: false,
+  },
+  edit: { featureGroup: drawnItems, edit: false },
+}));
+
+function setPolygon(layerDrawn) {
+  drawnItems.clearLayers();
+  if (layerDrawn) {
+    drawnItems.addLayer(layerDrawn);
+    state.polygon = layerDrawn.getLatLngs()[0]
+      .map(p => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(';');
+    $('area-state').textContent = 'filtering by drawn area — use 🗑 to clear';
+  } else {
+    state.polygon = null;
+    $('area-state').textContent =
+      'draw a shape (⬠ / ▭ tools, top-left) to filter by area';
+  }
+  refresh();
+}
+
+map.on(L.Draw.Event.CREATED, e => setPolygon(e.layer));
+map.on(L.Draw.Event.DELETED, () => setPolygon(null));
 
 loadMeta().then(refresh);
 </script>

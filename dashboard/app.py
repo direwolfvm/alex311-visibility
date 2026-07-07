@@ -41,12 +41,34 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Alex311 Visibility", lifespan=lifespan)
 
 
+def _parse_polygon(spec: str) -> str:
+    """'lng,lat;lng,lat;...' -> a Postgres polygon literal.
+
+    Uses the built-in geometric polygon type (point <@ polygon), so no
+    PostGIS extension is needed on the shared Cloud SQL instance.
+    """
+    try:
+        pts = []
+        for pair in spec.split(";"):
+            lng_s, lat_s = pair.split(",")
+            lng, lat = float(lng_s), float(lat_s)
+            if not (-180.0 <= lng <= 180.0 and -90.0 <= lat <= 90.0):
+                raise ValueError(pair)
+            pts.append((lng, lat))
+    except ValueError:
+        raise HTTPException(400, "polygon must be 'lng,lat;lng,lat;...'")
+    if not 3 <= len(pts) <= 200:
+        raise HTTPException(400, "polygon needs 3 to 200 vertices")
+    return "(" + ",".join(f"({lng},{lat})" for lng, lat in pts) + ")"
+
+
 def _filters(
     start: datetime | None,
     end: datetime | None,
     category: list[str] | None,
     status: str | None,
     q: str | None,
+    polygon: str | None = None,
 ):
     where, params = ["TRUE"], []
     if start:
@@ -65,6 +87,10 @@ def _filters(
         where.append("(address ILIKE %s OR description ILIKE %s OR service_request_id = %s)")
         like = f"%{q}%"
         params.extend([like, like, q])
+    if polygon:
+        where.append("lat IS NOT NULL AND long IS NOT NULL "
+                     "AND point(long, lat) <@ %s::polygon")
+        params.append(_parse_polygon(polygon))
     return " AND ".join(where), params
 
 
@@ -98,6 +124,18 @@ def meta():
     }
 
 
+# whitelist: sort key from the UI -> real column (never interpolate user input)
+SORT_COLUMNS = {
+    "case": "service_request_id",
+    "requested": "requested_datetime",
+    "updated": "last_updated_datetime",
+    "category": "service_name",
+    "status": "status",
+    "address": "address",
+    "photos": "media_count",
+}
+
+
 @app.get("/api/requests")
 def requests_list(
     start: datetime | None = None,
@@ -105,15 +143,24 @@ def requests_list(
     category: list[str] | None = Query(None),
     status: str | None = None,
     q: str | None = None,
+    polygon: str | None = None,
+    sort: str = "requested",
+    dir: str = "desc",
     limit: int = Query(500, le=2000),
     offset: int = 0,
 ):
-    where, params = _filters(start, end, category, status, q)
+    if sort not in SORT_COLUMNS:
+        raise HTTPException(400, f"sort must be one of {sorted(SORT_COLUMNS)}")
+    if dir not in ("asc", "desc"):
+        raise HTTPException(400, "dir must be asc|desc")
+    order = f"{SORT_COLUMNS[sort]} {dir.upper()} NULLS LAST, service_request_id DESC"
+    where, params = _filters(start, end, category, status, q, polygon)
     with pool.connection() as conn:
         rows = conn.execute(
             f"""SELECT sr.service_request_id, sr.status, sr.service_name,
                        sr.lat, sr.long, sr.address, sr.requested_datetime,
-                       sr.closed_datetime, sr.description, sr.media_count,
+                       sr.last_updated_datetime, sr.closed_datetime,
+                       sr.description, sr.media_count,
                        COALESCE(m.media_ids, '{{}}') AS media_ids
                 FROM service_requests sr
                 LEFT JOIN (
@@ -123,7 +170,7 @@ def requests_list(
                     GROUP BY service_request_id
                 ) m USING (service_request_id)
                 WHERE {where}
-                ORDER BY requested_datetime DESC
+                ORDER BY {order}
                 LIMIT %s OFFSET %s""",
             params + [limit, offset],
         ).fetchall()
@@ -142,12 +189,13 @@ def trend(
     category: list[str] | None = Query(None),
     status: str | None = None,
     q: str | None = None,
+    polygon: str | None = None,
     interval: str = "week",
     top: int = Query(8, le=15),
 ):
     if interval not in ("day", "week", "month"):
         raise HTTPException(400, "interval must be day|week|month")
-    where, params = _filters(start, end, category, status, q)
+    where, params = _filters(start, end, category, status, q, polygon)
     with pool.connection() as conn:
         rows = conn.execute(
             f"""WITH filtered AS (
@@ -175,12 +223,12 @@ def trend(
 def media(media_id: str):
     with pool.connection() as conn:
         row = conn.execute(
-            "SELECT stored_path, mime_type FROM media WHERE media_id = %s AND downloaded_at IS NOT NULL",
+            "SELECT stored_path, mime_type, stored_mime FROM media WHERE media_id = %s AND downloaded_at IS NOT NULL",
             (media_id,),
         ).fetchone()
     if not row or not row["stored_path"]:
         raise HTTPException(404, "media not stored")
-    mime = row["mime_type"] or "application/octet-stream"
+    mime = row["stored_mime"] or row["mime_type"] or "application/octet-stream"
     cache = {"Cache-Control": "public, max-age=86400"}
     store = store_from_env()
     if isinstance(store, LocalMediaStore):

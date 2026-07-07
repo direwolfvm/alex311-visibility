@@ -53,9 +53,13 @@ CREATE TABLE IF NOT EXISTS media (
     created_datetime    TIMESTAMPTZ,
     stored_path         TEXT,          -- GCS object name or local relative path
     stored_bytes        BIGINT,
+    stored_mime         TEXT,          -- actual stored content type (HEIC gets converted to JPEG)
     downloaded_at       TIMESTAMPTZ,
     download_error      TEXT
 );
+
+-- for databases created before stored_mime existed
+ALTER TABLE media ADD COLUMN IF NOT EXISTS stored_mime TEXT;
 
 CREATE INDEX IF NOT EXISTS media_sr_idx ON media (service_request_id);
 CREATE INDEX IF NOT EXISTS media_pending_idx ON media (downloaded_at) WHERE downloaded_at IS NULL;

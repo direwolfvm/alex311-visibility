@@ -136,13 +136,42 @@ def select_media_pending_download(conn: psycopg.Connection, limit: int) -> list[
 
 
 def mark_media_downloaded(
-    conn: psycopg.Connection, media_id: str, stored_path: str, size: int
+    conn: psycopg.Connection, media_id: str, stored_path: str, size: int,
+    stored_mime: str | None = None,
 ) -> None:
     conn.execute(
-        """UPDATE media SET stored_path = %s, stored_bytes = %s,
+        """UPDATE media SET stored_path = %s, stored_bytes = %s, stored_mime = %s,
                downloaded_at = now(), download_error = NULL
            WHERE media_id = %s""",
-        (stored_path, size, media_id),
+        (stored_path, size, stored_mime, media_id),
+    )
+    conn.commit()
+
+
+def select_stored_heic(conn: psycopg.Connection, limit: int) -> list[dict]:
+    """Downloaded media that still look like HEIC (candidates for conversion)."""
+    return conn.execute(
+        """SELECT media_id, service_request_id, file_name, mime_type,
+                  stored_path, stored_mime
+           FROM media
+           WHERE downloaded_at IS NOT NULL AND stored_path IS NOT NULL
+             AND COALESCE(stored_mime, '') NOT IN ('image/jpeg', 'image/png',
+                                                   'image/gif', 'image/webp')
+             AND (mime_type ILIKE '%%hei%%' OR file_name ~* '\\.hei[cf]$'
+                  OR stored_mime ILIKE '%%hei%%')
+           LIMIT %s""",
+        (limit,),
+    ).fetchall()
+
+
+def update_media_stored(
+    conn: psycopg.Connection, media_id: str, stored_path: str, size: int,
+    stored_mime: str,
+) -> None:
+    conn.execute(
+        """UPDATE media SET stored_path = %s, stored_bytes = %s, stored_mime = %s
+           WHERE media_id = %s""",
+        (stored_path, size, stored_mime, media_id),
     )
     conn.commit()
 
