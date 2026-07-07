@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DATABASE_URL=postgresql://postgres:alex311@localhost:54329/alex311 MEDIA_DIR=./media_store uv run uvicorn dashboard.app:app --port 8311"
+      ],
+      "port": 8311
+    }
+  ]
+}
