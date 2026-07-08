@@ -199,15 +199,43 @@ def points(
     where, params = _filters(start, end, category, status, q, polygon)
     with pool.connection() as conn:
         rows = conn.execute(
-            f"""SELECT service_request_id, lat, long, lower(status) AS s
+            f"""SELECT service_request_id, lat, long, lower(status) AS s,
+                       service_name,
+                       COALESCE(GREATEST(0, EXTRACT(epoch FROM now() - requested_datetime)
+                                            ::bigint / 86400), -1)::int AS age_days
                 FROM service_requests
                 WHERE {where} AND lat IS NOT NULL AND long IS NOT NULL""",
             params,
         ).fetchall()
-    return {
-        "total": len(rows),
-        "points": [[r["service_request_id"], r["lat"], r["long"], r["s"]] for r in rows],
-    }
+    # category names are sent once and referenced by index to keep the payload small
+    cat_idx: dict[str, int] = {}
+    pts = []
+    for r in rows:
+        cat = r["service_name"] or "Unknown"
+        idx = cat_idx.setdefault(cat, len(cat_idx))
+        pts.append([r["service_request_id"], r["lat"], r["long"], r["s"], idx, r["age_days"]])
+    return {"total": len(pts), "categories": list(cat_idx), "points": pts}
+
+
+@app.get("/api/categories")
+def category_counts(
+    start: datetime | None = None,
+    end: datetime | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    polygon: str | None = None,
+):
+    """Per-category counts under the current filters (except the category
+    selection itself), so the sidebar numbers reflect the active window."""
+    where, params = _filters(start, end, None, status, q, polygon)
+    with pool.connection() as conn:
+        rows = conn.execute(
+            f"""SELECT service_name, count(*) AS n FROM service_requests
+                WHERE {where} AND service_name IS NOT NULL
+                GROUP BY service_name ORDER BY n DESC""",
+            params,
+        ).fetchall()
+    return {"categories": rows}
 
 
 @app.get("/api/trend")

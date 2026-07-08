@@ -39,7 +39,18 @@
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
   .card h2 { font-size: 13px; margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--border);
              color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-  #map { height: 420px; border-radius: 0 0 10px 10px; }
+  #map { height: 420px; }
+  #map-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 14px;
+                font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+  #map-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+                  margin-right: 5px; vertical-align: -1px; }
+  .preset-row { display: flex; gap: 6px; margin-top: 6px; }
+  .preset-row button { flex: 1; padding: 4px 6px; font: inherit; font-size: 12px;
+                       border: 1px solid var(--border); border-radius: 6px;
+                       background: #fff; cursor: pointer; color: var(--muted); }
+  .preset-row button:hover { color: var(--ink); border-color: var(--accent); }
+  #color-by { padding: 1px 4px; font: inherit; font-size: 12px;
+              border: 1px solid var(--border); border-radius: 5px; }
   #trendbox { padding: 10px 14px; height: 260px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 14px; border-top: 1px solid var(--border); }
@@ -97,6 +108,10 @@
   <aside class="filters">
     <label>From</label><input type="date" id="f-start">
     <label>To</label><input type="date" id="f-end">
+    <div class="preset-row">
+      <button data-preset="3m">Last 3 months</button>
+      <button data-preset="all">All time</button>
+    </div>
     <label>Status</label>
     <select id="f-status">
       <option value="all">All</option><option value="open">Open</option>
@@ -111,9 +126,16 @@
   <div class="main">
     <div class="card"><h2>Map
       <span id="map-count" style="text-transform:none;letter-spacing:0;margin-left:8px"></span>
+      <label style="text-transform:none;letter-spacing:0;margin-left:14px">color by
+        <select id="color-by">
+          <option value="status">status</option>
+          <option value="category">request type</option>
+          <option value="age">age</option>
+        </select></label>
       <span id="area-state" style="float:right;text-transform:none;letter-spacing:0">
         draw a shape (⬠ / ▭ tools, top-left) to filter by area</span></h2>
-      <div id="map"></div></div>
+      <div id="map"></div>
+      <div id="map-legend"></div></div>
     <div class="card"><h2>Requests per week by category</h2>
       <div id="trendbox"><canvas id="trend"></canvas></div></div>
     <div class="card"><h2>Requests</h2>
@@ -147,8 +169,9 @@ city record. This is not an official City of Alexandria service.</p>
 
 <script>
 const $ = id => document.getElementById(id);
-const state = { offset: 0, limit: 300, rows: [], points: [], polygon: null,
-                sort: 'requested', dir: 'desc' };
+const state = { offset: 0, limit: 300, rows: [], points: [], pointCats: [],
+                polygon: null, sort: 'requested', dir: 'desc',
+                minDate: null, maxDate: null };
 let map, layer, chart;
 
 const PALETTE = ['#1d4ed8','#d97706','#059669','#dc2626','#7c3aed','#0891b2',
@@ -189,34 +212,83 @@ function popupHtml(r) {
     <div class="popup-thumbs">${thumbs}</div>`;
 }
 
+const AGE_BUCKETS = [   // [max days, color, label]
+  [7, '#059669', '≤ 1 week'], [30, '#eab308', '≤ 1 month'],
+  [90, '#f97316', '≤ 3 months'], [Infinity, '#dc2626', '> 3 months'],
+];
+const OTHER_COLOR = '#94a3b8';
+
+function markerColorer() {
+  const mode = $('color-by').value;
+  if (mode === 'age') {
+    return p => p[5] < 0 ? OTHER_COLOR
+      : AGE_BUCKETS.find(([max]) => p[5] <= max)[1];
+  }
+  if (mode === 'category') {
+    const freq = {};
+    state.points.forEach(p => { freq[p[4]] = (freq[p[4]] || 0) + 1; });
+    const color = {};
+    Object.keys(freq).sort((a, b) => freq[b] - freq[a]).slice(0, 8)
+      .forEach((idx, i) => color[idx] = PALETTE[i % 8]);
+    return p => color[p[4]] || OTHER_COLOR;
+  }
+  return p => p[3] === 'open' ? '#d97706' : '#059669';
+}
+
+function renderLegend(colorFor) {
+  const mode = $('color-by').value;
+  let items;
+  if (mode === 'age') {
+    items = AGE_BUCKETS.map(([, col, label]) => [label, col]);
+  } else if (mode === 'category') {
+    const seen = new Map();
+    state.points.forEach(p => {
+      const col = colorFor(p);
+      if (col !== OTHER_COLOR && !seen.has(col)) seen.set(col, state.pointCats[p[4]]);
+    });
+    items = [...seen].map(([col, name]) => [name, col]);
+    if (state.points.some(p => colorFor(p) === OTHER_COLOR)) items.push(['other', OTHER_COLOR]);
+  } else {
+    items = [['open', '#d97706'], ['closed / other', '#059669']];
+  }
+  $('map-legend').innerHTML = items
+    .map(([label, col]) => `<span><i style="background:${col}"></i>${label}</span>`).join('');
+}
+
 function renderMap() {
   layer.clearLayers();
-  state.points.forEach(([srid, lat, lng, status]) => {
-    const color = status === 'open' ? '#d97706' : '#059669';
-    const mk = L.circleMarker([lat, lng], {
-      radius: 5, weight: 1, color: '#fff', fillColor: color, fillOpacity: .8,
+  const colorFor = markerColorer();
+  state.points.forEach(p => {
+    const mk = L.circleMarker([p[1], p[2]], {
+      radius: 5, weight: 1, color: '#fff', fillColor: colorFor(p), fillOpacity: .8,
     }).bindPopup('Loading…', { maxWidth: 320 });
     mk.on('popupopen', async e => {
-      const data = await (await fetch(`/api/requests?q=${srid}&limit=1`)).json();
-      if (data.rows[0]) e.popup.setContent(popupHtml(data.rows[0]));
-      else e.popup.setContent('Not found');
+      const data = await (await fetch(`/api/requests?q=${p[0]}&limit=1`)).json();
+      e.popup.setContent(data.rows[0] ? popupHtml(data.rows[0]) : 'Not found');
     });
     mk.addTo(layer);
   });
   $('map-count').textContent = state.points.length.toLocaleString() + ' plotted';
-  // fit to in-city points only; the occasional mis-geocoded outlier still
-  // gets a marker but must not drag the viewport out of Alexandria.
-  // With an area filter active, leave the viewport where the user drew.
-  if (state.polygon) return;
-  const pts = state.points.filter(([, lat, lng]) =>
-    lat > 38.75 && lat < 38.88 && lng > -77.17 && lng < -77.01);
-  if (pts.length) map.fitBounds(pts.map(([, lat, lng]) => [lat, lng]), { maxZoom: 14, padding: [20, 20] });
+  renderLegend(colorFor);
 }
 
 async function loadPoints() {
   const data = await (await fetch('/api/points?' + params())).json();
   state.points = data.points;
+  state.pointCats = data.categories;
   renderMap();
+}
+
+async function loadCategoryCounts() {
+  // sidebar counts respect every filter except the category selection itself
+  const p = params(); p.delete('category');
+  const data = await (await fetch('/api/categories?' + p)).json();
+  const counts = Object.fromEntries(data.categories.map(c => [c.service_name, c.n]));
+  document.querySelectorAll('#categories [data-cat]').forEach(div => {
+    const n = counts[div.dataset.cat] || 0;
+    div.querySelector('.count').textContent = n;
+    div.style.opacity = n ? 1 : .45;
+  });
 }
 
 function renderRows(append) {
@@ -277,25 +349,40 @@ async function loadMeta() {
     $('stat-ingest').textContent = 'updated ' + m.last_ingest.finished_at.slice(0, 16).replace('T', ' ') + 'Z'
       + (m.last_ingest.ok ? '' : ' (LAST INGEST FAILED)');
   }
-  // default window: trailing 3 months (clamped to the data's actual start)
-  if (m.max_date) {
-    const end = m.max_date.slice(0, 10);
-    const d = new Date(end + 'T00:00:00Z');
-    d.setUTCMonth(d.getUTCMonth() - 3);
-    let start = d.toISOString().slice(0, 10);
-    if (m.min_date && start < m.min_date.slice(0, 10)) start = m.min_date.slice(0, 10);
-    $('f-start').value = start;
-    $('f-end').value = end;
-  }
+  state.minDate = m.min_date ? m.min_date.slice(0, 10) : null;
+  state.maxDate = m.max_date ? m.max_date.slice(0, 10) : null;
+  applyPreset('3m');
   $('categories').innerHTML = m.categories.map(c => `
-    <div><input type="checkbox" value="${c.service_name}" id="c-${c.service_name}">
+    <div data-cat="${c.service_name}">
+    <input type="checkbox" value="${c.service_name}" id="c-${c.service_name}">
     <label for="c-${c.service_name}" style="all:unset;cursor:pointer;flex:1">${c.service_name}</label>
     <span class="count">${c.n}</span></div>`).join('');
   document.querySelectorAll('#categories input')
     .forEach(cb => cb.addEventListener('change', refresh));
 }
 
-function refresh() { loadRows(); loadPoints(); loadTrend(); }
+function refresh() { loadRows(); loadPoints(); loadTrend(); loadCategoryCounts(); }
+
+// default window: trailing 3 months (clamped to the data's actual start)
+function applyPreset(which) {
+  if (!state.maxDate) return;
+  if (which === 'all') {
+    $('f-start').value = state.minDate;
+  } else {
+    const d = new Date(state.maxDate + 'T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() - 3);
+    let start = d.toISOString().slice(0, 10);
+    if (state.minDate && start < state.minDate) start = state.minDate;
+    $('f-start').value = start;
+  }
+  $('f-end').value = state.maxDate;
+}
+
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
+  applyPreset(b.dataset.preset);
+  refresh();
+}));
+$('color-by').addEventListener('change', renderMap);
 
 function renderSortIndicators() {
   document.querySelectorAll('th[data-sort]').forEach(th => {
@@ -318,8 +405,12 @@ $('f-q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTim
 ['f-start', 'f-end', 'f-status'].forEach(id => $(id).addEventListener('change', refresh));
 $('loadmore').addEventListener('click', () => loadRows(true));
 
-// canvas renderer: the points layer plots the full filtered set (can be 10k+)
-map = L.map('map', { preferCanvas: true }).setView([38.82, -77.08], 12);
+// canvas renderer: the points layer plots the full filtered set (can be 10k+).
+// Initial view is the City of Alexandria's extent, fixed — filters and data
+// never move the viewport (mis-geocoded outliers used to drag it around).
+const CITY_BOUNDS = L.latLngBounds([38.785, -77.144], [38.845, -77.037]);
+map = L.map('map', { preferCanvas: true });
+map.fitBounds(CITY_BOUNDS, { padding: [8, 8] });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
 }).addTo(map);
