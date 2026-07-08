@@ -79,6 +79,20 @@
   th[data-sort]::after { content: ' ↕'; opacity: .35; }
   th[data-sort].asc::after { content: ' ▲'; opacity: 1; }
   th[data-sort].desc::after { content: ' ▼'; opacity: 1; }
+  .expand { border: none; background: none; cursor: pointer; font-size: 12px;
+            color: var(--muted); padding: 2px 4px; transition: transform .15s; }
+  .expand.open { transform: rotate(90deg); color: var(--accent); }
+  tr.detail-row > td { background: #f8fafc; padding: 12px 18px 14px; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+                 gap: 6px 20px; margin-bottom: 8px; }
+  .detail-grid b { display: block; font-size: 10px; text-transform: uppercase;
+                   letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+  .detail-text { margin: 8px 0 0; max-width: 75ch; white-space: pre-wrap; }
+  .detail-text b { color: var(--muted); font-size: 11px; text-transform: uppercase;
+                   letter-spacing: .04em; display: block; }
+  .detail-photos { margin-top: 10px; }
+  .detail-photos img { height: 72px; border-radius: 5px; margin: 2px 4px 2px 0; }
+  .detail-foot { margin-top: 10px; font-size: 12px; }
   tbody tr:hover { background: #f1f5f9; }
   a { color: var(--accent); text-decoration: none; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11px;
@@ -165,6 +179,7 @@
     <div class="card"><h2>Requests</h2>
       <div style="overflow-x:auto"><table>
         <thead><tr>
+          <th></th>
           <th data-sort="case">Case</th>
           <th data-sort="requested">Requested</th>
           <th data-sort="updated">Updated</th>
@@ -220,6 +235,11 @@ let map, layer, chart;
 const PALETTE = ['#1d4ed8','#d97706','#059669','#dc2626','#7c3aed','#0891b2',
                  '#be185d','#65a30d','#64748b'];
 
+// descriptions/notes are third-party text from the city portal — always escape
+const esc = s => (s ?? '').toString()
+  .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;');
+
 function params(extra = {}) {
   const p = new URLSearchParams();
   if ($('f-start').value) p.set('start', $('f-start').value + 'T00:00:00Z');
@@ -249,9 +269,9 @@ function popupHtml(r) {
     .map((id, i) => `<img src="/api/media/${id}" ${lbAttrs(r, i)}>`)
     .join('');
   return `<b><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></b>
-    ${badge(r.status)}<br>${r.service_name || ''}<br>
-    <small>${r.address || ''} · ${(r.requested_datetime || '').slice(0, 10)}</small>
-    ${r.description ? `<div class="popup-desc">${r.description}</div>` : ''}
+    ${badge(r.status)}<br>${esc(r.service_name)}<br>
+    <small>${esc(r.address)} · ${(r.requested_datetime || '').slice(0, 10)}</small>
+    ${r.description ? `<div class="popup-desc">${esc(r.description)}</div>` : ''}
     <div class="popup-thumbs">${thumbs}</div>`;
 }
 
@@ -336,11 +356,13 @@ async function loadCategoryCounts() {
 
 function renderRows(append) {
   const html = state.rows.slice(append ? -state.lastCount : 0).map(r => `
-    <tr><td><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></td>
+    <tr><td><button class="expand" data-srid="${r.service_request_id}"
+        title="show details">▶</button></td>
+    <td><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></td>
     <td>${(r.requested_datetime || '').slice(0, 10)}</td>
     <td>${(r.last_updated_datetime || '').slice(0, 10)}</td>
-    <td>${r.service_name || ''}</td><td>${badge(r.status)}</td>
-    <td>${r.address || ''}</td>
+    <td>${esc(r.service_name)}</td><td>${badge(r.status)}</td>
+    <td>${esc(r.address)}</td>
     <td>${(r.media_ids || []).slice(0, 3).map((id, i) =>
         `<img class="thumb" loading="lazy" src="/api/media/${id}" ${lbAttrs(r, i)}>`)
       .join('')}${r.media_count > 3 ? ' +' + (r.media_count - 3) : (r.media_ids || []).length ? '' : (r.media_count || '')}</td></tr>`).join('');
@@ -560,6 +582,70 @@ document.querySelectorAll('th[data-sort]').forEach(th => th.addEventListener('cl
   loadRows();
 }));
 renderSortIndicators();
+
+// --- row detail expansion ---
+const fmtTs = v => v ? v.slice(0, 16).replace('T', ' ') : '–';
+
+function detailHtml(d) {
+  const fields = [
+    ['Requested', fmtTs(d.requested_datetime)],
+    ['Last updated', fmtTs(d.last_updated_datetime)],
+    ['Closed', fmtTs(d.closed_datetime)],
+    ['Cancelled', fmtTs(d.canceled_datetime)],
+    ['Expected by', fmtTs(d.expected_datetime)],
+    ['Department', d.primary_service_department],
+    ['Agency', d.agency_responsible],
+    ['Priority', d.priority],
+    ['Origin', d.origin || d.source],
+    ['Zip', d.zipcode],
+    ['Duplicate of', d.duplicate_parent_service_request_id],
+    ['Parent case', d.parent_service_request_id],
+  ].filter(([, v]) => v && v !== '–');
+  const grid = fields.map(([k, v]) => `<div><b>${k}</b>${esc(v)}</div>`).join('');
+  const text = (label, v) => v ? `<p class="detail-text"><b>${label}</b>${esc(v)}</p>` : '';
+  const stored = (d.media || []).filter(m => m.stored);
+  const ids = stored.map(m => m.media_id).join(',');
+  const photos = stored.map((m, i) =>
+    `<img src="/api/media/${m.media_id}" loading="lazy" data-lb-ids="${ids}"
+      data-lb-idx="${i}" data-lb-srid="${d.service_request_id}">`).join('');
+  const unstored = (d.media_count || 0) - stored.length;
+  return `<div class="detail-grid">${grid}</div>
+    ${text('Description', d.description)}
+    ${text('Status notes', d.status_notes)}
+    ${text('Closure details', d.closure_details)}
+    ${!d.enriched_at ? '<p class="detail-text"><i>Details not yet ingested for this record.</i></p>' : ''}
+    <div class="detail-photos">${photos}
+      ${unstored > 0 ? `<small style="color:var(--muted)">+${unstored} photo(s) not mirrored</small>` : ''}</div>
+    <div class="detail-foot"><a href="${d.report_url}" target="_blank" rel="noopener">
+      open official record ↗</a></div>`;
+}
+
+async function toggleDetail(btn) {
+  const tr = btn.closest('tr');
+  const next = tr.nextElementSibling;
+  if (next?.classList.contains('detail-row')) {
+    next.remove();
+    btn.classList.remove('open');
+    return;
+  }
+  btn.classList.add('open');
+  const dr = document.createElement('tr');
+  dr.className = 'detail-row';
+  dr.innerHTML = `<td colspan="8">Loading…</td>`;
+  tr.after(dr);
+  try {
+    const resp = await fetch('/api/request/' + encodeURIComponent(btn.dataset.srid));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    dr.firstElementChild.innerHTML = detailHtml(await resp.json());
+  } catch (e) {
+    dr.firstElementChild.innerHTML = `<i>Could not load details (${esc(e.message)})</i>`;
+  }
+}
+
+$('rows').addEventListener('click', e => {
+  const btn = e.target.closest('button.expand');
+  if (btn) toggleDetail(btn);
+});
 
 let qTimer;
 $('f-q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(refresh, 350); });
