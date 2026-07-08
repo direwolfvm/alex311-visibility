@@ -93,6 +93,10 @@
   .detail-photos { margin-top: 10px; }
   .detail-photos img { height: 72px; border-radius: 5px; margin: 2px 4px 2px 0; }
   .detail-foot { margin-top: 10px; font-size: 12px; }
+  .btn-map { border: 1px solid var(--border); background: #fff; border-radius: 6px;
+             font: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer;
+             color: var(--accent); }
+  .btn-map:hover { border-color: var(--accent); }
   tbody tr:hover { background: #f1f5f9; }
   a { color: var(--accent); text-decoration: none; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 11px;
@@ -587,7 +591,11 @@ renderSortIndicators();
 const fmtTs = v => v ? v.slice(0, 16).replace('T', ' ') : '–';
 
 function detailHtml(d) {
+  const coords = d.lat != null && d.long != null
+    ? `${(+d.lat).toFixed(5)}, ${(+d.long).toFixed(5)}` : null;
   const fields = [
+    ['Location', [d.address, d.zipcode].filter(Boolean).join(', ')
+                 + (coords ? ` (${coords})` : '')],
     ['Requested', fmtTs(d.requested_datetime)],
     ['Last updated', fmtTs(d.last_updated_datetime)],
     ['Closed', fmtTs(d.closed_datetime)],
@@ -597,7 +605,6 @@ function detailHtml(d) {
     ['Agency', d.agency_responsible],
     ['Priority', d.priority],
     ['Origin', d.origin || d.source],
-    ['Zip', d.zipcode],
     ['Duplicate of', d.duplicate_parent_service_request_id],
     ['Parent case', d.parent_service_request_id],
   ].filter(([, v]) => v && v !== '–');
@@ -616,8 +623,11 @@ function detailHtml(d) {
     ${!d.enriched_at ? '<p class="detail-text"><i>Details not yet ingested for this record.</i></p>' : ''}
     <div class="detail-photos">${photos}
       ${unstored > 0 ? `<small style="color:var(--muted)">+${unstored} photo(s) not mirrored</small>` : ''}</div>
-    <div class="detail-foot"><a href="${d.report_url}" target="_blank" rel="noopener">
-      open official record ↗</a></div>`;
+    <div class="detail-foot">
+      ${coords ? `<button class="btn-map" data-lat="${d.lat}" data-lng="${d.long}"
+        data-srid="${d.service_request_id}">📍 show on map</button> · ` : ''}
+      <a href="${d.report_url}" target="_blank" rel="noopener">open official record ↗</a>
+    </div>`;
 }
 
 async function toggleDetail(btn) {
@@ -645,7 +655,34 @@ async function toggleDetail(btn) {
 $('rows').addEventListener('click', e => {
   const btn = e.target.closest('button.expand');
   if (btn) toggleDetail(btn);
+  const mapBtn = e.target.closest('button.btn-map');
+  if (mapBtn) highlightOnMap(+mapBtn.dataset.lat, +mapBtn.dataset.lng, mapBtn.dataset.srid);
 });
+
+let highlightRing = null, highlightTimer = null;
+
+function highlightOnMap(lat, lng, srid) {
+  // clear any previous highlight
+  if (highlightRing) { map.removeLayer(highlightRing); clearInterval(highlightTimer); }
+  $('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  map.setView([lat, lng], Math.max(map.getZoom(), 16));
+  highlightRing = L.circleMarker([lat, lng], {
+    radius: 22, color: '#dc2626', weight: 3, fill: false, opacity: .9,
+  }).addTo(map);
+  let t = 0;
+  highlightTimer = setInterval(() => {
+    t += 1;
+    highlightRing.setRadius(22 - 12 * Math.abs(Math.sin(t / 4 * Math.PI)));
+    if (t >= 24) {  // ~3 pulses, then leave a steady ring
+      clearInterval(highlightTimer);
+      highlightRing.setRadius(14);
+    }
+  }, 125);
+  // open the existing marker's popup if it's plotted
+  const mk = layer.getLayers().find(l => l.getLatLng &&
+    Math.abs(l.getLatLng().lat - lat) < 1e-9 && Math.abs(l.getLatLng().lng - lng) < 1e-9);
+  mk?.openPopup();
+}
 
 let qTimer;
 $('f-q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(refresh, 350); });
