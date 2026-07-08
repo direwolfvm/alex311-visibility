@@ -275,6 +275,35 @@ def trend(
     return {"interval": interval, "rows": rows}
 
 
+@app.get("/api/request/{service_request_id}")
+def request_detail(service_request_id: str):
+    """Everything the row-expansion panel needs for one request."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            """SELECT service_request_id, status, service_name, address, zipcode,
+                      lat, long, description, status_notes, closure_details,
+                      priority, origin, source, primary_service_department,
+                      agency_responsible, owner, parent_service_request_id,
+                      duplicate_parent_service_request_id, media_count,
+                      requested_datetime, expected_datetime, last_updated_datetime,
+                      closed_datetime, canceled_datetime, enriched_at
+               FROM service_requests WHERE service_request_id = %s""",
+            (service_request_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "unknown service request")
+        media = conn.execute(
+            """SELECT media_id, file_name, private,
+                      downloaded_at IS NOT NULL AS stored
+               FROM media WHERE service_request_id = %s
+               ORDER BY created_datetime""",
+            (service_request_id,),
+        ).fetchall()
+    row["media"] = media
+    row["report_url"] = Alex311Client.deep_link(service_request_id)
+    return row
+
+
 @app.get("/api/analytics")
 def analytics(
     start: datetime | None = None,
