@@ -182,6 +182,34 @@ def requests_list(
     return {"total": total, "rows": rows}
 
 
+@app.get("/api/points")
+def points(
+    start: datetime | None = None,
+    end: datetime | None = None,
+    category: list[str] | None = Query(None),
+    status: str | None = None,
+    q: str | None = None,
+    polygon: str | None = None,
+):
+    """Every geocoded record matching the filters, as compact arrays.
+
+    Feeds the map independently of table pagination, so the dots always
+    reflect the full filtered set. [case_number, lat, long, status]
+    """
+    where, params = _filters(start, end, category, status, q, polygon)
+    with pool.connection() as conn:
+        rows = conn.execute(
+            f"""SELECT service_request_id, lat, long, lower(status) AS s
+                FROM service_requests
+                WHERE {where} AND lat IS NOT NULL AND long IS NOT NULL""",
+            params,
+        ).fetchall()
+    return {
+        "total": len(rows),
+        "points": [[r["service_request_id"], r["lat"], r["long"], r["s"]] for r in rows],
+    }
+
+
 @app.get("/api/trend")
 def trend(
     start: datetime | None = None,
