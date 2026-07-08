@@ -275,6 +275,95 @@ def trend(
     return {"interval": interval, "rows": rows}
 
 
+@app.get("/api/analytics")
+def analytics(
+    start: datetime | None = None,
+    end: datetime | None = None,
+    category: list[str] | None = Query(None),
+    status: str | None = None,
+    q: str | None = None,
+    polygon: str | None = None,
+):
+    """All analytics-tab aggregates in one round trip, under the same
+    filter semantics as the rest of the dashboard.
+
+    Time-to-close uses closed - requested, floored at 0 (a handful of
+    records carry closed timestamps before the request timestamp).
+    "Open age" is now - requested for not-yet-closed/cancelled records.
+    """
+    where, params = _filters(start, end, category, status, q, polygon)
+    ttc = "GREATEST(0, EXTRACT(epoch FROM closed_datetime - requested_datetime) / 86400.0)"
+    open_age = ("GREATEST(0, EXTRACT(epoch FROM now() - requested_datetime) / 86400.0)")
+    is_open = "closed_datetime IS NULL AND canceled_datetime IS NULL"
+
+    with pool.connection() as conn:
+        summary = conn.execute(
+            f"""SELECT count(*) AS total,
+                       count(*) FILTER (WHERE {is_open}) AS open,
+                       count(closed_datetime) AS closed,
+                       percentile_cont(0.5) WITHIN GROUP (ORDER BY {ttc})
+                           FILTER (WHERE closed_datetime IS NOT NULL) AS median_ttc,
+                       avg({ttc}) FILTER (WHERE closed_datetime IS NOT NULL) AS mean_ttc,
+                       count(*) FILTER (WHERE closed_datetime IS NOT NULL AND {ttc} <= 30)
+                           AS closed_within_30d,
+                       avg({open_age}) FILTER (WHERE {is_open}) AS avg_open_age,
+                       max({open_age}) FILTER (WHERE {is_open}) AS oldest_open_age
+                FROM service_requests WHERE {where}""",
+            params,
+        ).fetchone()
+
+        ttc_hist = conn.execute(
+            f"""SELECT width_bucket({ttc}, ARRAY[1, 3, 7, 14, 30, 90]) AS bucket,
+                       count(*) AS n
+                FROM service_requests
+                WHERE {where} AND closed_datetime IS NOT NULL
+                GROUP BY bucket ORDER BY bucket""",
+            params,
+        ).fetchall()
+
+        by_category = conn.execute(
+            f"""SELECT service_name, count(*) AS n,
+                       percentile_cont(0.5) WITHIN GROUP (ORDER BY {ttc})
+                           FILTER (WHERE closed_datetime IS NOT NULL) AS median_ttc,
+                       count(*) FILTER (WHERE {is_open}) AS open_n,
+                       avg({open_age}) FILTER (WHERE {is_open}) AS avg_open_age
+                FROM service_requests
+                WHERE {where} AND service_name IS NOT NULL
+                GROUP BY service_name ORDER BY n DESC""",
+            params,
+        ).fetchall()
+
+        weekly = conn.execute(
+            f"""SELECT week, sum(opened) AS opened, sum(closed) AS closed FROM (
+                    SELECT date_trunc('week', requested_datetime) AS week,
+                           1 AS opened, 0 AS closed
+                    FROM service_requests
+                    WHERE {where} AND requested_datetime IS NOT NULL
+                    UNION ALL
+                    SELECT date_trunc('week', closed_datetime), 0, 1
+                    FROM service_requests
+                    WHERE {where} AND closed_datetime IS NOT NULL
+                ) t GROUP BY week ORDER BY week""",
+            params + params,
+        ).fetchall()
+
+        weekday = conn.execute(
+            f"""SELECT EXTRACT(isodow FROM requested_datetime)::int AS dow, count(*) AS n
+                FROM service_requests
+                WHERE {where} AND requested_datetime IS NOT NULL
+                GROUP BY dow ORDER BY dow""",
+            params,
+        ).fetchall()
+
+    return {
+        "summary": summary,
+        "ttc_histogram": ttc_hist,
+        "by_category": by_category,
+        "weekly": weekly,
+        "weekday": weekday,
+    }
+
+
 @app.get("/api/media/{media_id}")
 def media(media_id: str):
     with pool.connection() as conn:

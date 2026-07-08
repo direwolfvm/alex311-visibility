@@ -21,6 +21,25 @@
            background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   header h1 { font-size: 18px; margin: 0; }
   header .sub { color: var(--muted); font-size: 12px; }
+  nav.tabs { display: flex; gap: 2px; margin-left: 22px; align-self: stretch; }
+  nav.tabs button { border: none; background: none; font: inherit; font-size: 14px;
+                    padding: 6px 16px 8px; cursor: pointer; color: var(--muted);
+                    border-bottom: 2px solid transparent; }
+  nav.tabs button:hover { color: var(--ink); }
+  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent);
+                           font-weight: 600; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+               gap: 14px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border);
+               border-radius: 10px; padding: 12px 16px; }
+  .stat-card .v { font-size: 22px; font-weight: 700; }
+  .stat-card .l { font-size: 11px; color: var(--muted); text-transform: uppercase;
+                  letter-spacing: .04em; margin-top: 2px; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .chart-grid .card.wide { grid-column: 1 / -1; }
+  .chart-box { padding: 10px 14px; height: 260px; }
+  .chart-box.tall { height: 340px; }
+  @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
   .stats { margin-left: auto; display: flex; gap: 18px; font-size: 13px; }
   .stats b { font-size: 16px; }
   .wrap { display: grid; grid-template-columns: 250px 1fr; gap: 14px; padding: 14px 20px; }
@@ -96,6 +115,10 @@
 <header>
   <h1>Alex311 Visibility</h1>
   <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs">
+    <button class="active" data-tab="explore">Explore</button>
+    <button data-tab="analytics">Analytics</button>
+  </nav>
   <div class="stats">
     <span>Total <b id="stat-total">–</b></span>
     <span>Open <b id="stat-open">–</b></span>
@@ -124,6 +147,7 @@
   </aside>
 
   <div class="main">
+  <div id="tab-explore">
     <div class="card"><h2>Map
       <span id="map-count" style="text-transform:none;letter-spacing:0;margin-left:8px"></span>
       <label style="text-transform:none;letter-spacing:0;margin-left:14px">color by
@@ -153,6 +177,25 @@
       </table></div>
       <button id="loadmore" hidden>Load more</button>
     </div>
+  </div>
+
+  <div id="tab-analytics" hidden>
+    <div class="stat-grid" id="stat-cards"></div>
+    <div class="chart-grid">
+      <div class="card"><h2>Requests by type</h2>
+        <div class="chart-box tall"><canvas id="ch-types"></canvas></div></div>
+      <div class="card"><h2>Time to close</h2>
+        <div class="chart-box tall"><canvas id="ch-ttc"></canvas></div></div>
+      <div class="card wide"><h2>Opened vs closed per week</h2>
+        <div class="chart-box"><canvas id="ch-weekly"></canvas></div></div>
+      <div class="card"><h2>Median days to close by type</h2>
+        <div class="chart-box tall"><canvas id="ch-ttc-cat"></canvas></div></div>
+      <div class="card"><h2>Average age of open requests by type</h2>
+        <div class="chart-box tall"><canvas id="ch-age-cat"></canvas></div></div>
+      <div class="card wide"><h2>Requests by day of week</h2>
+        <div class="chart-box"><canvas id="ch-dow"></canvas></div></div>
+    </div>
+  </div>
   </div>
 </div>
 <p class="foot">Data ingested from the public Alex311 portal. Case links open the official
@@ -361,7 +404,125 @@ async function loadMeta() {
     .forEach(cb => cb.addEventListener('change', refresh));
 }
 
-function refresh() { loadRows(); loadPoints(); loadTrend(); loadCategoryCounts(); }
+function refresh() {
+  loadRows(); loadPoints(); loadTrend(); loadCategoryCounts();
+  analyticsStale = true;
+  if (!$('tab-analytics').hidden) loadAnalytics();
+}
+
+// --- analytics tab ---
+const charts = {};
+let analyticsStale = true;
+
+function drawChart(id, cfg) {
+  charts[id]?.destroy();
+  cfg.options = { maintainAspectRatio: false, responsive: true, ...cfg.options };
+  charts[id] = new Chart($(id), cfg);
+}
+
+const TTC_LABELS = ['< 1 day', '1–3 days', '3–7 days', '1–2 weeks',
+                    '2–4 weeks', '1–3 months', '> 3 months'];
+const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+async function loadAnalytics() {
+  analyticsStale = false;
+  const d = await (await fetch('/api/analytics?' + params())).json();
+  const s = d.summary;
+  const days = v => v == null ? '–' : (+v).toFixed(1);
+  const pct30 = s.closed ? Math.round(100 * s.closed_within_30d / s.closed) + '%' : '–';
+  $('stat-cards').innerHTML = [
+    [s.total.toLocaleString(), 'requests'],
+    [s.open.toLocaleString(), 'open now'],
+    [days(s.median_ttc), 'median days to close'],
+    [pct30, 'closed within 30 days'],
+    [days(s.avg_open_age), 'avg open age (days)'],
+    [days(s.oldest_open_age), 'oldest open (days)'],
+  ].map(([v, l]) =>
+    `<div class="stat-card"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  // frequency of type: doughnut, top 8 + other
+  const cats = d.by_category;
+  const top = cats.slice(0, 8);
+  const other = cats.slice(8).reduce((a, c) => a + +c.n, 0);
+  drawChart('ch-types', {
+    type: 'doughnut',
+    data: {
+      labels: [...top.map(c => c.service_name), ...(other ? ['Other'] : [])],
+      datasets: [{ data: [...top.map(c => +c.n), ...(other ? [other] : [])],
+                   backgroundColor: [...PALETTE.slice(0, 8), '#cbd5e1'] }],
+    },
+    options: { plugins: { legend: { position: 'right',
+               labels: { boxWidth: 10, font: { size: 11 } } } } },
+  });
+
+  // time-to-close histogram (server buckets via width_bucket over 1/3/7/14/30/90)
+  const hist = Array(TTC_LABELS.length).fill(0);
+  d.ttc_histogram.forEach(b => hist[b.bucket] = +b.n);
+  drawChart('ch-ttc', {
+    type: 'bar',
+    data: { labels: TTC_LABELS,
+            datasets: [{ data: hist, backgroundColor: '#1d4ed8' }] },
+    options: { plugins: { legend: { display: false } } },
+  });
+
+  // opened vs closed per week
+  drawChart('ch-weekly', {
+    type: 'line',
+    data: {
+      labels: d.weekly.map(w => w.week.slice(0, 10)),
+      datasets: [
+        { label: 'opened', data: d.weekly.map(w => +w.opened),
+          borderColor: '#d97706', backgroundColor: '#d97706', tension: .25, pointRadius: 2 },
+        { label: 'closed', data: d.weekly.map(w => +w.closed),
+          borderColor: '#059669', backgroundColor: '#059669', tension: .25, pointRadius: 2 },
+      ],
+    },
+    options: { plugins: { legend: { position: 'bottom' } } },
+  });
+
+  // median time-to-close by type (12 highest-volume types, slowest first)
+  const ttcCats = cats.filter(c => c.median_ttc != null).slice(0, 12)
+    .sort((a, b) => b.median_ttc - a.median_ttc);
+  drawChart('ch-ttc-cat', {
+    type: 'bar',
+    data: { labels: ttcCats.map(c => c.service_name),
+            datasets: [{ data: ttcCats.map(c => +(+c.median_ttc).toFixed(1)),
+                         backgroundColor: '#7c3aed' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } },
+               scales: { x: { title: { display: true, text: 'days' } } } },
+  });
+
+  // average open age by type (types with >2 open, oldest first)
+  const ageCats = cats.filter(c => c.avg_open_age != null && c.open_n > 2).slice(0, 12)
+    .sort((a, b) => b.avg_open_age - a.avg_open_age);
+  drawChart('ch-age-cat', {
+    type: 'bar',
+    data: { labels: ageCats.map(c => c.service_name),
+            datasets: [{ data: ageCats.map(c => +(+c.avg_open_age).toFixed(1)),
+                         backgroundColor: '#0891b2' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } },
+               scales: { x: { title: { display: true, text: 'days' } } } },
+  });
+
+  // day-of-week pattern
+  const byDow = Array(7).fill(0);
+  d.weekday.forEach(w => byDow[w.dow - 1] = +w.n);
+  drawChart('ch-dow', {
+    type: 'bar',
+    data: { labels: DOW_LABELS,
+            datasets: [{ data: byDow, backgroundColor: '#be185d' }] },
+    options: { plugins: { legend: { display: false } } },
+  });
+}
+
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav.tabs button').forEach(x =>
+    x.classList.toggle('active', x === b));
+  $('tab-explore').hidden = b.dataset.tab !== 'explore';
+  $('tab-analytics').hidden = b.dataset.tab !== 'analytics';
+  if (b.dataset.tab === 'explore') map.invalidateSize();
+  else if (analyticsStale) loadAnalytics();
+}));
 
 // default window: trailing 3 months (clamped to the data's actual start)
 function applyPreset(which) {
