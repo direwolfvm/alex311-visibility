@@ -422,6 +422,12 @@ def healthz():
     return {"ok": True}
 
 
+# Gated submission prototype (Option A). Registered before the catch-all
+# static mount so /submit isn't shadowed by StaticFiles.
+from .submit import register_submit_routes  # noqa: E402
+
+register_submit_routes(app, lambda: pool)
+
 app.mount(
     "/", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="static"
 )

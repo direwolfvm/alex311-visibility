@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report a yard waste issue (beta) · Alex311</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root { --bg:#f6f7f9; --panel:#fff; --ink:#1c2733; --muted:#64748b; --accent:#1d4ed8;
+          --border:#e2e8f0; --warn:#b45309; --warnbg:#fef3c7; --ok:#059669; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:12px; padding:14px 22px; background:var(--panel);
+           border-bottom:1px solid var(--border); }
+  header img { height:26px; width:26px; }
+  header h1 { font-size:17px; margin:0; }
+  .beta { font-size:11px; font-weight:700; color:#fff; background:var(--accent);
+          padding:1px 7px; border-radius:99px; letter-spacing:.03em; }
+  .wrap { max-width:720px; margin:0 auto; padding:20px 18px 60px; }
+  .notice { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:10px;
+            padding:11px 14px; font-size:13px; margin-bottom:18px; }
+  .step { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+          padding:16px 18px; margin-bottom:16px; }
+  .step h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
+             margin:0 0 12px; }
+  .opt { display:flex; gap:10px; align-items:flex-start; padding:9px 11px; border:1px solid var(--border);
+         border-radius:8px; margin-bottom:8px; cursor:pointer; }
+  .opt:hover { border-color:var(--accent); }
+  .opt input { margin-top:3px; }
+  .opt .cat { font-size:12px; color:var(--muted); }
+  #map { height:280px; border-radius:8px; border:1px solid var(--border); }
+  .maphint { font-size:12px; color:var(--muted); margin:8px 0 0; }
+  label.fld { display:block; font-size:12px; color:var(--muted); margin:12px 0 4px; text-transform:uppercase;
+              letter-spacing:.03em; }
+  input[type=text], textarea, input[type=date] { width:100%; padding:8px 10px; border:1px solid var(--border);
+        border-radius:7px; font:inherit; background:#fff; }
+  textarea { min-height:78px; resize:vertical; }
+  #dupes:empty { display:none; }
+  .dupe-box { border-radius:8px; padding:11px 13px; font-size:13px; margin-top:10px; }
+  .dupe-box.warn { background:var(--warnbg); border:1px solid #fcd34d; color:var(--warn); }
+  .dupe-box.clear { background:#ecfdf5; border:1px solid #a7f3d0; color:var(--ok); }
+  .dupe-box a { color:inherit; font-weight:600; }
+  .dupe-list { margin:8px 0 0; padding-left:18px; }
+  .dupe-list li { margin:2px 0; }
+  .review { background:#f8fafc; border:1px dashed var(--border); border-radius:8px; padding:12px 14px;
+            font-size:13px; white-space:pre-wrap; font-family:ui-monospace,Menlo,monospace; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  button.primary, a.primary { background:var(--accent); color:#fff; border:none; border-radius:8px;
+        padding:10px 16px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
+  button.ghost { background:#fff; color:var(--accent); border:1px solid var(--border); border-radius:8px;
+        padding:10px 16px; font:inherit; cursor:pointer; }
+  button.ghost:hover { border-color:var(--accent); }
+  button:disabled, a.disabled { opacity:.5; pointer-events:none; }
+  .foot { color:var(--muted); font-size:12px; margin-top:8px; }
+  .copied { color:var(--ok); font-size:12px; margin-left:8px; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/favicon.svg" alt="">
+  <h1>Report a yard waste issue</h1>
+  <span class="beta">BETA</span>
+</header>
+
+<div class="wrap">
+  <div class="notice">
+    <b>Testing prototype.</b> This friendlier form helps you prepare a request and checks whether
+    your issue is already reported. It does <b>not</b> file with the City yet — the last step hands you
+    off to the official Alex311 portal. Not an official City of Alexandria service.
+  </div>
+
+  <div class="step">
+    <h2>1 · What happened?</h2>
+    <div id="scenarios"></div>
+  </div>
+
+  <div class="step">
+    <h2>2 · Where? (click the map to drop a pin)</h2>
+    <div id="map"></div>
+    <p class="maphint" id="loc-label">No location set yet.</p>
+    <label class="fld">Address (optional, helps the City locate it)</label>
+    <input type="text" id="address" placeholder="e.g. 123 King St">
+  </div>
+
+  <div class="step">
+    <h2>3 · Details</h2>
+    <label class="fld">Describe the issue</label>
+    <textarea id="desc" placeholder="e.g. Yard waste bags left at the curb on my collection day were not picked up."></textarea>
+    <label class="fld">Collection / occurrence date (optional)</label>
+    <input type="date" id="occurred">
+    <div id="dupes"></div>
+  </div>
+
+  <div class="step">
+    <h2>4 · Review &amp; submit officially</h2>
+    <div class="review" id="review">Fill in the steps above to see your request summary.</div>
+    <div class="actions">
+      <button class="ghost" id="copy" disabled>Copy details</button>
+      <a class="primary disabled" id="official" target="_blank" rel="noopener">Open official Alex311 portal ↗</a>
+      <span class="copied" id="copied" hidden>copied ✓</span>
+    </div>
+    <p class="foot">On the portal, start a new service request, choose the matching category, and
+      paste your details. (Automatic form pre-fill is still being evaluated — see the project notes.)</p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const PORTAL = 'https://alex311.alexandriava.gov/customer/s/';
+const state = { scenario: null, lat: null, long: null };
+let scenarios = [];
+
+// ---- map ----
+const map = L.map('map').setView([38.815, -77.09], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+let pin = null;
+map.on('click', e => {
+  state.lat = +e.latlng.lat.toFixed(6);
+  state.long = +e.latlng.lng.toFixed(6);
+  if (pin) pin.setLatLng(e.latlng);
+  else pin = L.marker(e.latlng).addTo(map);
+  $('loc-label').textContent = `Location set: ${state.lat}, ${state.long}`;
+  checkDupes();
+  render();
+});
+
+// ---- scenarios ----
+async function loadScenarios() {
+  scenarios = (await (await fetch('/submit/api/scenarios')).json()).scenarios;
+  $('scenarios').innerHTML = scenarios.map(s => `
+    <label class="opt"><input type="radio" name="scn" value="${s.key}">
+      <span>${s.label}<br><span class="cat">→ files as "${s.category}"</span></span></label>`).join('');
+  $('scenarios').querySelectorAll('input').forEach(r => r.addEventListener('change', () => {
+    state.scenario = scenarios.find(s => s.key === r.value);
+    checkDupes(); render();
+  }));
+}
+
+const esc = s => (s ?? '').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+
+// ---- duplicate check (our data — the portal can't do this) ----
+async function checkDupes() {
+  if (!state.scenario || state.lat == null) { $('dupes').innerHTML = ''; return; }
+  const p = new URLSearchParams({ lat: state.lat, long: state.long, category: state.scenario.category });
+  let d;
+  try { d = await (await fetch('/submit/api/nearby?' + p)).json(); }
+  catch { $('dupes').innerHTML = ''; return; }
+  if (!d.nearby.length) {
+    $('dupes').innerHTML = `<div class="dupe-box clear">No recent "${esc(state.scenario.category)}"
+      reports within 250m — looks new. Good to submit.</div>`;
+    return;
+  }
+  const items = d.nearby.slice(0, 6).map(n => `<li>
+    <b>${esc(n.service_request_id)}</b> · ${n.meters}m away · ${n.is_open ? 'OPEN' : 'closed'}
+    · ${(n.requested_datetime||'').slice(0,10)} · ${esc(n.address||'')}</li>`).join('');
+  $('dupes').innerHTML = `<div class="dupe-box warn">
+    Found <b>${d.nearby.length}</b> nearby "${esc(state.scenario.category)}" report(s)
+    (${d.open_count} still open) in the last 45 days. Yours may already be filed —
+    check these before adding a duplicate:
+    <ul class="dupe-list">${items}</ul></div>`;
+}
+
+// ---- review + handoff ----
+function summary() {
+  const s = state.scenario;
+  return [
+    `Category: ${s ? s.category : '—'}`,
+    `Location: ${state.lat != null ? state.lat + ', ' + state.long : '—'}`,
+    `Address: ${$('address').value.trim() || '—'}`,
+    `Occurred: ${$('occurred').value || '—'}`,
+    `Details: ${$('desc').value.trim() || '—'}`,
+  ].join('\n');
+}
+
+function render() {
+  const ready = state.scenario && state.lat != null;
+  $('review').textContent = ready ? summary()
+    : 'Fill in the steps above to see your request summary.';
+  $('copy').disabled = !ready;
+  const link = $('official');
+  if (ready) { link.classList.remove('disabled'); link.href = PORTAL + '?servicerequested=all'; }
+  else link.classList.add('disabled');
+}
+
+$('desc').addEventListener('input', render);
+$('address').addEventListener('input', render);
+$('occurred').addEventListener('change', render);
+$('copy').addEventListener('click', async () => {
+  await navigator.clipboard.writeText(summary());
+  $('copied').hidden = false; setTimeout(() => $('copied').hidden = true, 2000);
+});
+
+loadScenarios();
+render();
+</script>
+</body>
+</html>

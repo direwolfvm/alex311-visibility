@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "DATABASE_URL=postgresql://postgres:alex311@localhost:54329/alex311 MEDIA_DIR=./media_store uv run uvicorn dashboard.app:app --port 8311"
+        "DATABASE_URL=postgresql://postgres:alex311@localhost:54329/alex311 MEDIA_DIR=./media_store SUBMIT_USER=alex311user SUBMIT_PASSWORD=localtest uv run uvicorn dashboard.app:app --port 8311"
       ],
       "port": 8311
     }
