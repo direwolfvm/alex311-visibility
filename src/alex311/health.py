@@ -1,9 +1,15 @@
 """Health check: prove the whole Salesforce-facing path still works.
 
-Bootstraps a fresh session, pulls a 1-day list window, validates the record
-schema, fetches one detail, and validates that too. Records the outcome in
-ingest_runs (kind='health') and exits non-zero on any failure — wire a Cloud
-Scheduler job to this and alert on job failure.
+Bootstraps a fresh session, pulls a list window, validates the record schema,
+fetches one detail, validates that too, and asserts the guest-privacy
+invariant. Records the outcome in ingest_runs (kind='health') and exits
+non-zero on failure — wire a Cloud Scheduler job to this and alert on it.
+
+What counts as failure is deliberately narrow: bootstrap/schema/privacy
+breakage, or our stored data actually going stale. The portal rationing
+queries (its "volume too large" guard, seen most weekends) is reported as
+*degraded* and exits 0 — it self-heals, and it still proves our client path
+works, so paging on it is noise.
 
 Usage: python -m alex311.health [--skip-db]
 """
@@ -16,16 +22,46 @@ from datetime import datetime, timedelta, timezone
 
 from . import db, models
 from .client import Alex311Client
+from .ingest import STALE_AFTER
 
 log = logging.getLogger("alex311.health")
 
 
-def check(client: Alex311Client) -> str:
+def check_freshness(conn) -> None:
+    """Fail when our data has actually gone stale.
+
+    This is the signal worth waking someone for. Individual portal outages
+    are not — they self-heal — but one that keeps us from ingesting for a
+    day has stopped being transient.
+    """
+    last_ok = db.last_successful_ingest(conn)
+    if last_ok is None:
+        return  # nothing ingested yet (fresh install), not a health failure
+    age = datetime.now(timezone.utc) - last_ok
+    if age > STALE_AFTER:
+        raise RuntimeError(
+            f"no successful ingest in {age.total_seconds() / 3600:.1f}h "
+            f"(threshold {STALE_AFTER}) — data is stale")
+
+
+def check(client: Alex311Client, conn=None) -> str:
     """Raises on failure; returns a human summary on success."""
     end = datetime.now(timezone.utc)
     start = end - timedelta(days=2)
-    records = client.fetch_range(start, end, window=timedelta(days=2))
+    capped: list[tuple[datetime, datetime]] = []
+    records = client.fetch_range(start, end, window=timedelta(days=2),
+                                 on_capped=lambda s, e: capped.append((s, e)))
+    if conn is not None:
+        check_freshness(conn)
+
     if not records:
+        if capped:
+            # The portal *did* answer — with its volume guard. That still
+            # exercises bootstrap, the Aura envelope and our parsing, which is
+            # what this canary exists to verify. Freshness is checked above,
+            # so a rationing weekend no longer pages anyone.
+            return ("degraded: portal is rationing queries (volume cap); "
+                    "client path verified and data freshness OK")
         raise RuntimeError("health list window returned zero records "
                            "(2 days of a live 311 system should not be empty)")
     rec = next(iter(records.values()))
@@ -60,8 +96,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         with Alex311Client() as client:
-            summary = check(client)
-        log.info("health %s", summary)
+            summary = check(client, conn)
+        log.log(logging.WARNING if summary.startswith("degraded") else logging.INFO,
+                "health %s", summary)
         if conn:
             db.finish_run(conn, run_id, ok=True)
         return 0

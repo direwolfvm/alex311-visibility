@@ -70,6 +70,7 @@ class FakePortal:
         # windows: list of (start_iso, end_iso, [records]) consulted in order
         self.records: list[dict] = []
         self.volume_threshold: int | None = None  # error if window has > N
+        self.refusals_left = 0   # ration the next N list calls regardless of size
         self.details: dict[str, dict] = {}
 
     def _window_records(self, params: dict) -> list[dict]:
@@ -91,6 +92,10 @@ class FakePortal:
             inner = msg["actions"][0]["params"]["params"]
             inner_params = json.loads(inner["params"])[0]
             if inner["method"] == "getServiceRequestList_v2":
+                if self.refusals_left > 0:   # portal rationing, size-independent
+                    self.refusals_left -= 1
+                    return httpx.Response(200, json=_aura_error(
+                        "Data volume for selected duration is too large to show."))
                 recs = self._window_records(inner_params)
                 if self.volume_threshold is not None and len(recs) > self.volume_threshold:
                     return httpx.Response(200, json=_aura_error(
@@ -175,14 +180,60 @@ def test_volume_error_splits_window(client, portal):
     assert len(results) == 30
 
 
-def test_volume_error_raises_at_min_window(client, portal):
+def test_iter_window_still_raises_volume_error(client, portal):
+    """The raw primitive is unchanged; only fetch_range's policy is tolerant."""
     portal.records = [
         _record(f"26-{i:08d}", requested_datetime=_dt(10)) for i in range(50)
     ]
-    portal.volume_threshold = 5  # even tiny windows exceed this
+    portal.volume_threshold = 5
     with pytest.raises(VolumeTooLargeError):
-        client.fetch_range(WINDOW_START, WINDOW_END,
-                           min_window=timedelta(days=1))
+        list(client.iter_window(WINDOW_START, WINDOW_END))
+
+
+def test_floor_volume_cap_is_retried_then_succeeds(client, portal):
+    """The portal rations a couple of calls, then serves — as it does in life."""
+    portal.records = [_record("26-00000001", requested_datetime=_dt(10))]
+    portal.refusals_left = 2
+    capped = []
+    results = client.fetch_range(
+        WINDOW_START, WINDOW_END, window=timedelta(days=30),
+        min_window=timedelta(days=30), volume_retry_delay=0,
+        on_capped=lambda s, e: capped.append((s, e)))
+    assert list(results) == ["26-00000001"]
+    assert capped == []  # recovered on retry, nothing to report
+
+
+def test_capped_window_is_skipped_not_fatal(client, portal):
+    """One unreadable window must not cost us the readable ones."""
+    portal.records = (
+        [_record(f"26-{i:08d}", requested_datetime=_dt(10)) for i in range(50)]
+        + [_record("26-99999999", requested_datetime=_dt(20))]
+    )
+    portal.volume_threshold = 5  # the day-10 cluster is never servable
+    capped = []
+    results = client.fetch_range(
+        WINDOW_START, WINDOW_END, window=timedelta(days=10),
+        min_window=timedelta(days=5), volume_retry_delay=0,
+        on_capped=lambda s, e: capped.append((s, e)))
+    assert "26-99999999" in results   # the good window still landed
+    assert capped                      # and the bad one was reported, not raised
+
+
+def test_circuit_breaker_stops_hammering_a_refusing_portal(client, portal):
+    portal.records = [
+        _record(f"26-{i:08d}", requested_datetime=_dt(1 + (i % 28)))
+        for i in range(60)
+    ]
+    portal.volume_threshold = 0   # refuse every window that holds anything
+    capped = []
+    before = portal.aura_hits
+    results = client.fetch_range(
+        WINDOW_START, WINDOW_END, window=timedelta(days=1),
+        min_window=timedelta(days=1), volume_retry_delay=0, give_up_after=2,
+        on_capped=lambda s, e: capped.append((s, e)))
+    assert results == {}
+    assert len(capped) == 30          # every window accounted for, none silent
+    assert portal.aura_hits - before <= 10   # gave up instead of grinding
 
 
 def test_out_of_sync_triggers_rebootstrap(client, portal):

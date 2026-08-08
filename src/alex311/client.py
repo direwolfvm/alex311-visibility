@@ -12,7 +12,10 @@ Verified behaviors this client encodes (see spike/FINDINGS.md):
   one re-bootstrap + retry per call.
 - The list endpoint requires a date window and caps page_size around 50;
   oversized windows return a volume error, which ``fetch_range`` handles by
-  splitting the window in half (down to ``min_window``).
+  splitting the window in half (down to ``min_window``). The portal also
+  rations queries independently of size — most weekends — returning the same
+  volume error even for tiny windows; ``fetch_range`` retries and skips those
+  rather than failing, and the caller's next lookback re-covers them.
 - Sort is by last-activity time, not request time — a window must always be
   paged to exhaustion; there is no early-stop.
 - The server ignores ``service_name`` filters; filter client-side.
@@ -35,6 +38,12 @@ PATH_PREFIX = "/customer"
 LIST_PAGE_SIZE = 50
 DEFAULT_WINDOW = timedelta(days=14)
 MIN_WINDOW = timedelta(hours=6)
+# A window already at MIN_WINDOW holds ~a couple dozen records, so a volume
+# cap there is the portal rationing queries, not real data volume. Retry it,
+# then skip it; after this many consecutive floor-level caps, stop for now.
+VOLUME_RETRIES = 2
+VOLUME_RETRY_DELAY = 20.0
+VOLUME_GIVE_UP_AFTER = 3
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -322,6 +331,30 @@ class Alex311Client:
                 return
             page += 1
 
+    def _drain_window(
+        self, w_start: datetime, w_end: datetime, results: dict[str, dict],
+        *, retries: int, delay: float,
+    ) -> int:
+        """Page one window into results; retry volume caps `retries` times."""
+        attempt = 0
+        while True:
+            try:
+                count = 0
+                for rec in self.iter_window(w_start, w_end):
+                    key = rec.get("service_request_id")
+                    if key:
+                        results[key] = rec
+                        count += 1
+                return count
+            except VolumeTooLargeError:
+                if attempt >= retries:
+                    raise
+                attempt += 1
+                wait = delay * attempt
+                log.info("volume cap at floor window %s → %s; retry %d/%d in %.0fs",
+                         w_start, w_end, attempt, retries, wait)
+                time.sleep(wait)
+
     def fetch_range(
         self,
         start: datetime,
@@ -330,12 +363,29 @@ class Alex311Client:
         window: timedelta = DEFAULT_WINDOW,
         min_window: timedelta = MIN_WINDOW,
         on_window: Callable[[datetime, datetime, int], None] | None = None,
+        on_capped: Callable[[datetime, datetime], None] | None = None,
+        volume_retries: int = VOLUME_RETRIES,
+        volume_retry_delay: float = VOLUME_RETRY_DELAY,
+        give_up_after: int = VOLUME_GIVE_UP_AFTER,
     ) -> dict[str, dict]:
         """Every record in [start, end), deduped by service_request_id.
 
         Slices the range into windows, pages each to exhaustion, and halves
         any window that trips the server's volume cap. Records seen twice
         (window overlap, pagination drift) keep the last-read copy.
+
+        A cap on a window already at `min_window` is NOT real volume — six
+        hours holds a couple dozen records — it means the portal is rationing
+        queries (observed most weekends). Those windows are retried, then
+        reported to `on_capped` and skipped rather than aborting the whole
+        run: the caller's next pass re-covers them, because incremental runs
+        always re-read a multi-day lookback and upsert idempotently. After
+        `give_up_after` consecutive floor-level caps the remaining windows are
+        abandoned too (also reported), so we stop hammering a portal that is
+        clearly refusing to serve.
+
+        Skipped windows are never silent: each one is logged at WARNING and
+        handed to `on_capped` so the caller can record and surface it.
         """
         results: dict[str, dict] = {}
         stack: list[tuple[datetime, datetime]] = []
@@ -346,27 +396,45 @@ class Alex311Client:
             cursor = w_end
         stack.reverse()  # process chronologically
 
+        consecutive_caps = 0
         while stack:
             w_start, w_end = stack.pop()
+            span = w_end - w_start
+            at_floor = span <= min_window
             try:
-                count = 0
-                for rec in self.iter_window(w_start, w_end):
-                    key = rec.get("service_request_id")
-                    if key:
-                        results[key] = rec
-                        count += 1
-                if on_window:
-                    on_window(w_start, w_end, count)
-                log.info("window %s → %s: %d records (total %d)",
-                         w_start.date(), w_end.date(), count, len(results))
+                count = self._drain_window(
+                    w_start, w_end, results,
+                    retries=volume_retries if at_floor else 0,
+                    delay=volume_retry_delay,
+                )
             except VolumeTooLargeError:
-                span = w_end - w_start
-                if span <= min_window:
-                    raise
-                mid = w_start + span / 2
-                log.info("volume cap on %s → %s; splitting", w_start, w_end)
-                stack.append((mid, w_end))
-                stack.append((w_start, mid))
+                if not at_floor:
+                    mid = w_start + span / 2
+                    log.info("volume cap on %s → %s; splitting", w_start, w_end)
+                    stack.append((mid, w_end))
+                    stack.append((w_start, mid))
+                    continue
+                consecutive_caps += 1
+                log.warning(
+                    "volume cap persists at floor window %s → %s after %d retries; "
+                    "skipping it (portal rationing, not real volume)",
+                    w_start, w_end, volume_retries)
+                if on_capped:
+                    on_capped(w_start, w_end)
+                if consecutive_caps >= give_up_after:
+                    log.warning(
+                        "%d consecutive capped windows; abandoning %d remaining "
+                        "window(s) this run", consecutive_caps, len(stack))
+                    for rem_start, rem_end in stack:
+                        if on_capped:
+                            on_capped(rem_start, rem_end)
+                    stack.clear()
+                continue
+            consecutive_caps = 0
+            if on_window:
+                on_window(w_start, w_end, count)
+            log.info("window %s → %s: %d records (total %d)",
+                     w_start.date(), w_end.date(), count, len(results))
         return results
 
     def get_detail(self, service_request_id: str) -> dict:

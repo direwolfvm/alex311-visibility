@@ -64,6 +64,13 @@ def _jpeg_name(name: str) -> str:
 # Covers records whose activity timestamps drift during pagination.
 INCREMENTAL_OVERLAP = timedelta(days=1)
 
+# The portal rations queries most weekends, refusing windows regardless of
+# size. That is transient and self-healing: every run re-reads a multi-day
+# lookback and upserts idempotently, so a refused window is picked up later.
+# We therefore only treat "read nothing at all" as a failure once it has kept
+# us from ingesting for this long — that is when data actually goes stale.
+STALE_AFTER = timedelta(hours=24)
+
 
 def run_ingest(
     conn,
@@ -78,9 +85,20 @@ def run_ingest(
 ) -> None:
     run_id = db.start_run(conn, kind, start, end)
     seen = upserted = details = downloaded = 0
+    capped: list[tuple[datetime, datetime]] = []
     try:
-        records = client.fetch_range(start, end)
+        records = client.fetch_range(
+            start, end, on_capped=lambda s, e: capped.append((s, e)))
         seen = len(records)
+
+        if capped:
+            log.warning(
+                "%d window(s) incomplete — the portal refused them (volume "
+                "rationing); the next run's %s lookback re-covers them: %s",
+                len(capped), end - start,
+                ", ".join(f"{s:%Y-%m-%d %H:%M}→{e:%H:%M}" for s, e in capped[:5]))
+            if not records:
+                _require_not_stale(conn, len(capped))
 
         drift = models.validate_list_record(next(iter(records.values()))) if records else []
         if drift:
@@ -100,12 +118,34 @@ def run_ingest(
 
         db.finish_run(conn, run_id, ok=True, records_seen=seen,
                       records_upserted=upserted, details_fetched=details,
-                      media_downloaded=downloaded)
+                      media_downloaded=downloaded,
+                      windows_incomplete=len(capped))
     except Exception as e:
         db.finish_run(conn, run_id, ok=False, records_seen=seen,
                       records_upserted=upserted, details_fetched=details,
-                      media_downloaded=downloaded, error=f"{type(e).__name__}: {e}")
+                      media_downloaded=downloaded,
+                      windows_incomplete=len(capped),
+                      error=f"{type(e).__name__}: {e}")
         raise
+
+
+def _require_not_stale(conn, capped_windows: int) -> None:
+    """Read nothing at all this run — fail only if that has persisted.
+
+    A refused run is normal weekend behaviour and self-heals, so it is not
+    worth waking anyone. Data genuinely going stale is.
+    """
+    last_ok = db.last_successful_ingest(conn)
+    now = datetime.now(timezone.utc)
+    if last_ok is None or now - last_ok > STALE_AFTER:
+        age = "never" if last_ok is None else f"{(now - last_ok).total_seconds() / 3600:.1f}h ago"
+        raise RuntimeError(
+            f"portal refused all {capped_windows} window(s) and the last "
+            f"successful ingest was {age} (> {STALE_AFTER}); data is stale")
+    log.warning(
+        "portal refused all %d window(s), but the last successful ingest was "
+        "%.1fh ago — transient, letting the next run reconcile",
+        capped_windows, (now - last_ok).total_seconds() / 3600)
 
 
 def enrich(conn, client: Alex311Client, limit: int) -> int:
