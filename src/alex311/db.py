@@ -195,16 +195,31 @@ def start_run(conn: psycopg.Connection, kind: str,
     return row["run_id"]
 
 
+def last_successful_ingest(conn: psycopg.Connection) -> datetime | None:
+    """When a data-pulling run last completed successfully.
+
+    The staleness signal: transient portal outages are only worth alerting on
+    once they have kept us from ingesting for long enough to matter.
+    """
+    row = conn.execute(
+        """SELECT max(finished_at) AS at FROM ingest_runs
+           WHERE ok AND kind IN ('incremental', 'backfill')"""
+    ).fetchone()
+    return row["at"] if row else None
+
+
 def finish_run(conn: psycopg.Connection, run_id: int, *, ok: bool,
                records_seen: int = 0, records_upserted: int = 0,
                details_fetched: int = 0, media_downloaded: int = 0,
+               windows_incomplete: int = 0,
                error: str | None = None) -> None:
     conn.execute(
         """UPDATE ingest_runs SET finished_at = now(), ok = %s,
                records_seen = %s, records_upserted = %s, details_fetched = %s,
-               media_downloaded = %s, error = %s
+               media_downloaded = %s, windows_incomplete = %s, error = %s
            WHERE run_id = %s""",
         (ok, records_seen, records_upserted, details_fetched,
-         media_downloaded, error[:1000] if error else None, run_id),
+         media_downloaded, windows_incomplete,
+         error[:1000] if error else None, run_id),
     )
     conn.commit()

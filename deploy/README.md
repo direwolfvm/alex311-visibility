@@ -113,7 +113,38 @@ gcloud scheduler jobs create http alex311-health-schedule \
 
 The health check exits non-zero when the bootstrap parse, list schema, detail
 schema, or the guest-privacy invariant breaks — i.e. exactly the things a
-Salesforce redeploy can silently change.
+Salesforce redeploy can silently change — **or when our data has actually gone
+stale** (no successful ingest in 24h, `STALE_AFTER` in `alex311/ingest.py`).
+
+### Weekend "volume too large" episodes — expected, and not an alert
+
+The portal rations queries most weekends, returning *"Data volume for selected
+duration is too large to show"* even for tiny windows. Between 2026-07-12 and
+2026-08-08 this failed 21 ingest runs, **every one of them on a Sat/Sun/Mon and
+none Tue–Fri**, and every one self-healed with no data loss.
+
+The jobs now treat it as the transient portal-side condition it is:
+
+- `fetch_range` retries a capped floor window, then **skips and reports** it
+  instead of aborting the run; after 3 consecutive floor caps it abandons the
+  rest of the run rather than hammering a portal that is clearly refusing.
+- Skipped windows are never silent: logged at WARNING and counted in
+  `ingest_runs.windows_incomplete`.
+- Coverage repairs itself, because every incremental run re-reads a 15-day
+  lookback and upserts idempotently.
+- A run that reads *nothing at all* only fails if the last successful ingest is
+  older than `STALE_AFTER`; otherwise it warns and exits 0.
+- The health canary reports `degraded` (exit 0) when the portal is rationing —
+  a volume response still proves bootstrap, the Aura envelope and our parsing
+  all work, which is what the canary is for.
+
+Net effect: weekend rationing is silent and self-healing; a portal outage that
+genuinely stops ingestion for a day still pages. To see what a run skipped:
+
+```sql
+SELECT started_at, records_seen, windows_incomplete, error
+FROM ingest_runs WHERE windows_incomplete > 0 ORDER BY started_at DESC;
+```
 
 ## 5. Dashboard service
 

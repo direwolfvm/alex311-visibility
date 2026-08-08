@@ -76,7 +76,13 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
     records_upserted INTEGER,
     details_fetched INTEGER,
     media_downloaded INTEGER,
+    -- windows the portal refused to serve (volume rationing); the next run's
+    -- lookback re-covers them, so a nonzero value is informational, not failure
+    windows_incomplete INTEGER NOT NULL DEFAULT 0,
     error           TEXT
 );
+
+-- for databases created before windows_incomplete existed
+ALTER TABLE ingest_runs ADD COLUMN IF NOT EXISTS windows_incomplete INTEGER NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS ingest_runs_started_idx ON ingest_runs (started_at DESC);
