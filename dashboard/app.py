@@ -100,7 +100,15 @@ def meta():
         cats = conn.execute(
             """SELECT service_name, count(*) AS n FROM service_requests
                WHERE service_name IS NOT NULL
-               GROUP BY service_name ORDER BY n DESC"""
+               -- Alphabetical: this list is the filter picker, where people
+               -- scan for a category by name. Volume ordering stays in the
+               -- analytics queries, where "top N by count" is the point.
+               -- COLLATE "C" so a space sorts before letters ("Park
+               -- Maintenance" then "Parking Meters") and the order does not
+               -- depend on the database's configured collation.
+               GROUP BY service_name
+               ORDER BY lower(service_name) COLLATE "C"
+            """
         ).fetchall()
         rng = conn.execute(
             """SELECT min(requested_datetime) AS min_date,
