@@ -1,0 +1,1926 @@
+{
+ "generated": "2026-09-09 21:57 UTC",
+ "read_only": true,
+ "skipped_not_in_catalog": [
+  "Snow and Ice Removal Sidewalk"
+ ],
+ "categories": [
+  {
+   "service_name": "Missed Collection",
+   "service_code": "TESMISCO",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Which items were missed?",
+     "required": false,
+     "input": "radio",
+     "code": "01PL-MISSEDTYP",
+     "options": [
+      "Trash",
+      "Recycling",
+      "Yard Waste"
+     ],
+     "probes": {
+      "Trash": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Recycling": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Yard Waste": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Trash"
+    },
+    {
+     "order": 2,
+     "question": "When were your items set out for pickup?",
+     "required": false,
+     "input": "composite",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "",
+       "placeholder": "MM/DD/YYYY",
+       "aria": "Question 2 When were your items set out for pickup?"
+      },
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "12:00",
+       "aria": "12:00"
+      },
+      {
+       "tag": "select",
+       "type": "",
+       "placeholder": "",
+       "aria": ""
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please follow directions for any tag that has been placed on your items. And put out your items for your next collection day.",
+    "Please provide the details of your request in the Additional Information box below."
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Trash and Recycling Containers",
+   "service_code": "TESCONTN",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What is the nature of your container request?",
+     "required": true,
+     "input": "select",
+     "code": "",
+     "options": [
+      "New Resident",
+      "New Commercial Refuse Customer",
+      "Missing Container",
+      "Damaged Container",
+      "Exchange for Different Recycling Container Size",
+      "Request Additional Container",
+      "Remove Container"
+     ],
+     "probes": {
+      "New Resident": {
+       "alert": [
+        "Validation Alert Please check to see if your home already has containers before submitting this request.",
+        "Validation Alert",
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        2,
+        3
+       ],
+       "extra_controls": 0
+      },
+      "New Commercial Refuse Customer": {
+       "alert": [
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2,
+        3
+       ],
+       "extra_controls": 0
+      },
+      "Missing Container": {
+       "alert": [
+        "Validation Alert Please check the surrounding area before requesting a new container",
+        "Validation Alert"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Damaged Container": {
+       "alert": [
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2,
+        3
+       ],
+       "extra_controls": 0
+      },
+      "Exchange for Different Recycling Container Size": {
+       "alert": [
+        "Validation Alert Please clearly mark the container and make sure it is accessible on your next collection day",
+        "Validation Alert",
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        2,
+        3
+       ],
+       "extra_controls": 0
+      },
+      "Request Additional Container": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Remove Container": {
+       "alert": [
+        "Validation Alert Please clearly mark the container and make sure it is accessible on your next collection day",
+        "Validation Alert",
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        2,
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "New Resident"
+    },
+    {
+     "order": 2,
+     "question": "What type of container?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-CONTYPE",
+     "options": [
+      "Trash",
+      "Recycling"
+     ],
+     "probes": {
+      "Trash": {
+       "alert": [
+        "Trash containers are available in one size only.",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Recycling": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        4
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Trash"
+    },
+    {
+     "order": 3,
+     "question": "Date of move in?",
+     "required": true,
+     "input": "composite",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "",
+       "placeholder": "MM/DD/YYYY",
+       "aria": "Required Question 3 Date of move in?"
+      },
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "12:00",
+       "aria": "12:00"
+      },
+      {
+       "tag": "select",
+       "type": "",
+       "placeholder": "",
+       "aria": ""
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "The City is not currently providing yard waste containers.",
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Metal or Appliance Collection",
+   "service_code": "TESMETAL",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What type of item are you requesting for collection?",
+     "required": true,
+     "input": "checkbox",
+     "code": "",
+     "options": [
+      "Appliance (Stove/Refrigerator/Washer/ Dryer/Freezer/Hot Water Heater)",
+      "Metal (Fencing/Bicycles)"
+     ],
+     "probes": {
+      "Appliance (Stove/Refrigerator/Washer/ Dryer/Freezer/Hot Water Heater)": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Metal (Fencing/Bicycles)": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Appliance (Stove/Refrigerator/Washer/ Dryer/Freezer/Hot Water Heater)"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Collection only occurs curbside, no alley collection. Please make sure your items are placed out by 6:00 a.m. the first Tuesday or Wednesday after your request was submitted.",
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Traffic Light/Signal (Existing)",
+   "service_code": "TESTSGNLM",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What type of signal is it?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-TSGNLTYP",
+     "options": [
+      "Traffic Signal",
+      "Pedestrian Signal",
+      "Other"
+     ],
+     "probes": {
+      "Traffic Signal": {
+       "alert": [
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2,
+        3
+       ],
+       "extra_controls": 0
+      },
+      "Pedestrian Signal": {
+       "alert": [
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2,
+        3
+       ],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [
+        "There are 3 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2,
+        3,
+        4
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Traffic Signal"
+    },
+    {
+     "order": 2,
+     "question": "What is the traffic signal problem?",
+     "required": true,
+     "input": "select",
+     "code": "",
+     "options": [
+      "Bulb out",
+      "Twisted",
+      "Timing Concern",
+      "Change Needed (Please be aware that request for changes require a detailed review by staff for approval)",
+      "Intersection Dark (Emergency)",
+      "Flashing (Emergency)",
+      "Other"
+     ],
+     "probes": {
+      "Bulb out": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Twisted": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Timing Concern": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Change Needed (Please be aware that request for changes require a detailed review by staff for approval)": {
+       "alert": [
+        "Please describe in detail the modification needed in the Additional Information box below. Pictures are helpful for staff to properly address your concern.",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Intersection Dark (Emergency)": {
+       "alert": [
+        "Validation Alert Please contact (703) 746-4444 after hours.",
+        "Validation Alert",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Flashing (Emergency)": {
+       "alert": [
+        "Validation Alert Please contact (703) 746-4444 after hours.",
+        "Validation Alert",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Bulb out"
+    },
+    {
+     "order": 3,
+     "question": "Approximately when was the problem observed?",
+     "required": true,
+     "input": "checkbox",
+     "code": "",
+     "options": [
+      "Morning",
+      "Afternoon",
+      "Evening",
+      "Overnight"
+     ],
+     "probes": {
+      "Morning": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Afternoon": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Evening": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Overnight": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Morning"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Parking Comments, Complaints or Inquiries",
+   "service_code": "ALXPARK",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "select",
+     "code": "",
+     "options": [
+      "Contest Parking Citation",
+      "Parking Enforcement",
+      "Temporary Reserved Parking",
+      "Residential Parking Permit Program",
+      "Modification to Parking Regulations",
+      "General Inquiries"
+     ],
+     "probes": {
+      "Contest Parking Citation": {
+       "alert": [
+        "Validation Alert Please go to the City's Adjudication Office to contest Parking Tickets: Contest Parking Tickets",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Parking Enforcement": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Temporary Reserved Parking": {
+       "alert": [
+        "Validation Alert To reserve parking for a moving van, funeral, wedding, or other event, please apply for a Temporary Reserved Parking permit",
+        "Validation Alert"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Residential Parking Permit Program": {
+       "alert": [
+        "Validation Alert To learn more about adding residential permit parking restrictions to your block, please visit Parking Restrictions and Districts Overview for information about the petition process that can be started by residents.",
+        "Validation Alert"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Modification to Parking Regulations": {
+       "alert": [
+        "Validation Alert To request other changes to parking restrictions (no parking areas, loading zones, etc.), please complete the On-Street Parking Modification Request Form.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "General Inquiries": {
+       "alert": [
+        "Validation Alert For information on Parking in Alexandria, visit www.alexandriava.gov/Parking.",
+        "Validation Alert"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Parking Enforcement"
+    },
+    {
+     "order": 2,
+     "question": "Is this parking enforcement concern occurring right now?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-OCCURNOW",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please call 703.746.4444 to report a parking concern occurring right now.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Potholes",
+   "service_code": "TESPOTHO",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Where is the pothole located?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-WHRPOTHLOC",
+     "options": [
+      "Alley",
+      "Street"
+     ],
+     "probes": {
+      "Alley": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Street": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Alley"
+    },
+    {
+     "order": 2,
+     "question": "What is the surface type?",
+     "required": false,
+     "input": "radio",
+     "code": "01PL-WHTSURFTYP",
+     "options": [
+      "Asphalt",
+      "Concrete",
+      "Other"
+     ],
+     "probes": {
+      "Asphalt": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Concrete": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Asphalt"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Traffic Sign",
+   "service_code": "TESTSIGN",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What is the nature of your traffic sign request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-TRSGNLTYPE",
+     "options": [
+      "Damaged or Down Sign",
+      "Report Faded Sign",
+      "Request New Sign",
+      "Visibility of Sign Obstructed"
+     ],
+     "probes": {
+      "Damaged or Down Sign": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Report Faded Sign": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Request New Sign": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Visibility of Sign Obstructed": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Damaged or Down Sign"
+    },
+    {
+     "order": 2,
+     "question": "What type of traffic sign pertains to your request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-SIGNTYPE",
+     "options": [
+      "Stop Sign",
+      "Street Name Sign",
+      "Parking Sign",
+      "Other"
+     ],
+     "probes": {
+      "Stop Sign": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Street Name Sign": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Parking Sign": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Stop Sign"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Park Maintenance",
+   "service_code": "RPCMAIN",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Please indicate which park your request pertains to",
+     "required": true,
+     "input": "text",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "Provide information here",
+       "aria": "Required Question 1 Please indicate which park your request pertains to"
+      }
+     ]
+    },
+    {
+     "order": 2,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "select",
+     "code": "",
+     "options": [
+      "Mowing",
+      "Litter",
+      "Playgrounds",
+      "Dog Parks",
+      "Trail",
+      "Fence or Bench Repair",
+      "Other"
+     ],
+     "probes": {
+      "Mowing": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below.",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Litter": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below.",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Playgrounds": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Dog Parks": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Trail": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Fence or Bench Repair": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [
+        "In the box below please describe the specifics of your request and provide detailed information regarding where the problem is located. Pictures and landmarks are helpful."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Mowing"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "There are 2 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Noise Issues",
+   "service_code": "TESNOISE",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What is the source of the noise as best you can determine?",
+     "required": false,
+     "input": "radio",
+     "code": "01PL-NOISESOUR",
+     "options": [
+      "Residential",
+      "Commercial",
+      "Other"
+     ],
+     "probes": {
+      "Residential": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Commercial": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Residential"
+    },
+    {
+     "order": 2,
+     "question": "Please select the type of noise issue:",
+     "required": true,
+     "input": "radio",
+     "code": "01IN-NOISETYP",
+     "options": [
+      "Construction",
+      "Animal",
+      "Other"
+     ],
+     "probes": {
+      "Construction": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Animal": {
+       "alert": [
+        "Validation Alert Please contact the Animal Welfare League at 703-746-4774.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Construction"
+    },
+    {
+     "order": 3,
+     "question": "When did the noise occur?",
+     "required": false,
+     "input": "composite",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "",
+       "placeholder": "MM/DD/YYYY",
+       "aria": "Question 3 When did the noise occur?"
+      },
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "12:00",
+       "aria": "12:00"
+      },
+      {
+       "tag": "select",
+       "type": "",
+       "placeholder": "",
+       "aria": ""
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "If you are submitting this request between 7pm and 7am, or over the weekend, please call 703.746.4444 for immediate assistance.",
+    "Aircraft are exempt from the City Noise Code. Complaints can be logged with the Metropolitan Washington Airport Authority complaint line by calling 703.417.1204.",
+    "Please provide as much additional detail as possible on the nature of the noise complaint in the box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Sewer Infrastructure Issues",
+   "service_code": "TESSEWER",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What is the nature of your sewer request?",
+     "required": true,
+     "input": "select",
+     "code": "",
+     "options": [
+      "Backup - Not Weather Related",
+      "Flooding",
+      "Cave-in or Sinkhole",
+      "Missing or Broken Manhole Cover",
+      "Odor",
+      "Storm Drain",
+      "Sump Pump & Down Spout Issues",
+      "Watermain Break",
+      "Other"
+     ],
+     "probes": {
+      "Backup - Not Weather Related": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Flooding": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Cave-in or Sinkhole": {
+       "alert": [
+        "Validation Alert STOP, before continuing the submission please contact 703-746-4444 to report this safety concern.",
+        "Validation Alert",
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Missing or Broken Manhole Cover": {
+       "alert": [
+        "Validation Alert STOP, before continuing the submission please contact 703-746-4444 to report this safety concern.",
+        "Validation Alert",
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Odor": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Storm Drain": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Sump Pump & Down Spout Issues": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Watermain Break": {
+       "alert": [
+        "Validation Alert Please call American Water at 703.549.7080",
+        "Validation Alert",
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [
+        "Please provide the details of your request in the Additional Information box below."
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Backup - Not Weather Related"
+    },
+    {
+     "order": 2,
+     "question": "Is the issue inside your house?",
+     "required": false,
+     "input": "radio",
+     "code": "01PL-FLOODING",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please contact a plumber for assistance prior to moving forward with your request.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Cleaning and Sweeping (Alley and Street)",
+   "service_code": "TESCLNSW",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Where are you requesting this service?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-CLNSWPLOC",
+     "options": [
+      "Alley",
+      "Street"
+     ],
+     "probes": {
+      "Alley": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Street": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Alley"
+    },
+    {
+     "order": 2,
+     "question": "Are you requesting?",
+     "required": false,
+     "input": "radio",
+     "code": "01PL-ALLEYINFO",
+     "options": [
+      "Sweeping or cleaning",
+      "Vegetation control"
+     ],
+     "probes": {
+      "Sweeping or cleaning": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Vegetation control": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Sweeping or cleaning"
+    },
+    {
+     "order": 3,
+     "question": "What type of debris?",
+     "required": false,
+     "input": "radio",
+     "code": "01PL-DEBRIS",
+     "options": [
+      "Gravel",
+      "Mud",
+      "Glass",
+      "Leaves",
+      "Other"
+     ],
+     "probes": {
+      "Gravel": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Mud": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Glass": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Leaves": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Gravel"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Downtown King Street is cleaned on a regular basis by the City. See the City's Street Sweeping webpage for more details.",
+    "Please provide the details of your request in the Additional Information box below. Pictures are helpful for staff to properly locate your issue.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Streetlights (Existing)",
+   "service_code": "TESSTLGHT",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What type of light are you reporting?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-LIGHTTYPE",
+     "options": [
+      "Street",
+      "Park or Trail Light",
+      "Tunnel Light",
+      "Traffic Light/Signal"
+     ],
+     "probes": {
+      "Street": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Park or Trail Light": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Tunnel Light": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Traffic Light/Signal": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Street"
+    },
+    {
+     "order": 2,
+     "question": "What is the problem?",
+     "required": true,
+     "input": "select",
+     "code": "",
+     "options": [
+      "Light out",
+      "Stays on",
+      "Flickering",
+      "Wire Down",
+      "Pole Down",
+      "Shining too Bright",
+      "Other - Please add details in Additional Information box"
+     ],
+     "probes": {
+      "Light out": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Stays on": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Flickering": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Wire Down": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Pole Down": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Shining too Bright": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other - Please add details in Additional Information box": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Light out"
+    },
+    {
+     "order": 3,
+     "question": "Please provide any other identification found on the pole (if applicable).",
+     "required": false,
+     "input": "text",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "Provide information here",
+       "aria": "Question 3 Please provide any other identification found on the pole (if applicable)."
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please provide the details of your request in the Additional Information box below. Pictures are helpful for staff to properly locate your issue.",
+    "There are 2 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Sidewalk",
+   "service_code": "TESSIDEWALK",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Is this request for a sidewalk that does not currently exist?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-IFWANTNEW",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 2,
+     "question": "What is the surface type?",
+     "required": false,
+     "input": "select",
+     "code": "",
+     "options": [
+      "Asphalt",
+      "Brick",
+      "Concrete",
+      "Cobblestone",
+      "Gravel",
+      "Unknown"
+     ],
+     "probes": {
+      "Asphalt": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Brick": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Concrete": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Cobblestone": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Gravel": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Unknown": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Asphalt"
+    },
+    {
+     "order": 3,
+     "question": "Is the damaged portion of the sidewalk part of a driveway apron?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-DRWAYAPRN",
+     "options": [
+      "Yes",
+      "No",
+      "Unsure"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert This is the responsibility of the homeowner or HOA. Please contact 311, 703.746.4311 or TES Permitting for more information TESPermits@alexandriava.gov",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Unsure": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "If this is a major hazard please call 703.746.4444 to report",
+    "Pictures are helpful for staff to properly locate your issue.",
+    "Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.",
+    "There are 2 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true
+  },
+  {
+   "service_name": "Tree Inspection Request",
+   "service_code": "RPCATREINSP",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Is the tree blocking the road?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREERD",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please call the Police non-emergency line at 703.746.4444 to report.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 2,
+     "question": "Are the tree roots damaging the sidewalk?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREESIDE",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please use suggested service type.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 3,
+     "question": "Is the tree on public or private property?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-TREEPROPERTY",
+     "options": [
+      "Private",
+      "Public"
+     ],
+     "probes": {
+      "Private": {
+       "alert": [
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Public": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        4
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Public"
+    },
+    {
+     "order": 4,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREINSP",
+     "options": [
+      "Tree Pruning",
+      "Tree Removal"
+     ],
+     "probes": {
+      "Tree Pruning": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Tree Removal": {
+       "alert": [
+        "Validation Alert A City Arborist will have to inspect the site and determine the appropriate next steps",
+        "Validation Alert"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "reveals": [
+        5
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Tree Pruning"
+    },
+    {
+     "order": 5,
+     "question": "Please describe why the service is needed.",
+     "required": true,
+     "input": "text",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "Provide information here",
+       "aria": "Required Question 5 Please describe why the service is needed."
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "If this is an immediate danger please call 911.",
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 1
+  },
+  {
+   "service_name": "Bulk Yard Waste Pickup",
+   "service_code": "TESYRDWS",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Have you reviewed the City\u2019s guidelines for bulk yard waste pickup?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-BULKGUIDE",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [
+        "Validation Alert Please review the City's guidelines for bulk yard waste pick up on our website at: www.alexandriava.gov/YardWaste",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Yes"
+    },
+    {
+     "order": 2,
+     "question": "Are the materials in paper yard waste bags or in a reusable container weighing less than 45 lbs?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-BULKWEIGHT",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert A 311 request is not required for materials in paper yard waste bags or in reusable containers that are less than 45 lbs. Please set this material out with your regular weekly yard waste collection.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 3,
+     "question": "Have the materials been placed curbside?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-YRDWSLOC",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [
+        4
+       ],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [
+        "Validation Alert Please refer to the City's guidelines for bulk yard waste pickup at www.alexandriava.gov/YardWaste and set the materials at your collection point.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Yes"
+    },
+    {
+     "order": 4,
+     "question": "Do the materials include tree stumps?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-BULKTREE",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert The City does not collect tree stumps. Please contact a private hauler to have them removed.",
+        "Validation Alert",
+        "The City does not collect tree stumps. Please contact a private hauler to have them removed."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 1
+  }
+ ]
+}
