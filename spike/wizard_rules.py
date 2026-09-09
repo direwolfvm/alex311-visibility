@@ -19,7 +19,7 @@ Read-only and polite: one browser, sequential, pauses, in-place probing
 instead of restarting per option, and it NEVER presses "Submit Request".
 Results save incrementally to docs/data/wizard-rules.json; re-running resumes.
 
-Usage: uv run python spike/wizard_rules.py [top_n=15] [screenshot_dir]
+Usage: uv run python spike/wizard_rules.py [top_n=15 | all] [screenshot_dir]
 """
 import asyncio, json, sys, time
 from pathlib import Path
@@ -87,6 +87,8 @@ SCAN = r"""() => {
 
 
 def load_targets(n):
+    """Top-n categories by mined volume, or the whole catalog when n is None:
+    mined categories first (by volume), then every other catalog service."""
     rows = json.load(open(ROOT / "docs/data/question-schema.mined.json"))
     cat = json.load(open(ROOT / "docs/data/service-catalog.json"))
     by_name = {t["service_name"].lower(): t for t in cat}
@@ -94,16 +96,24 @@ def load_targets(n):
     for r in rows:
         tot[r["service_name"]] = r["total"]
     ranked = sorted(tot, key=lambda k: -tot[k])
-    targets, skipped = [], []
+
+    def entry(t):
+        groups = [c["name"] for c in (t.get("definitions") or {}).get("service_categories", [])]
+        return (t["service_name"], t["service_code"], groups)
+
+    targets, skipped, seen = [], [], set()
     for nm in ranked:
         t = by_name.get(nm.lower())
         if t:
-            groups = [c["name"] for c in (t.get("definitions") or {}).get("service_categories", [])]
-            targets.append((nm, t["service_code"], groups))
+            targets.append(entry(t)); seen.add(t["service_code"])
         elif len(skipped) < 5:
             skipped.append(nm)
-        if len(targets) == n:
-            break
+        if n is not None and len(targets) == n:
+            return targets, skipped
+    if n is None:
+        for t in cat:
+            if t["service_code"] not in seen:
+                targets.append(entry(t))
     return targets, skipped
 
 
@@ -428,14 +438,17 @@ def summarize(rec):
 
 
 async def main():
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 15
+    arg = sys.argv[1] if len(sys.argv) > 1 else "15"
+    n = None if arg == "all" else int(arg)
     targets, skipped = load_targets(n)
     out = {"generated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()), "read_only": True,
            "skipped_not_in_catalog": skipped, "categories": []}
     if OUT.exists():  # resume: keep categories an earlier run finished cleanly
         try:
+            PERMANENT = ("not found", "view-only")
             done = {c["service_code"]: c for c in json.load(open(OUT))["categories"]
-                    if not c.get("error") and c.get("questions")}
+                    if (not c.get("error") and c.get("continue_enabled_at_end") is not None)
+                    or any(k in (c.get("error") or "") for k in PERMANENT)}
         except Exception:
             done = {}
         out["categories"] = [done[c] for _, c, _ in targets if c in done]

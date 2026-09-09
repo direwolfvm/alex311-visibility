@@ -8,6 +8,7 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY dashboard ./dashboard
+COPY docs/data ./docs/data
 RUN pip install --no-cache-dir ".[gcs]"
 
 ENV PYTHONUNBUFFERED=1
