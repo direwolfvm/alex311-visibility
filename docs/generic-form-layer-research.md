@@ -91,11 +91,31 @@ Optional on top: the CopilotKit helper assessed earlier (conversational intake �
 
 ## 7. Recommended next steps
 
-1. **Rule discovery spike** (read-only): extend `wizard_walk.py` to probe every option of every list question for the top 15 categories by volume and record redirects/conditionals into the rules file.
+1. ~~**Rule discovery spike**~~ — **done for the top 15** (§8); extend to the remaining 96 services with the same probe.
 2. **Schema registry + renderer**: merge catalog + mined schema + rules; build the single-page form on the existing gated `/submit` for those 15 categories; keep it behind the login.
 3. **Abuse layer**: accounts, limits, per-address caps, review queue, audit log — all testable against our historical data before any live traffic.
 4. **Harness**: land PR #14, add the iframe map click and schema-driven fills, run it as a Cloud Run Job, dry-run only.
 5. **One supervised live submission** per category family, with the City informed, before opening the gate any wider.
+
+## 8. Rule-discovery spike — results (2026-09-09)
+
+Step 1 of the plan is done for the **top 15 categories by volume** (`spike/wizard_rules.py`, read-only — it never presses Submit). For every list question along each category's path it selected each option *in place* and recorded the effect. Full per-option detail: **`docs/wizard-rules.md`**; machine-readable: `docs/data/wizard-rules.json`.
+
+**Coverage:** 15 categories, 40 questions, 120 options probed, 15/15 walked to an enabled Continue, 0 errors. Widget mix: radio ×25, select ×7, composite ×3, text ×3, checkbox ×2.
+
+**Rules found:** **14 hard stops** (answer rejected after a Validation Alert), **13 advisories** (alert shown, answer stands), **12 inline info messages**, and **skip-logic on 13 questions across 7 categories** — none of which is visible in the submitted data.
+
+Three patterns matter for the form:
+
+1. **Eligibility gates.** Some categories are a sequence of yes/no filters, each with one disqualifying answer: *Bulk Yard Waste Pickup* asks four (guidelines reviewed? bagged? curbside? tree stumps?) and rejects the wrong answer to each; *Tree Inspection Request* rejects "blocking the road" (→ police), "roots damaging the sidewalk" (→ use the Sidewalk service), and "private property". A single-page form should ask these **up front as eligibility checks**, with the redirect shown inline, instead of ejecting the resident three questions in.
+2. **Redirects to other channels.** Emergencies and other departments are routed by option: traffic-signal "Intersection Dark / Flashing (Emergency)" → after-hours number; sewer "Cave-in or Sinkhole" / "Missing Manhole Cover" → *STOP, call 703-746-4444*; "Watermain Break" → American Water; noise "Animal" → Animal Welfare League; parking "Contest Parking Citation" → Adjudication Office; "Modification to Parking Regulations" → a different process. These become **inline guidance next to the option**, or a short pre-question ("Is this happening right now?"), rather than modals.
+3. **Skip-logic.** Options change which questions follow: container "Recycling" reveals a size question; "New Resident" reveals *Date of move in?* while "Missing Container" does not; signal type "Other" and sign type "Other" reveal a describe-it question; sewer "Storm Drain" skips the plumber question. The registry's `show_if` rules now have concrete content for all 15.
+
+**Cross-check with the data:** every rendered option the mined vocabularies had never seen turned out to be a hard stop (e.g. *Tree Inspection* "Private"), confirming that the data reflects only what the web wizard lets through.
+
+**Method notes (for extending to the remaining 96 services):** Incap311 renders questions with four widget kinds — native radios, native `<select>`, `div[role=checkbox]`, and date+time+AM/PM composites — inside nested shadow roots, so the probe deep-walks every shadow root, finds "QUESTION *n*" **text nodes**, and attributes controls to the nearest header above by screen position. Two hard stops ("use suggested service type"-style) alter the wizard flow so no further question reveals; the probe recovers by reopening the category on a **fresh page** and replaying the safe path (2 restarts were needed). Cost: ~15 wizard walks plus restarts, sequential with pauses — polite enough to repeat weekly for drift detection.
+
+**Limits:** first-order branching only (each option's *immediate* reveal); one hard stop (*Sidewalk* Q1 "Yes") returned no alert text and needs a manual look; contact/review steps were not re-walked.
 
 ## Artifacts
 
@@ -106,3 +126,5 @@ Optional on top: the CopilotKit helper assessed earlier (conversational intake �
 | `scripts/mine_question_schema.sql` | regenerates the above from Postgres |
 | `spike/wizard_walk.py` | read-only wizard walker (shadow-DOM-aware) |
 | `docs/img/wizard-*.png` | step 3 fully revealed, contact, review |
+| `spike/wizard_rules.py` · `spike/wizard_rules_report.py` | rule-discovery probe and its report renderer |
+| `docs/wizard-rules.md` · `docs/data/wizard-rules.json` | per-option rules for the top 15 categories |
