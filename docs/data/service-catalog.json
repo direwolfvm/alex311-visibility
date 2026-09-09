@@ -1,0 +1,3250 @@
+[
+ {
+  "service_code": "AFDGENER",
+  "service_name": "Alexandria Fire Department Comments or Inquiries",
+  "description": "Use this request to submit general inquiries related to Alexandria Fire Department.",
+  "keywords": "AFDGENER, Fire, Comments, Inquiries",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "AFD",
+     "name": "Fire",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "AFDCOMOU",
+  "service_name": "Alexandria Fire Department Community Outreach",
+  "description": "Use this request to schedule community outreach opportunities for the Alexandria Fire Department.",
+  "keywords": "AFDCOMOU, Fire, Outreach, Smoke, Station, EMS",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "AFD",
+     "name": "Fire",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "AFDAPABI",
+  "service_name": "Ambulance Payments and Billing",
+  "description": "Use this request to submit issues related to Ambulance Payments and Billing.",
+  "keywords": "AFDAPABI, Ambulance, Payments, Billing",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "AFD",
+     "name": "Fire",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "AFDFPREV",
+  "service_name": "Fire Marshal Inquiries",
+  "description": "Use this request to submit issues related to Fire Prevention within the City of Alexandria. This includes fire prevention permits, fire code violations, and inspections.",
+  "keywords": "AFDFPREV, Fire, Prevention, Investigation, Code violation, Permits, Inspections, Marshal",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "AFD",
+     "name": "Fire",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "AFDFPSRI",
+  "service_name": "Fire Protection System Re-testing and Inspections",
+  "description": "Use this request to submit issues related to Fire Protection System Re-testing and Inspections for Alexandria Fire Department. This includes scheduling a fire protection inspection or a re-test inspection, ordering a knox box, or contesting a fire protection system inspection invoice.  This request is for commercial or residential dwellings. Single family dwellings should use the Fire Marshal Inquiries request.",
+  "keywords": "AFDFPSRI, Fire Inspections, Emergency Management, Fire Investigation, Fire Protection, Knox Box, Fire Protection Systems, retest, Inspector",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "AFD",
+     "name": "Fire",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "AFDEMGMT",
+  "service_name": "Inquiries for Emergency Management",
+  "description": "Use this request to submit issues related to Emergency Management, Community Emergency Response Team (CERT) or Emergency Prepardness within Alexandria.",
+  "keywords": "AFDEMGMT, Emergency Management, Fire, Community Emergency Response Team, CERT, Preparedness",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "AFD",
+     "name": "Fire",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "ALSGENER",
+  "service_name": "Alexandria Libraries General Inquiries",
+  "description": "Use this request for inquiries related to Alexandria Libraries. Specific topics include but are not limited to library events, locations, hours, board information, improvements, complaints and compliments.",
+  "keywords": "ALSGENER, Library, Charles E. Beatley, Jr. Central Library, Kate Waller Barrett Branch, Ellen Coolidge Burke Branch, James M. Duncan Jr.",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ALS",
+     "name": "Alexandria Library",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALSSERVI",
+  "service_name": "Alexandria Library Services",
+  "description": "Use this request to submit issues related to digital services and downloadable media, information about library events, meeting rooms inquiries, and research inquiries.",
+  "keywords": "ALSSERVI, Events, Meeting Room, Research, Charles E. Beatley, Jr. Central Library, Kate Waller Barrett Branch, Ellen Coolidge Burke Branch, James M. Duncan Jr., Digital, Downloadable",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ALS",
+     "name": "Alexandria Library",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALSACCNT",
+  "service_name": "Library Account Concerns",
+  "description": "Use this request to submit issues related to library accounts with the Alexandria Libraries.",
+  "keywords": "ALSACCNT, Library card, Library account, Charles E. Beatley, Jr. Central Library, Kate Waller Barrett Branch, Ellen Coolidge Burke Branch, James M. Duncan Jr.",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ALS",
+     "name": "Alexandria Library",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALSVOLUN",
+  "service_name": "Library Volunteer Information",
+  "description": "Use this request to inquire about volunteer opportunities with Alexandria Libraries.",
+  "keywords": "ALSVOLUN, Volunteer, Community Service, Internships, Library",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ALS",
+     "name": "Alexandria Library",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALSPASS",
+  "service_name": "Passport Processing",
+  "description": "Use this request to submit issues related to passport processing.",
+  "keywords": "ALSPASS, Passports, Travel, Library, International",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ALS",
+     "name": "Alexandria Library",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXCABI",
+  "service_name": "Capital Bikeshare",
+  "description": "Submit requests related to the City\u2019s Capital Bikeshare system, including requests to remove improperly parked for-rent e-bikes and suggest new station locations.",
+  "keywords": "ALXCABI, Lyft, CaBi, bike, e-bike, ebike, station, share",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXPARK",
+  "service_name": "Parking Comments, Complaints or Inquiries",
+  "description": "Use this request to submit issues related to parking. For a parking enforcement issue in progress, please call 703.746.4444.",
+  "keywords": "ALXPARK, Comments, Complaints, Inquiries, Ticket, Parking Ticket, Citation, Parkmobile, Contest, Adjudication, Dispute",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "APD",
+     "name": "Police",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXSCOO",
+  "service_name": "Scooters and Dockless Mobility",
+  "description": "Submit requests related to the City\u2019s Dockless Mobility Program, including requests to remove improperly parked for-rent scooters and e-bikes.",
+  "keywords": "ALXSCOO, ebike, e-bike, Lime, Lyft, Jump, Bird, Bolt, Skip, Spin, Superpedestrian, Pilot, Bikeshare, Uber, GCOO",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "APDGENER",
+  "service_name": "Alexandria Police Department Comments, Complaints, or Inquiries",
+  "description": "Use this request to submit general comments, complaints, and inquiries related to the Alexandria Police Department.",
+  "keywords": "APDGENER, police, officer, neighborhood watch, crime, accident report, police report, comments, complaints, inquiries",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "APD",
+     "name": "Police",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "APDTAXI",
+  "service_name": "Taxi Cab Comments, Complaints or Inquiries",
+  "description": "Use this request to submit issues related to taxi cabs, taxi cab drivers or a taxi cab company.",
+  "keywords": "APDTAXI, Taxi, taxi cab, taxi complaint, Taxi drivers, Uber, Lyft, Ride, TNCs",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "APD",
+     "name": "Police",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXCTYAT",
+  "service_name": "City Attorney's Office Inquiries",
+  "description": "Use this request to submit issues related to the City Attorney's Office.",
+  "keywords": "ALXCTYAT, City attorney, lawyer, FOIA, Freedom of Information Act, Public Records, City Attorney's Office",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "AT",
+     "name": "City Attorney",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ATCDASH",
+  "service_name": "DASH Bus Service",
+  "description": "Use this request to submit issues related to DASH Bus Service. Specific topics include information regarding riding the bus, bus schedules, bus fares and general DASH inquiries. Information regarding bus stop or bus shelter maintenance concerns should be submitted under the Bus Stop or Bus Shelter concerns request.",
+  "keywords": "ATCDASH, DASH, Bus, Buses, Bus Fares, Bus Schedules, Alexandria Transit Company, Route",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ATC",
+     "name": "Alexandria Transit Company DASH",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODABAND",
+  "service_name": "Abandoned or Inoperable Vehicle",
+  "description": "Use this request to submit issues related to an abandoned or inoperable vehicle.",
+  "keywords": "CODABAND, Abandoned vehicle, Inoperable vehicle",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "APD",
+     "name": "Police",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODMOLD",
+  "service_name": "Mold/Moisture",
+  "description": "Use this request for support from Code Administration if your landlord has not responded to address your mold issue after 10\u201315 days.",
+  "keywords": "CODMOLD, mold, mildew, moisture, water intrusion, humidity",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODNHNA",
+  "service_name": "No Air, No Heat Violation",
+  "description": "Use this request to submit issues related to no air, no heat violations in buildings.",
+  "keywords": "CODNHNA, Air, Heat, Air Conditioning, No Heat, No Air, Code, AC, Heating, HVAC",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODGENER",
+  "service_name": "Plan Review, Permit Processing and Other Code Enforcement Inquiries",
+  "description": "Use this request to submit issues related to Code violations, plan reviews and permit processing.",
+  "keywords": "CODGENER, Code violation, Code Enforcement, Permit plan review",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODCONST",
+  "service_name": "Report Illegal Construction",
+  "description": "Use this request to submit issues related to Illegal Construction.",
+  "keywords": "CODCONST, Illegal, Construction, Report, Site",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODOVERC",
+  "service_name": "Report Overcrowding",
+  "description": "Use this request to submit issues related to overcrowding.",
+  "keywords": "CODOVERC, Overcrowding, People, Report, Code Adminsitration",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "PZ",
+     "name": "Planning & Zoning",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODRODEN",
+  "service_name": "Rodent",
+  "description": "Use this request to submit issues related to rodent infestation.",
+  "keywords": "CODRODEN, Rodents, Rat, Rats, Mice, Mouse, Racoons, Possums, Termites, Roaches, Skunk, Pests",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CODGRASS",
+  "service_name": "Tall Grass and Weeds Complaint",
+  "description": "Use this request to submit issues related to tallgrass on private property, parks, right of way, and schools. Tallgrass is considered a  concern if it is 12 inches or higher.",
+  "keywords": "CODGRASS, Code Administratrion, Tall grass, Overgrown Shrubs, Weeds, Unmown Lawn",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXCRCRT",
+  "service_name": "Alexandria Circuit Court Inquires",
+  "description": "Use this request to submit issues related to Alexandria's Circuit Court. Specific topics include but are not limited to handgun permits, birth certificates, death certificates, wills, genealogical information and document notarization.",
+  "keywords": "ALXCRCRT, Marriage, Certificate, Divorce, Legal, Birth, Death, Guns Laws, Civil Rights, probate will, notary, adoption",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CCLRK",
+     "name": "Clerk of Circuit Court",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXCLERK",
+  "service_name": "Clerk of Council",
+  "description": "Use this request to submit issues related to the City Clerk of Council. Inquiries regarding Council meetings, Boards and Commissions, records of approved ordinances and resolutions or the production and distribution of the dockets can be submitted here.",
+  "keywords": "ALXCLERK, City Clerk, Clerk, Council, Ordinances, Resolutions, Reports, Docket",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CLRK",
+     "name": "City Clerk & Clerk of Council",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXLEGIS",
+  "service_name": "Inquiries for the Legislative Director",
+  "description": "Use this request to contact the Legislative Director.",
+  "keywords": "ALXLEGIS, City Manager, CMO, City Manager's Office, Legislative Director",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CMO",
+     "name": "City Manager",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXCMO",
+  "service_name": "Inquiries for the City Manager",
+  "description": "Use this request to contact the City Manager's Office",
+  "keywords": "ALXCMO, City Manager, CMO, City Manager's Office",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CMO",
+     "name": "City Manager",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CTYCNCL",
+  "service_name": "Contact Mayor, Vice Mayor and/or City Council",
+  "description": "Use this request to contact City Council members. This includes the Mayor and Vice Mayor.",
+  "keywords": "CTYCNCL, Council, City Council, Mayor, Vice Mayor, Elected, Elected Officials, Alderman, Board of Supervisors",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "COU",
+     "name": "Mayor & City Council",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "DCHGENER",
+  "service_name": "Community and Human Services Inquiries",
+  "description": "Use this request to submit general comments, complaints and inquiries regarding Community and Human Services concerns, Benefits, Aging and Adult Services, Children, Youth and Family Services, Mental Health Services, and Homelessness.",
+  "keywords": "DCHGENER, Adult, Assisted Living, Breast Cancer, Burial, Caregiver, Child, Childcare, Community, Day Care, DCHS, Domestic Violence, Elderly, Food, Fraud, Health, Home, Homeless, Housing, Human Services, Insurance, Meal, Mental Health, Protective, Report, Senior, Sexual Assault, WIC",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "DCHS",
+     "name": "Community & Human Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DECCGENER",
+  "service_name": "911/311 Service - Complaints, Compliments, Inquiries",
+  "description": "Use this request to submit general compliments, complaints or inquiries related to 911, 311 or the Department of Emergency and Customer Communications.",
+  "keywords": "DECCGENER, 911, 311, Emergency Communications, Smart911, Alex311, DEC",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "DECC",
+     "name": "Emergency & Customer Communications",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "ALEX311",
+  "service_name": "Alex311 (Other) Comments, Complaints and Inquiries",
+  "description": "Use this request to submit general comments, complaints and inquiries for the City of Alexandria.",
+  "keywords": "Alex311, 311, Complaints, Inquiries, General, Issues, Comments, Other, DECC",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "311A",
+     "name": "Alex311/DECC",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DPIGENER",
+  "service_name": "City & Capital Construction Projects - Comments, Complaints, Inquiries",
+  "description": "Use this request to submit inquiries related to the City & Capital construction projects. The Department of Transportation & Environmental Services - Project Implementation is responsible for the implementation of city & capital infrastructure projects including intersection improvements, storm water and water quality improvements, sanitary sewer improvements, flood mitigation and park improvements. In addition, the Project Implementation branch coordinates and plans complex multi-departmental projects such as the Waterfront Small Area Plan Implementation, Adaptive Signal Control, Simpson Park and I-395 Ramp at Duke Street.",
+  "keywords": "DPIGENER, Waterfront Construction, Long Term Control Update, CSS, Potomac Yard Metro, Construction Projects, King St Metro",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "DPI",
+     "name": "Project Implementation",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "FINAPEAL",
+  "service_name": "Assessment Appeals",
+  "description": "Use this request to report issues related to Personal Property Assessment Appeals for Business or Vehicles.",
+  "keywords": "FINAPEAL, Personal Property Assessments, Vehicles, Businesses, Appeals, Tax, Value",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "FIN",
+     "name": "Finance",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PAYMTTAXES",
+     "name": "Payments & Taxes",
+     "description": "Includes vehicle and business taxes, payments on accounts and assessments.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/Code_Enforcement.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXCABLE",
+  "service_name": "Cable Franchise, Municipal Fiber Complaints and Inquiries",
+  "description": "Use this request to report Comcast, Verizon, or Ting issues, cable franchise complaints, or municipal fiber inquiries.",
+  "keywords": "ALXCABLE, Cable, Comcast, Verizon FIOS, Franchise, Monopoly, Television, Municipal Fiber, Ting, Internet",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ITS",
+     "name": "Information Technology Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "FINDMV",
+  "service_name": "DMV Registration (Stop or Block)",
+  "description": "Use this request to contact the Finance Department to address Department of Motor Vehicle (DMV) stops. DMV stops are restrictions put on vehicle accounts due to unpaid city vehicle taxes or parking tickets.",
+  "keywords": "FINDMV, DMV Stops, Car Boot, Car Tax, Department of Motor Vehicles, Finance",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "FIN",
+     "name": "Finance",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PAYMTTAXES",
+     "name": "Payments & Taxes",
+     "description": "Includes vehicle and business taxes, payments on accounts and assessments.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/Code_Enforcement.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "FINEVADE",
+  "service_name": "Report Possible Tax Evader",
+  "description": "Use this request to report a possible vehicle or business tax evader.",
+  "keywords": "FINEVADE, Business tax evader, Tax cheat, Tax evader, Scofflaw, RADAR, Tax evasion, delinquent taxes",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "FIN",
+     "name": "Finance",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PAYMTTAXES",
+     "name": "Payments & Taxes",
+     "description": "Includes vehicle and business taxes, payments on accounts and assessments.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/Code_Enforcement.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "FINPPLAN",
+  "service_name": "Request Payment Plan for Delinquent Taxes",
+  "description": "Use this to request a payment plan for delinquent taxes or ask a question about an existing payment plan.",
+  "keywords": "FINPPLAN, Payment Plan, Delinquent, Finance, business, vehicle, installment, tax",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "FIN",
+     "name": "Finance",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PAYMTTAXES",
+     "name": "Payments & Taxes",
+     "description": "Includes vehicle and business taxes, payments on accounts and assessments.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/Code_Enforcement.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "FINRPARK",
+  "service_name": "Residential Parking Permits",
+  "description": "Use this to request or update a residential or guest parking permit.",
+  "keywords": "FINRPARK, Vehicle Parking, Car Parking, Parking Permit, Guest Parking",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "FIN",
+     "name": "Finance",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PAYMTTAXES",
+     "name": "Payments & Taxes",
+     "description": "Includes vehicle and business taxes, payments on accounts and assessments.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/Code_Enforcement.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "FINUPDAT",
+  "service_name": "Tax Account or Bill Inquiry",
+  "description": "Use this request to update account information, request a bill, and inquire about vehicle, business, and real estate tax balances.",
+  "keywords": "FINUPDAT, Request a bill, Real estate, Car tax, Personal property tax, Business tax, Tax bill, Check balance, Treasury, Outstanding balance, Revenue, Collections, NCC, Finance",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "FIN",
+     "name": "Finance",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PAYMTTAXES",
+     "name": "Payments & Taxes",
+     "description": "Includes vehicle and business taxes, payments on accounts and assessments.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/Code_Enforcement.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "FINTRELF",
+  "service_name": "Tax Relief for Elderly, Disabled, Disabled Veterans",
+  "description": "Use this request for inquires regarding property tax relief for the elderly and/or disabled, disabled veterans, and Spouse of service member killed in action.",
+  "keywords": "FINTRELF, Tax relief, Relief, Real estate, Personal property, Car tax, Vehicle tax, Veterans, Disability, Elderly, Senior, Senior Tax Relief",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "FIN",
+     "name": "Finance",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PAYMTTAXES",
+     "name": "Payments & Taxes",
+     "description": "Includes vehicle and business taxes, payments on accounts and assessments.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/Code_Enforcement.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "DGSSURPL",
+  "service_name": "City Surplus Property Information",
+  "description": "Use this request to submit issues related to City Surplus Real Estate Property Information.",
+  "keywords": "DGSSURPL, Surplus, Property, General Services",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "GS",
+     "name": "General Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DGSCOVID",
+  "service_name": "COVID-19, Safety and Security Concerns Regarding City-owned Property",
+  "description": "Use this request to submit issues related to COVID-19 health, safety and security concerns at City owned property.",
+  "keywords": "DGSCOVID, COVID-19, Concerns, City Facility, Masks, Physical, Social, Distancing",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "GS",
+     "name": "General Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DGSVENDO",
+  "service_name": "Farmers' Market Vendor Inquiries and Complaints",
+  "description": "Use this request to submit issues related to City run Farmer's Market/Farmer's Market Vendor Complaint. Please note that some Farmer's Markets held in Alexandria are not City run.",
+  "keywords": "DGSVENDO, Farmer's, Market, Vendor, Complaint, Inquiries, Comments",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "GS",
+     "name": "General Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DGSGENER",
+  "service_name": "General Services Comments, Complaints, or Inquiries",
+  "description": "Use this request to submit issues related to the Department of General Services.",
+  "keywords": "DGSGENER, City vehicle, Garage, Pool car, fleet, facilities, property, asset, logistic",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "GS",
+     "name": "General Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DGSMAINT",
+  "service_name": "Maintenance and Repair of City Buildings and Garages",
+  "description": "Use this request to submit issues related to maintenance and repair of City owned infrastructure managed by the Department of General Services.",
+  "keywords": "DGSMAINT, Public building repair, Public garage repair, City public building maintenance",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "GS",
+     "name": "General Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DGSSECTY",
+  "service_name": "Safety and Security Concerns Regarding City-owned Property",
+  "description": "Use this request to submit issues related to safety and security concerns at City owned property.",
+  "keywords": "DGSSECTY, Safety, Security",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "GS",
+     "name": "General Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "DOHAFFHO",
+  "service_name": "Affordable Housing and Other Housing Resources",
+  "description": "Use this request to submit issues related to affordable housing and to find other housing resources.",
+  "keywords": "DOHAFFHO, Affordable Housing, Home, Subsidized, New Tenant, accessibility, ARHA, Handicap, Ramps",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "HOU",
+     "name": "Housing",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "DOHHMOWP",
+  "service_name": "Homeownership Assistance Program",
+  "description": "Use this request to submit issues related to the Office of Housing Homeownership Program.",
+  "keywords": "DOHHMOWP, Homeownership, Home, Ownership, Housing, Buyer",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "HOU",
+     "name": "Housing",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "DOHLANTE",
+  "service_name": "Landlord-Tenant Dispute",
+  "description": "Use this request to submit requests related to the City\u2019s landlord and tenant dispute mediation program. The City provides housing-related mediation between landlords and tenants by mutual agreement.",
+  "keywords": "DOHLANTE, Landlord, Tenants, Dispute, Rights, Obligations, Apartments, Housing, Roaches, Rodents, Mold, Pests",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "HOU",
+     "name": "Housing",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "HRDGENER",
+  "service_name": "Alexandria Human Resources Inquiries",
+  "description": "Use this request to submit inquires related to the Alexandria Human Resources Department.",
+  "keywords": "HRDGENER, Career, Benefits, Compensation, Training, Learning Development, Employee, Leave, Relations, Job applications, retirement, opportunity",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "HR",
+     "name": "Human Resources",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "ITSADDRUPD",
+  "service_name": "Address Renumbering Request",
+  "description": "Per City code (Sec. 5-2-94) property owners may request a renumbering of their property to eliminate confusion, to correct errors in the assignment of numbers, or for other health, safety, and welfare reasons.",
+  "keywords": "ITSADDRUPD, Addresses, Change, Map, Number, Renumber",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "ITSGENER",
+  "service_name": "GIS Data, and/or General Technology Services",
+  "description": "Use this request to submit issues related to Information Technology Services, including Geographic Information Systems (GIS), mapping, open data and other technology services.",
+  "keywords": "ITSGENER, Information, Technology, Information Technology Services, GIS, Maps, Mapping, GIS data, Open Data Portal, Data Security, Security, Software, Hardware, Parcels, Buildings, Hardcopy Maps, Online Maps, ITS, Computers, Network, Fiber, Cyber Security and CIP.",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "ITS",
+     "name": "Information Technology Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "OAIGENER",
+  "service_name": "Performance Dashboard and Resident Survey Inquiries",
+  "description": "Use this request to submit inquiries related to the Office of Analytics, Innovation, and Data (OAID), Performance Dashboards, questions about the Resident Survey or other OAID projects.",
+  "keywords": "OAIGENER, OPAGENER, Performance, Stats, Indicators, Performance Dashboard, Data, Analytics, OPA, Dashboard, Resident, Survey, OAID",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "OAID",
+     "name": "Office of Analytics, Innovation, and Data",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CPIGENER",
+  "service_name": "Office of Communications and Community Engagement General Inquiries",
+  "description": "Use this request to ask the Office of Communications and Community Engagement (OCCE) about news and media inquiries, public information provided by the City and community engagement opportunities.",
+  "keywords": "OCCE, CPIGENER, Social Media, News Releases, Communications, Information",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "OCCE",
+     "name": "Office of Communications & Community Engagement",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "CPIWEB",
+  "service_name": "Website or User Account Issues",
+  "description": "Use this request to submit issues related to the City's websites or address user account issues.",
+  "keywords": "OCCE, CPIWEB, Website, Web, Hyperlinks, Images, Web Content, Web Maps, login, log-in, eNews",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "OCCE",
+     "name": "Office of Communications & Community Engagement",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "OHAGENER",
+  "service_name": "Historic Alexandria Questions and Information",
+  "description": "Use this request to ask questions related to Alexandria\u2019s history, museums, historic sites, archaeology, and the Office of Historic Alexandria.",
+  "keywords": "OHAGENER, History, Research, Museum, Archaeology, Black History, Lyceum, Archives, Fort Ward, Gadsby's Tavern, Apothecary, Freedom House, Friendship, Lloyd",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "OHA",
+     "name": "Historic Alexandria",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "OHARGTET",
+  "service_name": "Historic Alexandria School Programs, Group Visits and Museum Rentals",
+  "description": "Use this request for information on visiting or renting any of the City of Alexandria\u2019s museums or historic sites. To learn more about their reopening, please visit  https://www.alexandriava.gov/uploadedFiles/oha/info/ReopeningCOVIDpolicyOHA.pdf.",
+  "keywords": "OHARGTET, Wedding, Event, Rental, Party, Group, Venue, Lloyd house, Museums, Tour, Black History, Archaeology, Freedom House, Fort Ward, Gadsby\u2019s Tavern, Stabler-Leadbeater Apothecary, Lyceum, Friendship",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "OHA",
+     "name": "Historic Alexandria",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "OHAVOLUN",
+  "service_name": "Historic Alexandria Volunteer Request and Information",
+  "description": "Use this request to submit questions about volunteering with City of Alexandria museums, historic sites, or Archives.",
+  "keywords": "OHAVOLUN, Volunteer, Museum, Black History, History Museum, Lyceum, Fort Ward, Freedom House, Friendship, Gadsby\u2019s Tavern, Lloyd, Stabler-Leadbeater Apothecary, Sail250",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "OHA",
+     "name": "Historic Alexandria",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "OHRDISAB",
+  "service_name": "Accommodations and Accessibility for Persons with Disabilities",
+  "description": "Use this request to report issues related to accessibility for persons with disabilities. Inquiries regarding the DOT Paratransit Program can be submitted here.",
+  "keywords": "OHRDISAB, Accommodations and Accessibility, Persons with Disabilities, Physically Challenged, Disabled, Language Interpreter, disability, ada",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "RIGHT",
+     "name": "Human Rights",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "OHRGENER",
+  "service_name": "Human Rights Complaints and Inquiries",
+  "description": "Use this request to report issues related to enforcement of human rights, and discrimination complaint within the City of Alexandria.",
+  "keywords": "OHRGENER, Rights, Racism, Discrimination, Violation, Inequality",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RIGHT",
+     "name": "Human Rights",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "OMBGENER",
+  "service_name": "Management and Budget Inquiries",
+  "description": "Use this request to submit inquires related to the Office of Management and Budget.",
+  "keywords": "OMBGENER, CIP, City Budget, Proposed Budget, ASPS Budget, Approved Budget, Operating, Capital, CFMP, Fiscal",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "OMB",
+     "name": "Management & Budget",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "PZFDTRUK",
+  "service_name": "Food Truck Concerns",
+  "description": "Use this request to submit issues related to food trucks.",
+  "keywords": "PZFDTRUK, Food truck, Food truck vendor complaint, Food truck license and permit, Trucks",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "PZ",
+     "name": "Planning & Zoning",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "PZGENER",
+  "service_name": "Planning and Zoning General Comments, Complaints, and Inquiries",
+  "description": "Use this request to submit inquires related to general comments, complaints, and questions for Planning and Zoning.",
+  "keywords": "PZGENER, Planning, Zoning, SUP, Special Use Permit, Development projects, Historic preservation, Long Range Planning, Planning Commission, Fences on Private Property, Outdoor Dining, Setbacks, Sheds, Accessory structures",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "PZ",
+     "name": "Planning & Zoning",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "GOVLIBCOU",
+     "name": "City Government, Libraries, & Courts",
+     "description": "Includes city council, courts, city communications and library requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1690885761/CitizenAsset/CategoryIcons/CityGovernment.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "PZRENTL",
+  "service_name": "Short Term Rental Complaint or Permitting",
+  "description": "Use this request to report issues related to a specific short-term rental. This includes properties associated with AirBnB, VRBO, etc.\r\n\r\nIf you would like information on how to obtain a permit for a short-term rental, submit your inquiry here.",
+  "keywords": "PZRENTL, FINRENTL, Short, Rental, AirBnB, VRBO, Homeaway, short-term",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "PZ",
+     "name": "Planning & Zoning",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXGRAFT",
+  "service_name": "Graffiti Removal",
+  "description": "Use to report and request the removal of graffiti. Upon assessment of the complaint, the City will determine the optimal removal method (e.g., painting, sandblasting, etc.) and dispatch the appropriate resources. Graffiti removal from private property requires the owner's written consent.",
+  "keywords": "ALXGRAFT, Graffiti, gang, tags, removal, overpass, vandalism",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "APD",
+     "name": "Police",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "RPCROW",
+  "service_name": "Median Maintenance",
+  "description": "Use this request to submit issues related to median or right of way maintenance.",
+  "keywords": "RPCROW, Right of way, Median, ROW, Street, Divider, Curb, Center, Path, Road",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "RPCMAIN",
+  "service_name": "Park Maintenance",
+  "description": "Use this to request maintenance for public park infrastructure (e.g., pavilion). Typical park maintenance requests include litter within the parks, mowing, equipment replacement or repairs, fence or bench repairs, dog parks, trails, or water fountain repairs.",
+  "keywords": "RPCMAIN, Park, Maintenance, Equipment, Trash, fence, repair, bench, repair, water, fountain, trail, mowing, Fields, open, space, grass, fountain, bathroom, Ben, Brenman,  Jones, Fort, Ward, Four, Oronoco, Chinquapin",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "RPCPLYGRNDM",
+  "service_name": "Playground Maintenance",
+  "description": "Use this to request maintenance, repairs and trash associated with playgrounds. Staff will review this request to determine if the playground is managed by the City or Alexandria Public Schools for corrective actions.",
+  "keywords": "RPCPLYGRNDM, Playground, Maintenance, School, Park",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "RPCPROG",
+  "service_name": "Recreation Centers, Programs and Services",
+  "description": "Use this request to submit questions about recreation centers and programs.",
+  "keywords": "RPCPROG, Recreation, Programs, Classes, Camps, Sport, Leagues, Dog, Swim, Summer, Activities, kids, gym, sports, basketball, baseball, football, soccer, hockey",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "RPCGENER",
+  "service_name": "Recreation, Parks and Cultural Activities Comments, Complaints, or Inquiries",
+  "description": "Use this request to submit issues related to the Department of Recreation, Parks and Cultural Activities. Specific issues include Arts in Alexandria, Volunteering, Planning and Construction, and Special Event information.",
+  "keywords": "RPCGENER, Parks, Programs, Recreation, Recreation Activities, Cultural Activities, Arts, Volunteering, Special Events, RPCA",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "RPCATREINSP",
+  "service_name": "Tree Inspection Request",
+  "description": "Use this request to request an inspection about a potential tree pruning or removal.",
+  "keywords": "RPCATREINSP, Trees, Fallen, Planting, Pruning, Branches, Roots, Removal",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    },
+    {
+     "code": "RPCATREE",
+     "name": "Tree Services",
+     "description": "This category lists requests of tree services",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "RPCATREPLNT",
+  "service_name": "Tree Planting Request",
+  "description": "Use this to request the planting of a tree on city-owned land.<br />\r\nIf a resident would like to request a tree be planted on City-owned land in front of their home, a City Arborist will inspect the site and determine the appropriate tree for planting at no cost to you. At the time a tree is removed, a City Arborist will identify the appropriate tree for the site and the tree will be scheduled for planting. The City's tree planting program occurs between October and May, weather permitting.",
+  "keywords": "RPCATREPLNT, Trees, Fallen, Planting, Pruning, Branches, Roots",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "RPCATREE",
+     "name": "Tree Services",
+     "description": "This category lists requests of tree services",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "RPCATRESDMG",
+  "service_name": "Tree Storm Damage",
+  "description": "Use this service request to report a damaged City tree resulting from a storm event. Please do not use this request in the event of an emergency - if the City tree damage is causing immediate danger, please call 911. Please note that many damaged City tree related concerns are not immediately actionable by the City. However, reporting damaged City trees allows the City\u2019s Urban Forestry Team to better determine the required response to a storm event.",
+  "keywords": "RPCATREDSMG, Trees, Fallen, Planting, Pruning, Branches, Roots",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCATREE",
+     "name": "Tree Services",
+     "description": "This category lists requests of tree services",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "RPCATREE",
+  "service_name": "Trees",
+  "description": "Use this request to submit questions about tree planting, pruning, or removal.",
+  "keywords": "RPCATREE, Trees, Fallen, Planting, Pruning, Branches, Roots",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RPCA",
+     "name": "Recreation & Cultural Activities",
+     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESREPAR",
+  "service_name": "Alley or Street",
+  "description": "Use this service request to report repairs needed to Alleys or Streets. Repair and paving projects typically take place from Spring until early Fall. Staff make every effort to provide timely, accurate information about this work and to minimize disruption and duration.",
+  "keywords": "TESREPAR, Alley, Street, Sidewalk, Repair, Bricks, Cracks, Holes, Repaving, Sinkholes,  Uneven roadway, Cobblestone",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "ALYSWSTRT",
+     "name": "Alleys, Sidewalks, & Streets",
+     "description": "Includes potholes, repairs, leaf collection and snow removal requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESBIKE",
+  "service_name": "Bike Rack or Abandoned Bike Concerns",
+  "description": "Use this service request to suggest a new bike rack, request the repair of an existing bike rack on public property and to report an abandoned bike.",
+  "keywords": "TESBIKE, Bike, Bicycle, Rack, Racks, Parking, Corral, Capital, BikeShare, Bike racks, Bicycle Parking, Bike Corral, Bikeracks, Repair",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESYRDWS",
+  "service_name": "Bulk Yard Waste Pickup",
+  "description": "Use this service request to request a bulk yard waste pickup. Please visit <a href=\"https://www.alexandriava.gov/YardWaste\" target=\"_blank\">www.alexandriava.gov/YardWaste</a> for yard waste preparation guidelines.",
+  "keywords": "TESYRDWS, Yard, waste, Bulk, Pickup, Bulky, Missed, Resource, Recovery, Branches",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESBUSST",
+  "service_name": "Bus Stop or Bus Shelter Concerns",
+  "description": "Use this service request to report bus stop or bus shelter concerns. Request for maintenance or new installation of a bus stop or shelter are submitted here.  For bus scheduling or routing concerns please contact the appropriate agency: DASH 703.746.3274 or WMATA 202.637.1328.",
+  "keywords": "TESBUSST, Bus Stops, Bus Shelters, Dash, WMATA, Bus Stop Repair, Bus Stop Maintenance",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESCLNSW",
+  "service_name": "Cleaning and Sweeping (Alley and Street)",
+  "description": "Use this request type for alley or street cleaning and sweeping. Sweeping occurs between March 1st and October 31st due to the effect of winter weather conditions on equipment. Downtown King Street is cleaned on a regular basis by the City.",
+  "keywords": "TESCLNSW, Streets, alleys, sidewalks, cleaning, sweeping, street cleaning",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "ALYSWSTRT",
+     "name": "Alleys, Sidewalks, & Streets",
+     "description": "Includes potholes, repairs, leaf collection and snow removal requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESDOTPARA",
+  "service_name": "DOT Paratransit Comments, Complaints, or Inquiries",
+  "description": "Submit requests related to the City\u2019s DOT Paratransit program, including questions, comments, and concerns about trips and scheduling. This system will not allow you to make a reservation.  To make a reservation, follow this <a href=\"https://www.alexandriava.gov/Paratransit#MakingAReservation\" target=\"_blank\"> link</a>.",
+  "keywords": "TESDOTPARA, DOT, Paratransit, UZURV, Diamond, Senior Services, Call Center, Reservations, bus, disability, disabilities, public transit, transit, mobility services, transportation",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESFLOODINQ",
+  "service_name": "Flooding Concerns and Inquiries",
+  "description": "Use this service request to report flooding, as well as inquiries and concerns related to flooding. Please do not use this request in the event of an emergency - if the flooding is causing immediate danger, please call 911. If it is not an emergency, contact the non-emergency police line at 703.746.4444. Please note that many flooding-related concerns are not immediately actionable by the City. However, reporting flooding concerns allows the City\u2019s stormwater and sanitary engineers to better understand the extent and nature of flooding in the City, enabling them to more appropriately plan for medium- to long-term infrastructure design and flood mitigation projects.",
+  "keywords": "Flooding, Flood, Storm, Floodplain, Damage, Drainage, Stream, Erosion, Insurance, Backflow, water damage",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESHYDRA",
+  "service_name": "Hydrant Maintenance",
+  "description": "Use this service request to report hydrants that are in need of maintenance.",
+  "keywords": "TESHYDRA, Hydrants, Hydrant, Fire Hydrant",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXLITHW",
+  "service_name": "Litter and Illegal Dumping",
+  "description": "Use this service request to report litter and illegal dumping. Residential property owners are responsible for maintaining the sidewalks adjacent to their property. Commercial property owners are responsible for the public space around their property including the curb and gutter.",
+  "keywords": "ALXLITHW, Litter, Hazardous Waste, Dumping",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "CA",
+     "name": "Code Administration",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESLOWWI",
+  "service_name": "Low Hanging Wire",
+  "description": "Use this service request to report low hanging wires. Please stay clear of downed wires. If the wires are causing immediate danger please call 911. In many cases wires are maintained by a third party, such as a utility company. In these situations they are responsible for making the repairs.",
+  "keywords": "TESLOWWI, Low, Hanging, Wire, Electric, Powerline",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "TESMETAL",
+  "service_name": "Metal or Appliance Collection",
+  "description": "Use this to request a metal or appliance pickup. The City collects metal and appliance items by special request. A fee may apply. Acceptable items include metal fencing, grills, large and small appliances (white goods), exercise equipment and lawn mowers (drain gasoline and oil). Car parts are not accepted. Collection occurs on Tuesdays and Wednesdays unless there is a collection delay.",
+  "keywords": "TESMETAL, Metal, Appliance, Stoves, Refrigerators, Washers, Dryers, Hot water heaters, Freezers, Dish Washer, White, Goods",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESMISCO",
+  "service_name": "Missed Collection",
+  "description": "Use this service request to report issues related to missed trash, recycling, or yard waste collections. Set out trash, recycling and yard waste containers no earlier than 5 p.m. the day prior to collection, and no later than 6 a.m. the morning of collection.   For collection schedules on holidays or during inclement weather, please visit the City's website, social media accounts or eNews. If there is a non-collection tag on your materials, please follow the directions on the tag and put out your trash, recycling, or yard waste for the next collection day.",
+  "keywords": "TESMISCO, Missed Trash, Missed Refuse, Missed Bulk, Missed Yardwaste, Missed Recycling, Trash, Recycling, Refuse, Holiday, Skipped",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESLEAF",
+  "service_name": "Missed Leaf Collection",
+  "description": "Use this request type to report missed leaf collections. Leaves are picked up curb side Monday-Friday. Inclement weather and the amount of leaves on the ground heavily affect collection. Bagged leaves will be picked up on your normal trash collection day. For loose leaves, a missed collection can only occur after the City has completed the zone.",
+  "keywords": "TESLEAF, Leaf, Missed, Leaf Collection, Leaves, Missed Leaf, Missed Leaves",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "ALYSWSTRT",
+     "name": "Alleys, Sidewalks, & Streets",
+     "description": "Includes potholes, repairs, leaf collection and snow removal requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXTRFCO",
+  "service_name": "Mobility, Access, and Traffic Safety",
+  "description": "Submit requests and find information related to street safety, ADA accessibility, traffic, bicycle lanes, multi-use paths, and other transportation-related topics. Request for Police Enforcement or Review please call 703.746.4444.",
+  "keywords": "ALXTRFCO, Access, Bicycle, Bike, Bikes, Bikeshare, Biking, Cabi, Capital, Complete, Congestion, Crossing, Crosswalk, Driving, Intersection, Lane, Mobility, Pedestrian, Roadway, Routes, Safe, Safety, School, Sharrow, Sign, Signal, Smart, Speeding, Streets, Traffic, Trails, Turning, Vision, Walking, Zero, Traffic Enforcement, Enforcement",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "APD",
+     "name": "Police",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESNOISE",
+  "service_name": "Noise Issues",
+  "description": "Use this service request to report loud noise concerns.  This may include use of power lawn and garden equipment, construction activity, and commercial loading/unloading outside of allowable hours as provided in the city\u2019s noise ordinance.  For after hour noise concerns please contact the Alexandria Police department at 703.746.4444.  For animal noise, please contact the city\u2019s Office of Animal control at 703.746.4747.",
+  "keywords": "TESNOISE, Noise, Loud, Noisy, Disruption",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESPKMTR",
+  "service_name": "Parking Meters",
+  "description": "Use this service request to report parking meter issues.",
+  "keywords": "TESPKMTR, Parking Meters, Paymobile, Pay Parking",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESDELIBOT",
+  "service_name": "TES-Personal Delivery Devices",
+  "description": "Submit requests related to personal delivery device, including requests to move these devices. To learn more about Personal Delivery Devices, please visit <a href=\"https://www.alexandriava.gov/mobility/personal-delivery-devices\" target=\"_blank\">alexandriava.gov/mobility/personal-delivery-devices</a>.",
+  "keywords": "TESDELIBOT, blocking, delivery, devices, improper, parked, parking, personal, robot",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "TESPOTHO",
+  "service_name": "Potholes",
+  "description": "Use this service request to report pothole concerns. The City only repairs potholes on City maintained streets and alleys.",
+  "keywords": "TESPOTHO, pothole, street, pot hole",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "ALYSWSTRT",
+     "name": "Alleys, Sidewalks, & Streets",
+     "description": "Includes potholes, repairs, leaf collection and snow removal requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESRECYCTRS",
+  "service_name": "Recycling Drop-Off Centers",
+  "description": "The City of Alexandria operates four public recycling drop-off centers. Submit any questions or concerns regarding these centers here.",
+  "keywords": "TESRECYCTRS, Recycling, Centers, Dropoff, Drop-off, Drop",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESWATER",
+  "service_name": "Report Water Quality Issues",
+  "description": "Use this service request to report surface water quality concerns. This includes concerns such as discoloration or dumping in rivers, streams and associated storm drain systems.",
+  "keywords": "TESWATER, Water, Quality, Pollution, Dumping, Illegal, Illicit, Discharge, Cloudy, Oil, Gas, Paint, Streams , Creeks, Rivers, Storm drain, Outfall, fuel, spill",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "TESROW",
+  "service_name": "ROW Access & Construction Issues",
+  "description": "Use this request to submit issues related to inspection and construction related issues in the right of way for project performed by private developers and utility companies. Typical projects include: Utility works, installation of sanitary and storm sewers, curb or sidewalk construction, BMPs, or street restoration.",
+  "keywords": "TESROW, ROW, Construction, Restoration, Inspections",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "TESSEWER",
+  "service_name": "Sewer Infrastructure Issues",
+  "description": "Use this service request to report issues related to sewer infrastructure. Cave-in, flooding, backup, manhole covers, odor, and requests for inspection.",
+  "keywords": "TESSEWER, Sewer, Manhole, Cave-in, Flooding, Odor, Sewer Inspection, Backup, back up, Storm Drain",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "BLDGHOUS",
+     "name": "Buildings & Housing",
+     "description": "Includes code violations, home assistance and other building requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684741873/QA/t4jfxy57kgkgenthwy1a.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESSIDEWALK",
+  "service_name": "Sidewalk",
+  "description": "Use this service request to report repairs needed to Sidewalks. Sidewalk requests are inspected to determine the proper remedy or solution for repair. Emergency repairs are typically made safe within 2 business days. Many permanent repairs require a longer time frame and depend upon resource availability. Staff make every effort to provide timely, accurate information about this work and to minimize disruption and duration.",
+  "keywords": "TESSIDEWALK, Sidewalks",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "ALYSWSTRT",
+     "name": "Alleys, Sidewalks, & Streets",
+     "description": "Includes potholes, repairs, leaf collection and snow removal requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESPVMRK",
+  "service_name": "Street Pavement Markings",
+  "description": "Use this service request to report issues related to pavement markings. The City installs pavement markings between April and October. Temperatures for pavement markings must be 50 degrees or higher to ensure the best long-term durability of the markings. Please be aware that requests for new markings require a detailed review by staff before approval. Note: The City of Alexandria does not paint curbs.",
+  "keywords": "TESPVMRK, Bicycle, Bike, Crosswalk, Lane, Lines, Marking, Markings, Missing, New, Paint, Pavement, Removal, Shared, Sharrow",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "ALYSWSTRT",
+     "name": "Alleys, Sidewalks, & Streets",
+     "description": "Includes potholes, repairs, leaf collection and snow removal requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742398/QA/tnxemslxacw2r0d1ibn5.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESSTLGHT",
+  "service_name": "Streetlights (Existing)",
+  "description": "Use this to report burned-out lamps, flickering lights, bright lights, and other problems.",
+  "keywords": "TESSTLGHT, Streetlight, Streetlights, Dominion, Street Light, Traffic Light, Park Lights, Trail Lights",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "DP",
+     "name": "Dominion Power",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESSTLGHTN",
+  "service_name": "Streetlights (New)",
+  "description": "Use this to request the installation of a new streetlight or park or trail light.",
+  "keywords": "Streetlight, Streetlights, Street Light, Traffic Light, Park Lights, Trail Lights",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ },
+ {
+  "service_code": "TESTSGNLM",
+  "service_name": "Traffic Light/Signal (Existing)",
+  "description": "Use this to report all issues related to traffic signals \u2013 stuck traffic lights, burned-out bulbs, pedestrian crossing signal malfunctions, timing concerns, knocked down or leaning traffic signal poles, and other problems.",
+  "keywords": "TESTSGNLM, Traffic Signals, Pedestrian Signal, Pedestrian Button, Crosswalk, Signal, Bulb Out, Flashing Signal, Signal Timing, Radar Flashers, School Zone Flashers, Pedestrian",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "DP",
+     "name": "Dominion Power",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESTSGNLN",
+  "service_name": "Traffic Light/Signal (New)",
+  "description": "Use this to request the installation of new traffic signals.",
+  "keywords": "TESTSGNLN, Traffic Signals, Pedestrian Signal, Pedestrian Button, Crosswalk, Signal, Bulb Out, Flashing Signal, Signal Timing, Radar Flashers, School Zone Flashers, Pedestrian",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "DP",
+     "name": "Dominion Power",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    },
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESTSIGN",
+  "service_name": "Traffic Sign",
+  "description": "Use this service request to report traffic sign concerns. Identify traffic signs that are faded, damaged, hit, missing, need to be removed or that are obstructing visibility. Please be aware that requests for new signs require a detailed staff review and Traffic and Parking Board approval.",
+  "keywords": "TESTSIGN, Street, Traffic Signs, Faded Signs, Damaged Traffic Sign, Down or Leaning Traffic Sign, Missing Traffic\u00a0Sign, Visibility of Traffic Sign Obstructed, Traffic Sign Removal, New Traffic Sign",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESTSGNL",
+  "service_name": "Traffic Signals and Street Lights",
+  "description": "Use this service request for pedestrian or traffic concerns or street light outages. This includes signals that are malfunctioning, bulb outages, or timing issues. Dominion Virginia Power maintains the majority of the street lights within Alexandria. Street light outages can be reported directly to Dominion by calling 1.866.DOM.HELP (1.866.366.4357). Please be aware that request for new signals and lights require a detailed review by staff before approval.",
+  "keywords": "TESTSGNL, Traffic Signals, Pedestrian Signal, Pedestrian Button, Crosswalk Signal, Bulb Out, Flashing Signal, Signal Timing, Radar Flashers, School Zone Flashers, Streetlight, Streetlights, Dominion, Street Light, Traffic Light, Pedestrian",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "DP",
+     "name": "Dominion Power",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "POPSVCRQ",
+     "name": "Popular Service Requests",
+     "description": "The most popular service request types in the city of Alexandria.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
+    },
+    {
+     "code": "PARKTRANS",
+     "name": "Parking & Transportation",
+     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESCONTN",
+  "service_name": "Trash and Recycling Containers",
+  "description": "Use this service request to report issues related to residential trash or recycling containers. The City of Alexandria provides one black trash container and one recycling container for each household. Additional trash containers are available for a fee. Additional recycling containers are free of charge. The City does not provide yard waste containers.",
+  "keywords": "TESCONTN, Trash Container, Recycling Container, Trash Bin, Recycle Bin, Yard Waste Can, Containers, Green Can, Black Can, Supercan, Refuse Container, Trash can, Waste, Waste Bin",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "ALXSTCAN",
+  "service_name": "Trash and Recycling Public Space Containers",
+  "description": "Use this service request to report issues related to trash or recycling public space containers. Examples include parks, parking areas, and public thoroughfares. Typically, blue containers are designated for recycling and black containers are designated for trash.",
+  "keywords": "ALXSTCAN, Trash, Recycling, Trash Pickup, Trash Overflow, Trashcan, Waste, Waste Bin, Street Can, Can",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "RPCA",
+     "name": "Recreation, Parks & Cultural Activities",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    },
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "TESYRDWSL",
+  "service_name": "Yard Waste Label",
+  "description": "Use this to request an adhesive \"Yard Waste Only\" label to be applied by the resident to their reusable container to identify its contents as yard waste.",
+  "keywords": "TESYRDWSL, Yard Waste, Label, Trash, Recycling, Stickers",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "TES",
+     "name": "Transportation & Environmental Services",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": [
+    {
+     "code": "RECYTRASH",
+     "name": "Recycling & Trash",
+     "description": "Includes missed collection, bulk pick-up, and container requests.",
+     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1695816572/CitizenAsset/CategoryIcons/2.jpg"
+    }
+   ]
+  }
+ },
+ {
+  "service_code": "VDHGENER",
+  "service_name": "Department of Health Inquiries",
+  "description": "Use this request to submit issues related to the Virginia Department of Health.\r\n\r\nFor the latest information on COVID-19, please visit <a href=\"https://www.alexandriava.gov/Coronavirus\" target=\"_blank\">alexandriava.gov/Coronavirus</a>.",
+  "keywords": "VDHGENER, Food, Safety, Health, Illness, Vector, mosquitoes, rabies, insect, Corona, Virus, COVID-19, CDC, Virginia, VDH",
+  "group": null,
+  "metadata": true,
+  "type": "realtime",
+  "definitions": {
+   "view_only_sr": false,
+   "service_departments": [
+    {
+     "code": "VDH",
+     "name": "Health Department",
+     "phone": null,
+     "email": null,
+     "web_link": null
+    }
+   ],
+   "service_categories": []
+  }
+ }
+]
