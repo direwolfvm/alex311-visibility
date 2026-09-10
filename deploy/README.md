@@ -16,6 +16,7 @@ Live in project **permitting-ai-helper** (us-east4):
 | Media bucket | `gs://permitting-ai-helper-alex311-media` (prefix `alex311-media/`) |
 | Ingest schedule | 03:20 / 09:20 / 15:20 / 21:20 America/New_York (`alex311-ingest-schedule`) |
 | Health schedule | hourly at :45 (`alex311-health-schedule`) |
+| Submission job | `alex311-submit` (§7) — own image with a browser, **created unarmed**, run by hand |
 | Drift schedule | Mondays 06:30 America/New_York (`alex311-drift-schedule`) |
 | Alerting | policy "Alex311 job failures" → email channel (jke314@outlook.com) |
 
@@ -212,7 +213,62 @@ it never presses Submit) and diffs the result against the committed rules with
 added or removed options, and any rule that flipped. When drift is real, adopt
 it by rebuilding the registry and committing the regenerated data.
 
-## 7. Alerting
+## 7. Submission worker (separate image, separate job)
+
+Filing a request needs a real browser, and the public dashboard image must not
+carry one: it is internet-facing and has no business running Chromium. So the
+worker is its own image (`Dockerfile.submit`, on the Playwright base) and its
+own Cloud Run job.
+
+It cannot be told what to file on the command line either — per-execution
+`--args` overrides fail in this project (see the note at the top). It takes its
+work from the database instead: the gated form queues a prepared request, a
+person approves it, and the worker drains approved rows one at a time.
+
+```bash
+gcloud builds submit --config cloudbuild.submit.yaml .
+
+gcloud run jobs create alex311-submit --region=$REGION \
+    --image=$REGION-docker.pkg.dev/$PROJECT/cloud-run-source-deploy/alex311-submit:latest \
+    --set-cloudsql-instances=$SQL_INSTANCE \
+    --set-secrets="DATABASE_URL=alex311-database-url:latest" \
+    --task-timeout=900 --max-retries=0 --memory=2Gi --cpu=2
+```
+
+**It is created in rehearsal mode.** With no `ALEX311_ALLOW_LIVE_SUBMIT` on the
+job and no `--live` in its arguments, a run drives the City's wizard to the
+review step, leaves the row approved and files nothing. That is how to prove the
+path works and how several people can exercise it safely.
+
+To arm it, both keys have to turn:
+
+```bash
+# the environment key, on the job
+gcloud run jobs update alex311-submit --region=$REGION \
+    --set-env-vars=ALEX311_ALLOW_LIVE_SUBMIT=1 --args="--live"
+```
+
+The other key is per request: the worker only claims rows a person has moved to
+`approved`, and it records who did. Disarm by reversing that command.
+
+| State | Means |
+|---|---|
+| `prepared` | evaluated by the anti-abuse policy, nothing more |
+| `queued` | a resident asked for it to be filed |
+| `approved` | a person said yes — the per-request half of the live gate |
+| `filing` | a worker has claimed it; `SKIP LOCKED` stops a second worker taking it |
+| `filed` | the City accepted it; `city_case_number` holds their number |
+| `failed` | three tries did not get it filed; `submit_error` says why |
+
+One request per execution by default, because every filing dispatches City
+staff. There is no batch mode and there should not be. Schedule it only once
+real traffic justifies it; until then run it by hand:
+
+```bash
+gcloud run jobs execute alex311-submit --region=$REGION --wait
+```
+
+## 8. Alerting
 
 Alert on failed executions of any job (this catches ingest breakage, the health
 check's deliberate non-zero exits, and the weekly registry drift check):

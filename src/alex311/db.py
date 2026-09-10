@@ -291,6 +291,47 @@ def record_attempt(conn: psycopg.Connection, *, submitter_id: str | None,
     return row["attempt_id"]
 
 
+def queue_attempt(conn: psycopg.Connection, attempt_id: int, contact: dict) -> None:
+    """A resident asks for a prepared request to be filed on their behalf.
+
+    Queuing is not approval. The worker only claims rows a person has approved,
+    which is the per-request half of the live gate.
+    """
+    conn.execute(
+        """UPDATE submission_attempts
+              SET submit_state = 'queued', queued_at = now(), contact = %s
+            WHERE attempt_id = %s AND submit_state IN ('prepared', 'queued')""",
+        (Jsonb(contact), attempt_id))
+    conn.commit()
+
+
+def approve_attempt(conn: psycopg.Connection, attempt_id: int, actor: str) -> bool:
+    """Mark a queued request fit to file. Returns False if it was not queued."""
+    row = conn.execute(
+        """UPDATE submission_attempts
+              SET submit_state = 'approved', approved_at = now(), approved_by = %s
+            WHERE attempt_id = %s AND submit_state = 'queued'
+            RETURNING attempt_id""",
+        (actor, attempt_id)).fetchone()
+    conn.commit()
+    return row is not None
+
+
+def submission_queue(conn: psycopg.Connection, states: tuple = ("queued", "approved",
+                                                                "filing", "failed"),
+                     limit: int = 50) -> list[dict]:
+    """What is waiting to be filed, and what happened to what already was."""
+    return conn.execute(
+        """SELECT attempt_id, created_at, queued_at, approved_at, approved_by,
+                  submit_state, tries, submit_error, service_code, service_name,
+                  address, description, outcome, city_case_number, relayed_at
+             FROM submission_attempts
+            WHERE submit_state = ANY(%s)
+            ORDER BY COALESCE(approved_at, queued_at, created_at) DESC
+            LIMIT %s""",
+        (list(states), limit)).fetchall()
+
+
 def review_queue(conn: psycopg.Connection, limit: int = 50) -> list[dict]:
     """Attempts held for a human, newest first."""
     return conn.execute(
