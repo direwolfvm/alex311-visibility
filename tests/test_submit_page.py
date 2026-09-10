@@ -12,7 +12,8 @@ import pytest
 
 from dashboard.submit import merge_candidates
 
-PAGE = (Path(__file__).resolve().parents[1] / "dashboard/submit.html").read_text()
+ROOT = Path(__file__).resolve().parents[1]
+PAGE = (ROOT / "dashboard/submit.html").read_text()
 
 
 def row(address, seen, lat=38.8, long=-77.1):
@@ -228,25 +229,61 @@ def test_you_can_get_back_to_the_dashboard_from_both_pages():
     assert 'href="/"' in LOGIN and 'href="/"' in PAGE
 
 
-def test_releasing_is_not_self_service():
-    """A signed-in tester releasing their own request collapses the two keys
-    into one: a real City record with nobody else involved."""
-    src = (Path(__file__).resolve().parents[1] / "dashboard/submit.py").read_text()
-    approve = src.split("def approve(")[1].split("def ")[0]
-    assert "Depends(admin_only)" in src.split("def approve(")[0].rsplit("\n", 2)[-1] \
-        or "admin_only" in src[src.index("def approve(") - 120:src.index("def approve(") + 80]
-
-
-def test_the_moderation_views_are_not_open_to_every_tester():
-    """They carry other residents' addresses and what they reported."""
-    src = (Path(__file__).resolve().parents[1] / "dashboard/submit.py").read_text()
-    for endpoint in ("def submission_queue(", "def queue(limit"):
-        line = src[src.index(endpoint):src.index(endpoint) + 140]
-        assert "admin_only" in line, f"{endpoint} is not restricted"
-
-
-def test_the_page_names_who_releases_a_request():
-    """"A reviewer" implied a review desk that does not exist; only an
-    administrator can release, so the page says so."""
+def test_sending_is_the_testers_own_action_and_the_page_admits_it():
+    """The administrator step was removed on purpose: testers found waiting for
+    one worse than not having the feature. What matters now is that the page
+    does not imply somebody is still checking, because nobody is."""
     assert "reviewer" not in PAGE
-    assert "administrator" in PAGE
+    for promise in ("until an administrator", "has to release", "waits for"):
+        assert promise not in PAGE, f"the page still implies review: {promise!r}"
+    assert PAGE.lower().count("nobody reviews it") >= 2  # the notice and the offer
+
+
+def test_the_only_gate_left_is_named_where_someone_will_read_it():
+    """One key now, and it is an environment variable on a Cloud Run job. A
+    person changing that file has to be told, since nothing else stops a
+    tester's press from reaching the City."""
+    worker = (ROOT / "src/alex311/submit_worker.py").read_text()
+    assert "**One key" in worker
+    assert "ALEX311_ALLOW_LIVE_SUBMIT" in worker.split("**One key")[1][:600]
+
+
+def test_sending_still_takes_two_presses():
+    """Not review — confirmation. It is irreversible and immediate, so the
+    second press says what it does."""
+    assert "armSend" in PAGE
+    assert "Confirm: send this to the City" in PAGE
+
+
+def test_a_blocked_request_is_refused_and_a_flagged_one_is_argued_with():
+    """`review` used to park a request until somebody looked. With nobody
+    looking it becomes a warning the person can overrule, which is feedback
+    rather than moderation — and the overrule is recorded."""
+    src = (ROOT / "dashboard/submit.py").read_text()
+    send = src.split('@router.post("/api/queue")')[1].split("@router.get")[0]
+    assert "abuse.BLOCK" in send and "abuse.REVIEW" in send
+    assert "body.acknowledged" in send
+    assert "record_moderation" in send
+
+
+def test_the_tester_can_watch_their_own_request_and_only_their_own():
+    """Ownership is who pressed send, not the resident-identity cookie. That
+    cookie is optional here, and a check that skipped when it was missing
+    handed every signed-in tester the address on anybody's request — which it
+    did, until someone tried it."""
+    src = (ROOT / "dashboard/submit.py").read_text()
+    status = src.split('@router.get("/api/status/{attempt_id}")')[1].split("@router")[0]
+    assert 'row["approved_by"] is not None and row["approved_by"] == actor' in status
+    assert "if not (owner or an_admin)" in status
+    assert "sent by someone else" in status
+    assert "city_case_number" in status
+    assert "watch(" in PAGE and "/submit/api/status/" in PAGE
+
+
+def test_the_queue_views_are_still_not_open_to_every_tester():
+    """Sending is self-service now. Reading what everybody else sent is not:
+    those views carry other residents' addresses and what they reported."""
+    src = (ROOT / "dashboard/submit.py").read_text()
+    for endpoint in ("def submission_queue(", "def queue(limit", "def instrument("):
+        line = src[src.index(endpoint):src.index(endpoint) + 160]
+        assert "admin_only" in line, f"{endpoint} is not restricted"

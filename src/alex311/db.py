@@ -317,6 +317,69 @@ def approve_attempt(conn: psycopg.Connection, attempt_id: int, actor: str) -> bo
     return row is not None
 
 
+def attempt_status(conn: psycopg.Connection, attempt_id: int) -> dict | None:
+    """What a tester is allowed to watch on their own request.
+
+    Deliberately narrow: enough to draw the timeline and show the City's case
+    number, and nothing about anybody else.
+    """
+    return conn.execute(
+        """SELECT attempt_id, submitter_id, approved_by, submit_state, submit_error,
+                  tries, queued_at, approved_at, relayed_at, city_case_number,
+                  service_name, address
+             FROM submission_attempts WHERE attempt_id = %s""",
+        (attempt_id,)).fetchone()
+
+
+def retry_attempt(conn: psycopg.Connection, attempt_id: int, actor: str) -> bool:
+    """Put a failed request back in the queue. Returns False if it was not failed.
+
+    Not moderation: the request was already released by the person who made it.
+    This is for when the City's form changed under us and the worker gave up.
+    """
+    row = conn.execute(
+        """UPDATE submission_attempts
+              SET submit_state = 'approved', tries = 0, submit_error = NULL,
+                  approved_at = now(), approved_by = %s
+            WHERE attempt_id = %s AND submit_state = 'failed'
+            RETURNING attempt_id""",
+        (actor, attempt_id)).fetchone()
+    conn.commit()
+    return row is not None
+
+
+def instrumentation(conn: psycopg.Connection, days: int = 30) -> dict:
+    """Counts and timings for the status board.
+
+    The board exists because nobody is standing in the way any more: the way to
+    know the thing works is to watch what it does, not to approve each one.
+    """
+    states = conn.execute(
+        """SELECT submit_state, count(*) AS n FROM submission_attempts
+            WHERE created_at > now() - make_interval(days => %s)
+            GROUP BY submit_state""", (days,)).fetchall()
+    outcomes = conn.execute(
+        """SELECT outcome, count(*) AS n FROM submission_attempts
+            WHERE created_at > now() - make_interval(days => %s)
+            GROUP BY outcome""", (days,)).fetchall()
+    timing = conn.execute(
+        """SELECT count(*) AS filed,
+                  percentile_disc(0.5) WITHIN GROUP (
+                      ORDER BY extract(epoch FROM relayed_at - approved_at)) AS median_seconds,
+                  max(extract(epoch FROM relayed_at - approved_at)) AS slowest_seconds,
+                  max(relayed_at) AS last_filed_at
+             FROM submission_attempts
+            WHERE relayed_at IS NOT NULL AND approved_at IS NOT NULL
+              AND created_at > now() - make_interval(days => %s)""", (days,)).fetchone()
+    return {"days": days,
+            "states": {r["submit_state"]: r["n"] for r in states},
+            "outcomes": {r["outcome"]: r["n"] for r in outcomes},
+            "filed": timing["filed"] if timing else 0,
+            "median_seconds": timing["median_seconds"] if timing else None,
+            "slowest_seconds": timing["slowest_seconds"] if timing else None,
+            "last_filed_at": timing["last_filed_at"] if timing else None}
+
+
 def submission_queue(conn: psycopg.Connection,
                      states: tuple = ("queued", "approved", "filing", "filed",
                                       "failed", "cancelled"),

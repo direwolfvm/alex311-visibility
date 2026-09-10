@@ -241,34 +241,58 @@ job and no `--live` in its arguments, a run drives the City's wizard to the
 review step, leaves the row approved and files nothing. That is how to prove the
 path works and how several people can exercise it safely.
 
-To arm it, both keys have to turn:
+**There used to be a second key and there is not any more.** A person had to
+release each request before the worker would claim it. Testers found waiting for
+that worse than not having the feature, and it was removed deliberately. What
+remains is one key:
 
 ```bash
-# the environment key, on the job
 gcloud run jobs update alex311-submit --region=$REGION \
     --set-env-vars=ALEX311_ALLOW_LIVE_SUBMIT=1 --args="--live"
 ```
 
-The other key is per request: the worker only claims rows a person has moved to
-`approved`, and it records who did. Disarm by reversing that command.
+With that set, **a tester pressing send is the last human step before the City
+has a real request.** Nobody sees it in between. Disarm by reversing the
+command; that is the whole control surface now, so treat this variable the way
+you would treat a production credential.
 
-Once the job is armed, **approving is the moment a real request is created** —
-not a formality on the way to one. Whoever reviews the queue should understand
-that the City dispatches staff on what they release, and that nothing recalls it
-afterwards.
+The web service starts the job itself, which is what makes the feedback
+immediate. It needs to know which job to start:
+
+```bash
+gcloud run services update alex311-dashboard --region=$REGION \
+    --update-env-vars=ALEX311_SUBMIT_JOB=alex311-submit,ALEX311_REGION=$REGION
+```
+
+Without those the send still succeeds and the request sits in `approved` until
+the schedule below picks it up — slower, not lost. The service account needs
+`roles/run.admin` (or `run.jobs.run`), which the default compute account
+already has here.
 
 | State | Means |
 |---|---|
 | `prepared` | evaluated by the anti-abuse policy, nothing more |
-| `queued` | a resident asked for it to be filed |
-| `approved` | **the live action.** An administrator released it; the next armed run files it with the City and it cannot be recalled. Releasing is admin-only, so a tester cannot file their own request |
+| `queued` | contact details attached, a moment before release; rows rarely sit here |
+| `approved` | **the live action.** The tester pressed send; the next run files it with the City and it cannot be recalled |
 | `filing` | a worker has claimed it; `SKIP LOCKED` stops a second worker taking it |
 | `filed` | the City accepted it; `city_case_number` holds their number |
 | `failed` | three tries did not get it filed; `submit_error` says why |
 
-One request per execution by default, because every filing dispatches City
-staff. There is no batch mode and there should not be. Schedule it only once
-real traffic justifies it; until then run it by hand:
+An execution drains what is waiting and stops, pausing between filings. Several
+executions can be alive at once, because each send starts one; a Postgres
+advisory lock means only one of them drives a browser at the City's site and the
+rest exit immediately.
+
+A schedule catches anything a failed kick left behind:
+
+```bash
+gcloud scheduler jobs create http alex311-submit-sweep --location=$REGION \
+    --schedule="*/10 * * * *" \
+    --uri="https://$REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-submit:run" \
+    --http-method=POST --oauth-service-account-email=$SA
+```
+
+To run it by hand:
 
 ```bash
 gcloud run jobs execute alex311-submit --region=$REGION --wait
