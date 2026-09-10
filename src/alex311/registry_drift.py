@@ -14,9 +14,12 @@ The third source — the wizard walk itself — needs Playwright and stays out o
 the web image; `spike/rules_diff.py` diffs a fresh crawl against the committed
 rules instead. Everything here is read-only: one catalog call and some SELECTs.
 
-Channel matters. Phone agents bypass the web wizard's rules, so agent- and
-phone-entered records prove nothing about what the *web* form accepts. Only
-rows we can positively tell are not agent/phone are used for the data checks.
+Channel matters, and more than it first appears. About a third of records reach
+the City some way other than the wizard — staff typing a phone call, an emailed
+or tweeted report transcribed by staff, a third-party app with its own form —
+and in all of those a human keys in answers the wizard would have refused. The
+data checks therefore use an **allowlist** of wizard channels (`WEB_SOURCES`),
+so an unrecognised channel is excluded rather than mistaken for the web form.
 
 Usage: python -m alex311.registry_drift [--days 30] [--min-rows 5]
 Exits non-zero when drift is found — wire it to a weekly Cloud Run job so the
@@ -39,8 +42,14 @@ from .client import Alex311Client
 
 log = logging.getLogger("alex311.registry_drift")
 
-#: Records from these channels never exercise the web wizard's validation.
-NON_WEB_SOURCES = {"agent"}
+#: Sources that ARE the web wizard we walked. Everything else reaches the City
+#: another way — staff typing a phone call (Agent/Phone), an emailed or tweeted
+#: report transcribed by staff (origin Email/Facebook/Twitter/Sprout Social), or
+#: a third-party app with its own form (snap311) — and none of those exercise
+#: the wizard's validation, so they say nothing about what the web form accepts.
+#: An allowlist, not a denylist: a channel we do not recognise is excluded
+#: rather than assumed to be the wizard.
+WEB_SOURCES = {"web", "ios", "ios browser", "android", "android browser"}
 NON_WEB_ORIGINS = {"phone"}
 
 REGISTRY_NAME = "docs/data/form-registry.json"
@@ -89,13 +98,13 @@ def norm(t: str | None) -> str:
 
 
 def is_web(row: dict) -> bool:
-    """True when the row is definitely not an agent/phone submission.
+    """True only when the record came through the web wizard this registry describes.
 
-    Deliberately strict: a record we cannot classify is excluded rather than
-    assumed to be web, because a false 'the wizard now allows this' is worse
-    than a missed one.
+    Strict by design: a false "the wizard now allows this" is worse than a
+    missed one, and roughly a third of records arrive by phone, email or social
+    media, where staff key in answers the wizard would have refused.
     """
-    return ((row.get("source") or "").strip().lower() not in NON_WEB_SOURCES
+    return ((row.get("source") or "").strip().lower() in WEB_SOURCES
             and (row.get("origin") or "").strip().lower() not in NON_WEB_ORIGINS)
 
 
@@ -129,7 +138,8 @@ def fetch_attribute_rows(conn, days: int) -> list[dict]:
     """Recent enriched records that carry answered questions."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
     return conn.execute(
-        """SELECT service_code, source, origin, raw_detail->'attributes' AS attrs
+        """SELECT service_code, source, origin, requested_datetime,
+                  raw_detail->'attributes' AS attrs
              FROM service_requests
             WHERE requested_datetime >= %s
               AND jsonb_array_length(coalesce(raw_detail->'attributes', '[]'::jsonb)) > 0""",
@@ -151,12 +161,29 @@ def observed(rows: list[dict]) -> dict[str, dict]:
                 continue
             q = svc["questions"].setdefault(
                 code, {"text": attr.get("description"), "datatype": attr.get("datatype"),
-                       "values": set()})
+                       "values": {}})
             for v in attr.get("values") or []:
-                answer = v.get("answer_value") or v.get("answer")
+                # the portal pads some stored answers (" Construction "), which
+                # is not drift — compare on the trimmed value
+                answer = (v.get("answer_value") or v.get("answer") or "").strip()
                 if answer:
-                    q["values"].add(answer)
+                    # keep the newest sighting: a rule can only have been
+                    # relaxed by a record submitted after we crawled it
+                    at = row.get("requested_datetime")
+                    if at and (q["values"].get(answer) is None or at > q["values"][answer]):
+                        q["values"][answer] = at
+                    else:
+                        q["values"].setdefault(answer, at)
     return out
+
+
+def built_at(registry: dict) -> datetime | None:
+    """When the registry was generated, as an aware UTC datetime."""
+    try:
+        return datetime.strptime(registry["generated"], "%Y-%m-%d %H:%M UTC").replace(
+            tzinfo=timezone.utc)
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def data_drift(rows: list[dict], registry: dict, min_rows: int = 5) -> list[Finding]:
@@ -166,6 +193,7 @@ def data_drift(rows: list[dict], registry: dict, min_rows: int = 5) -> list[Find
     service should not raise an alarm.
     """
     known = {s["service_code"]: s for s in registry["services"]}
+    crawled = built_at(registry)
     out: list[Finding] = []
 
     for code, svc in sorted(observed(rows).items()):
@@ -192,21 +220,34 @@ def data_drift(rows: list[dict], registry: dict, min_rows: int = 5) -> list[Find
                                    f"{qcode}: {rq['datatype']} -> {q['datatype']}",
                                    {"question": qcode, "was": rq["datatype"], "now": q["datatype"]}))
 
-            opts = {o["value"]: o for o in rq.get("options") or []}
+            if rq.get("source") == "data-only":
+                # We never saw this question rendered, so its option list is a
+                # historical vocabulary, not a claim about what the form offers.
+                # Comparing answers against it only produces noise.
+                continue
+            opts = {o["value"].strip(): o for o in rq.get("options") or []}
             if not opts:          # free text: no vocabulary to compare
                 continue
-            for value in sorted(q["values"]):
+            for value, last_seen in sorted(q["values"].items()):
                 o = opts.get(value)
                 if o is None:
                     out.append(Finding("option_added", code,
                                        f"{qcode}: answer {value!r} is not an option in the registry",
                                        {"question": qcode, "option": value}))
                 elif (o.get("rule") or {}).get("type") == "hard_stop":
-                    # The wizard used to reject this answer, yet a web
-                    # submission carries it: the rule was relaxed.
+                    # The wizard rejects this answer, yet a wizard submission
+                    # carries it. Only records submitted *after* the crawl can
+                    # mean the rule was relaxed; older ones predate what we
+                    # measured and are already reflected in `seen_in_data`.
+                    if crawled and last_seen and last_seen <= crawled:
+                        continue
                     out.append(Finding("rule_contradicted", code,
+                                       f"{qcode}: {value!r} is marked a hard stop but was submitted "
+                                       f"through the web form on {last_seen:%Y-%m-%d}"
+                                       if last_seen else
                                        f"{qcode}: {value!r} is marked a hard stop but appears in web data",
                                        {"question": qcode, "option": value,
+                                        "last_seen": last_seen.isoformat() if last_seen else None,
                                         "message": (o.get("rule") or {}).get("message", "")}))
     return out
 
@@ -231,6 +272,15 @@ def check(registry: dict, *, client: Alex311Client | None = None, conn=None,
         rows = fetch_attribute_rows(conn, days)
         stats["data_rows"] = len(rows)
         stats["web_rows"] = sum(1 for r in rows if is_web(r))
+        # Surface the channels we excluded. If the City renames the wizard's
+        # source value, the web sample silently drops to zero — this is how we
+        # would notice, so it belongs in the job output rather than a comment.
+        skipped: dict[str, int] = {}
+        for r in rows:
+            if not is_web(r):
+                key = f"{r.get('source') or '(none)'}/{r.get('origin') or '(none)'}"
+                skipped[key] = skipped.get(key, 0) + 1
+        stats["skipped_channels"] = dict(sorted(skipped.items(), key=lambda kv: -kv[1])[:8])
         findings += data_drift(rows, registry, min_rows=min_rows)
 
     return findings, stats
@@ -281,7 +331,11 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"registry {stats.get('generated')} — {stats['services_in_registry']} services; "
               f"catalog {'checked' if stats['catalog_checked'] else 'skipped'}; "
-              f"{stats['web_rows']} web records in the last {args.days} days")
+              f"{stats['web_rows']} of {stats['data_rows']} records in the last {args.days} days "
+              f"came through the web form")
+        if stats.get("skipped_channels"):
+            print("  other channels (not the wizard): "
+                  + ", ".join(f"{k} {v}" for k, v in stats["skipped_channels"].items()))
         for f in findings:
             print(f"  {f}")
 

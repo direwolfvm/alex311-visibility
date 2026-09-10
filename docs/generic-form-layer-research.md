@@ -143,11 +143,23 @@ deployed image and exit non-zero on drift, reusing the existing "job failed"
 alert. The walk needs Playwright, which deliberately stays out of the web image,
 so it runs from a workstation and is compared with `spike/rules_diff.py`.
 
-Two design points worth keeping. **Channel matters:** phone agents bypass the
-wizard's validation, so agent- and phone-entered records are excluded from every
-data check — otherwise an agent-entered answer would look like the City relaxing
-a rule. **Thin data is not drift:** a service needs at least `--min-rows`
-(default 5) recent web records before its answers are judged.
+Three design points, each of which the first production run earned. **Channel is
+an allowlist, not a denylist:** only Web, iOS, iOS Browser, Android and Android
+Browser are the wizard. About a third of records arrive by phone, email, social
+media or a third-party app, and in all of those a human keys in answers the
+wizard would have refused, so an unrecognised channel is excluded rather than
+assumed. **Only records newer than the crawl can contradict a rule:** an answer
+the wizard rejects today may well appear in older data, which is the phone-channel
+skew the registry already records — the check compares against the registry's own
+build time. **Data-only questions are exempt from option checks:** we never saw
+them rendered, so their vocabulary is history, not a claim about the form.
+
+Left out, those three produced exactly three false positives on the first real
+run: a padded answer (`' Construction '`), a data-only vocabulary difference
+(`NA` vs `N/A`), and a hard-stopped sewer answer submitted a month *before* we
+crawled the rule. With them, the same run is clean over 1,799 wizard submissions,
+and a deliberately backdated registry still surfaces the sewer record with its
+date — the check is quiet, not blind.
 
 The rule the data check is most useful for is the one we cannot see any other
 way: an option the wizard rejects today appearing in tomorrow's submissions means
