@@ -41,12 +41,24 @@ def clean_alerts(p):
     return list(dict.fromkeys(out))
 
 
+def suggested_services(text):
+    """'New Service Type Suggestion' modal text -> a one-line advisory naming the proposed services."""
+    m = re.search(r"Keep Current(.*)$", text)
+    tail = m.group(1) if m else text
+    names = [n.strip() for n in re.split(r"Show Description|Hide Description|Switch To This Service", tail) if n.strip()]
+    if names:
+        return "The portal suggests this may belong under: " + ", ".join(dict.fromkeys(names)) + " (you can keep this type)."
+    return "The portal suggests a different service type for this answer (you can keep this type)."
+
+
 def rule_for(p):
     msgs = clean_alerts(p)
     if p.get("hard_stop"):
         return {"type": "hard_stop", "message": " / ".join(msgs)}
     if p.get("advisory"):
         return {"type": "advisory", "message": " / ".join(msgs)}
+    if p.get("suggests"):   # the wizard proposed other service types ("New Service Type Suggestion" modal)
+        return {"type": "advisory", "message": suggested_services(p["suggests"])}
     if msgs:
         return {"type": "info", "message": " / ".join(msgs)}
     return None
@@ -96,7 +108,9 @@ for t in catalog:
                              "note": "in data but not rendered on the web wizard (phone/agent channel?)"})
             questions.append({
                 "order": wq["order"], "code": (m or {}).get("code") or wq.get("code") or "",
-                "text": strip_html(wq["question"]), "kind": wq["input"],
+                "text": strip_html(wq["question"]),
+                "kind": ("multiselect" if (wq.get("multi") or (m or {}).get("datatype") == "multivaluelist") else "select")
+                        if wq["input"] == "dropdown" else wq["input"],
                 "datatype": (m or {}).get("datatype"), "required": bool(wq.get("required")),
                 "presence_pct": (m or {}).get("pct"), "options": opts,
                 "parts": wq.get("parts"), "source": "wizard+data" if m else "wizard",

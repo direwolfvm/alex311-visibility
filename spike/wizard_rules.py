@@ -82,6 +82,14 @@ SCAN = r"""() => {
     if (c.aria === 'Additional Information' || c.ph === 'Additional Information') return;
     h.controls.push(c);
   });
+  // custom dropdown triggers (not native <select>): innermost visible element whose text is the placeholder
+  const DD = /^Select (all applicable|an option)$/i;
+  let trig = nodes.filter(e => vis(e) && !e.shadowRoot && !['OPTION', 'SELECT'].includes(e.tagName) && DD.test((e.innerText || '').trim()));
+  trig.sort((a, b) => top(a) - top(b)).forEach((e, i) => {
+    const h = assign(top(e)); if (!h) return;
+    h.controls.push({ tag: e.tagName.toLowerCase(), role: 'dropdown', type: '', vis: true, name: '', val: '', checked: false,
+      ph: '', aria: '', text: (e.innerText || '').trim(), idx: i });
+  });
   return heads;
 }"""
 
@@ -164,13 +172,25 @@ async def scan(pg):
     return await pg.evaluate(SCAN)
 
 
+async def keep_current_visible(pg):
+    """The 'New Service Type Suggestion' modal's dismiss control is an <a>, not a button."""
+    try:
+        loc = pg.get_by_text("Keep Current", exact=True).first
+        return bool(await loc.count()) and await loc.is_visible()
+    except Exception:
+        return False
+
+
 async def dismiss_alerts(pg):
     """Press OK until no Validation Alert remains (a lingering modal makes the
     next probe look like a hard stop)."""
-    for _ in range(5):
-        if not await enabled(pg, "OK"):
+    for _ in range(6):
+        if await enabled(pg, "OK"):
+            await press(pg, "OK")
+        elif await keep_current_visible(pg):             # "New Service Type Suggestion" modal
+            await pg.get_by_text("Keep Current", exact=True).first.click(force=True)
+        else:
             return
-        await press(pg, "OK")
         await settle(pg)
         await pg.wait_for_timeout(700)
 
@@ -186,6 +206,9 @@ def classify(h):
         s = sels[0]
         return {"kind": "select", "code": _code_from_aria(s["aria"]), "aria": s["aria"],
                 "options": [o for o in s["opts"] if o != PLACEHOLDER]}
+    dd = [c for c in cs if c["role"] == "dropdown"]
+    if dd:
+        return {"kind": "dropdown", "code": "", "options": [], "trigger": dd[0]["text"], "idx": dd[0]["idx"]}
     rchecks = [c for c in cs if c["role"] == "checkbox" and c["vis"]]
     if rchecks:
         return {"kind": "checkbox", "code": "", "options": [c["text"] or c["aria"] for c in rchecks]}
@@ -212,6 +235,8 @@ def answered(h, meta):
         return any(c["tag"] == "select" and c["val"] and c["val"] != PLACEHOLDER and PLACEHOLDER in (c.get("opts") or []) for c in cs)
     if meta["kind"] in ("checkbox", "radio-role"):
         return any(c["checked"] for c in cs if c["role"] in ("checkbox", "radio"))
+    if meta["kind"] == "dropdown":
+        return not any(c["role"] == "dropdown" for c in cs)
     if meta["kind"] in ("text", "composite"):
         vals = [c["val"] for c in cs if c["vis"] and c["tag"] in ("input", "textarea")]
         return bool(vals) and all(vals)
@@ -231,6 +256,8 @@ async def choose(pg, meta, opt):
         await pg.locator("[role=checkbox]", has_text=opt).first.click(force=True)
     elif k == "radio-role":
         await pg.locator("[role=radio]", has_text=opt).first.click(force=True)
+    elif k == "dropdown":
+        await choose_dropdown(pg, meta, opt)
     await pg.wait_for_timeout(900)
 
 
@@ -241,10 +268,109 @@ def is_selected(h, meta, opt):
     if meta["kind"] == "select":
         return any(c["tag"] == "select" and (c["val"] == opt or c["text"].startswith(opt)) for c in cs) or \
             any(c["tag"] == "select" and c["val"] not in ("", PLACEHOLDER) for c in cs)
+    if meta["kind"] == "dropdown":
+        return not any(c["role"] == "dropdown" for c in cs)     # placeholder text replaced by the selection
     return any(c["checked"] and (c["text"] == opt or c["aria"] == opt) for c in cs if c["role"] in ("checkbox", "radio"))
 
 
-async def fill_free(pg, meta):
+def _value_for(question: str, ph: str, aria: str, typ: str) -> str:
+    """A plausible value for a free-text field, chosen from its placeholder,
+    accessible label and question text so format validation accepts it."""
+    hay = f"{question} {ph} {aria}".lower()
+    if typ == "email" or "email" in hay:
+        return "dryrun@example.invalid"
+    if typ == "tel" or "phone" in hay:
+        return "7035551212"
+    if "zip" in hay:
+        return "22314"
+    if typ == "date" or "mm/dd/yyyy" in hay:
+        return "2026-09-01" if typ == "date" else "09/01/2026"
+    if ph.strip() == "$" or "income" in hay or "amount" in hay or "cost" in hay or "price" in hay:
+        return "50000"
+    if typ == "number" or "numeric" in hay or "how many" in hay or "number of" in hay or "count" in hay:
+        return "2"
+    if "year" in hay and "yearly" not in hay:
+        return "2026"
+    return "Research dry run - not a real request. Please disregard."
+
+
+DD_TRIGGER = ".Chooes_option_box"                      # Incap311 custom picklist trigger (text = placeholder or selection)
+DD_ITEMS = "[role=checkbox][data-id], [role=option][data-id], [role=radio][data-id], [role=option]"
+
+
+def _trigger(pg, meta):
+    loc = pg.locator(DD_TRIGGER)
+    return loc.nth(meta.get("idx", 0))
+
+
+async def _dd_open(pg, meta):
+    t = _trigger(pg, meta)
+    if not await t.count():
+        t = pg.get_by_text(meta["trigger"], exact=True).first
+    await t.click(force=True)
+    await pg.wait_for_timeout(800)
+    return t
+
+
+async def _dd_close(pg, t):
+    """Close an open picklist. NEVER press Escape here: it closes the whole wizard modal."""
+    items = pg.locator(DD_ITEMS).locator("visible=true")
+    for _ in range(2):
+        if not await items.count():
+            return
+        await t.click(force=True)                        # the trigger toggles the list
+        await pg.wait_for_timeout(500)
+    if await items.count():
+        hdr = pg.get_by_text("Details", exact=True).first  # neutral click target: the modal title
+        if await hdr.count():
+            await hdr.click(force=True)
+            await pg.wait_for_timeout(500)
+
+
+async def dropdown_options(pg, meta):
+    """Open a custom (non-native) picklist, read its options, close it."""
+    t = await _dd_open(pg, meta)
+    items = pg.locator(DD_ITEMS).locator("visible=true")
+    opts = await items.evaluate_all("els => els.map(e => e.dataset.id || e.innerText.trim())")
+    await _dd_close(pg, t)
+    return [o for o in dict.fromkeys(opts) if o and len(o) < 90]
+
+
+async def choose_dropdown(pg, meta, opt):
+    """Toggle one option of a custom picklist (multi-selects toggle, so calling twice unticks)."""
+    t = await _dd_open(pg, meta)
+    item = pg.locator(f'[data-id="{_css(opt)}"]').locator("visible=true").first
+    if not await item.count():
+        item = pg.locator(DD_ITEMS).locator("visible=true").filter(has_text=opt).first
+    await item.click(force=True)
+    await pg.wait_for_timeout(500)
+    await _dd_close(pg, t)
+
+
+async def dropdown_checked(pg, opt):
+    """aria-checked of a custom picklist option (readable while the list is closed)."""
+    try:
+        loc = pg.locator(f'[role=checkbox][data-id="{_css(opt)}"], [role=radio][data-id="{_css(opt)}"]').first
+        if await loc.count():
+            return (await loc.get_attribute("aria-checked")) == "true"
+    except Exception:
+        pass
+    return False
+
+
+async def suggestion_text(pg):
+    """Text of the 'New Service Type Suggestion' modal when it is showing."""
+    try:
+        loc = pg.get_by_text("New Service Type Suggestion").first
+        if await loc.count():
+            t = await loc.evaluate("e => { let p = e; for (let i = 0; i < 6 && p.parentElement; i++) p = p.parentElement; return p.innerText; }")
+            return " ".join(t.split())[:500]
+    except Exception:
+        pass
+    return ""
+
+
+async def fill_free(pg, meta, question=""):
     """Fill text / date / time / AM-PM parts of a non-list question."""
     for tag, typ, ph, aria, opts in meta.get("parts", []):
         try:
@@ -252,15 +378,16 @@ async def fill_free(pg, meta):
                 loc = pg.locator(f'select[aria-label="{_css(aria)}"]').first if aria else pg.locator("select", has=pg.locator('option:text-is("AM")')).first
                 await loc.select_option(index=1 if opts and opts[0] == PLACEHOLDER else 0)
                 continue
-            loc = pg.locator(f'[aria-label="{_css(aria)}"]').first if aria else pg.locator(f'[placeholder="{_css(ph)}"]').first
-            if "MM/DD/YYYY" in ph: val = "09/01/2026"
-            elif ":" in ph: val = "10:00"
-            elif typ == "date": val = "2026-09-01"
-            elif typ == "number": val = "1"
-            elif typ == "email": val = "dryrun@example.invalid"
-            elif typ == "tel": val = "7035551212"
-            else: val = "research dry run - not a real request"
-            await loc.fill(val)
+            # the scan truncates labels, so match by prefix; long labels otherwise never match exactly
+            loc = pg.locator(f'[aria-label^="{_css(aria[:120])}"]').first if aria else pg.locator(f'[placeholder="{_css(ph)}"]').first
+            if not await loc.count() and ph:
+                loc = pg.locator(f'[placeholder="{_css(ph)}"]').first
+            val = "10:00" if (":" in ph and "MM" not in ph) else _value_for(question, ph, aria, typ)
+            await loc.fill(val, timeout=5000)
+            try:
+                await loc.dispatch_event("change")
+            except Exception:
+                pass
         except Exception:
             pass
         await pg.wait_for_timeout(500)
@@ -272,16 +399,26 @@ async def open_category(pg, name, code, groups):
     await pg.wait_for_timeout(2500)
     tile = pg.locator(f'[data-service-code="{code}"]').first
     if not await tile.count():
-        for g in groups:  # not a Suggested tile: open its category group first
+        # Not a Suggested tile: open its category group. 31 services belong to
+        # no group in the catalog; the home page lists those under "other".
+        for g in list(groups) + ["other"]:
             gb = pg.get_by_role("button", name=g, exact=True).first
             if await gb.count():
                 await gb.click(force=True)
-                await pg.wait_for_timeout(2500)
                 tile = pg.locator(f'[data-service-code="{code}"]').first
-                if await tile.count():
+                try:
+                    await tile.wait_for(state="attached", timeout=8000)   # group panels render lazily
                     break
+                except Exception:
+                    continue
+    if not await tile.count():                       # last resort: the search box surfaces service chips
+        box = pg.get_by_placeholder("Search Service Requests").first
+        if await box.count():
+            await box.fill(name)
+            await pg.wait_for_timeout(2500)
+            tile = pg.locator(f'[data-service-code="{code}"]').first
     if not await tile.count():
-        raise RuntimeError("category tile not found on home or in its groups")
+        raise RuntimeError("category tile not found on home, in its groups, or via search")
     await tile.scroll_into_view_if_needed()
     await tile.click(force=True)
     await pg.wait_for_timeout(2500)
@@ -290,16 +427,22 @@ async def open_category(pg, name, code, groups):
     await pg.wait_for_timeout(3000)
     await press(pg, "Continue")                                    # step 1 -> 2
     fr = pg.locator("iframe.map-loc-mobile").first
-    for fx, fy in ((0.55, 0.55), (0.45, 0.48), (0.6, 0.4)):
-        box = await fr.bounding_box()
-        if not box:
-            raise RuntimeError("no map iframe on location step")
-        await pg.mouse.click(box["x"] + box["width"] * fx, box["y"] + box["height"] * fy)
-        await pg.wait_for_timeout(3200)
-        if await enabled(pg, "Continue"):
-            break
-    if not await press(pg, "Continue"):                            # step 2 -> 3
-        raise RuntimeError("location gate did not enable Continue")
+    try:
+        await fr.wait_for(state="visible", timeout=8000)
+        has_map = True
+    except Exception:
+        has_map = False                                            # some services have no Location step
+    if has_map:
+        for fx, fy in ((0.55, 0.55), (0.45, 0.48), (0.6, 0.4)):
+            box = await fr.bounding_box()
+            if not box:
+                break
+            await pg.mouse.click(box["x"] + box["width"] * fx, box["y"] + box["height"] * fy)
+            await pg.wait_for_timeout(3200)
+            if await enabled(pg, "Continue"):
+                break
+        if not await press(pg, "Continue"):                        # step 2 -> 3
+            raise RuntimeError("location gate did not enable Continue")
     await pg.wait_for_timeout(2200)
 
 
@@ -333,7 +476,17 @@ async def _walk(pg, fresh, rec, name, code, groups):
         heads = await scan(pg)
         pend = [h for h in heads if h["k"] not in done_ks and not answered(h, classify(h))]
         if not pend:
+            await dismiss_alerts(pg)
             cont = await enabled(pg, "Continue")
+            if not cont and not rec["questions"]:
+                # No questions at all: for some services the free-text box is
+                # the required field. Fill it and see whether Continue enables.
+                ta = pg.locator('textarea[aria-label="Additional Information"], textarea[placeholder="Additional Information"]').first
+                if await ta.count():
+                    await ta.fill("research dry run - not a real request")
+                    await pg.wait_for_timeout(1200)
+                    cont = await enabled(pg, "Continue")
+                    rec["additional_information_required"] = bool(cont)
             last_had_hard = bool(rec["questions"]) and any(
                 p.get("hard_stop") for p in rec["questions"][-1]["probes"].values())
             if not cont and last_had_hard and restarts < 3:
@@ -359,13 +512,25 @@ async def _walk(pg, fresh, rec, name, code, groups):
                     break
                 continue
             rec["continue_enabled_at_end"] = cont
+            if not cont and SHOTS:
+                try:
+                    await pg.screenshot(path=str(SHOTS / f"rules_{code}_stuck.png"), full_page=True)
+                except Exception:
+                    pass
             break
         h = pend[0]
         meta = classify(h)
+        if meta["kind"] == "dropdown":
+            try:
+                meta["options"] = await dropdown_options(pg, meta)
+            except Exception as e:
+                print(f"  dropdown enumeration failed: {e}", flush=True)
         done_ks.add(h["k"])
         entry = {"order": h["k"], "question": h["text"], "required": h["required"], "input": meta["kind"],
                  "code": meta.get("code") or "", "options": meta["options"], "probes": {}, "chosen": None}
-        if meta["kind"] in ("radio", "select", "checkbox", "radio-role") and meta["options"]:
+        if meta["kind"] == "dropdown":                   # "Select all applicable" = multi-select picklist
+            entry["multi"] = meta.get("trigger", "").lower().startswith("select all")
+        if meta["kind"] in ("radio", "select", "checkbox", "radio-role", "dropdown") and meta["options"]:
             base_msgs = set(await msgs(pg))
             base_ks = {x["k"] for x in heads}
             for opt in meta["options"]:
@@ -377,16 +542,17 @@ async def _walk(pg, fresh, rec, name, code, groups):
                     await pg.wait_for_timeout(900)
                     new_msgs = [m for m in await msgs(pg) if m not in base_msgs]
                     had_ok = await enabled(pg, "OK")
-                    if had_ok:
+                    suggests = await suggestion_text(pg) if await keep_current_visible(pg) else ""
+                    if had_ok or suggests:
                         await dismiss_alerts(pg)
                     after = await scan(pg)
                     h2 = next((x for x in after if x["k"] == h["k"]), None)
-                    still = bool(h2 and is_selected(h2, meta, opt))
+                    still = await dropdown_checked(pg, opt) if meta["kind"] == "dropdown" else bool(h2 and is_selected(h2, meta, opt))
                     entry["probes"][opt] = {"alert": new_msgs, "hard_stop": bool(had_ok and not still),
-                                            "advisory": bool(had_ok and still),
+                                            "advisory": bool(had_ok and still), "suggests": suggests,
                                             "reveals": sorted({x["k"] for x in after} - base_ks),
                                             "extra_controls": max(0, len(h2["controls"]) - len(h["controls"])) if h2 else 0}
-                    if meta["kind"] == "checkbox" and still:
+                    if meta["kind"] in ("checkbox", "dropdown") and still:
                         await choose(pg, meta, opt)          # toggle back off to isolate probes
                         await settle(pg)
                 except Exception as e:
@@ -399,9 +565,7 @@ async def _walk(pg, fresh, rec, name, code, groups):
                     try:
                         await choose(pg, meta, chosen)
                         await settle(pg)
-                        if await enabled(pg, "OK"):
-                            await press(pg, "OK")
-                            await settle(pg)
+                        await dismiss_alerts(pg)
                         h3 = next((x for x in await scan(pg) if x["k"] == h["k"]), None)
                         if h3 and is_selected(h3, meta, chosen):
                             break
@@ -412,7 +576,7 @@ async def _walk(pg, fresh, rec, name, code, groups):
             if chosen:
                 path.append(("list", meta, chosen))
         else:
-            await fill_free(pg, meta)
+            await fill_free(pg, meta, h["text"])
             entry["chosen"] = "filled"
             path.append(("free", meta, None))
             entry["parts"] = [{"tag": t, "type": ty, "placeholder": ph, "aria": a} for t, ty, ph, a, _ in meta.get("parts", [])]
@@ -445,7 +609,7 @@ async def main():
            "skipped_not_in_catalog": skipped, "categories": []}
     if OUT.exists():  # resume: keep categories an earlier run finished cleanly
         try:
-            PERMANENT = ("not found", "view-only")
+            PERMANENT = ("view-only",)
             done = {c["service_code"]: c for c in json.load(open(OUT))["categories"]
                     if (not c.get("error") and c.get("continue_enabled_at_end") is not None)
                     or any(k in (c.get("error") or "") for k in PERMANENT)}

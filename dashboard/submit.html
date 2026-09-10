@@ -158,7 +158,7 @@ function ruleHtml(o) {
 function inputHtml(q, key) {
   const v = state.answers[key];
   const opts = q.options.filter(o => o.rendered !== false || !q.kind);   // hide phone-only values
-  if (q.kind === 'checkbox' || q.datatype === 'multivaluelist') {
+  if (q.kind === 'checkbox' || q.kind === 'multiselect' || q.datatype === 'multivaluelist') {
     return opts.map(o => `<label class="opt ${o.rule?.type==='hard_stop'?'hard':''}"><input type="checkbox" data-key="${key}" value="${esc(o.value)}" ${Array.isArray(v)&&v.includes(o.value)?'checked':''}><span>${esc(o.value)}${ruleHtml(o)}</span></label>`).join('');
   }
   if (opts.length) {
