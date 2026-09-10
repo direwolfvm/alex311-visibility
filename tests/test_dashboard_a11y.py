@@ -132,3 +132,25 @@ def test_respects_reduced_motion_and_coarse_pointers():
 
 def test_focus_is_visible():
     assert ":focus-visible" in HTML
+
+
+# ------------------------------------------------ map sizing (regression)
+
+SUBMIT = (Path(__file__).resolve().parents[1] / "dashboard/submit.html").read_text()
+
+
+@pytest.mark.parametrize("page,name", [(HTML, "dashboard"), (SUBMIT, "submit form")])
+def test_the_map_is_told_to_re_measure(page, name):
+    """Leaflet measures its container once. Both pages build the map while its
+    container is hidden or a different size, which paints one column of tiles
+    and leaves the rest grey until invalidateSize runs."""
+    assert "invalidateSize" in page, f"{name} never re-measures its map"
+
+
+@pytest.mark.parametrize("page,name", [(HTML, "dashboard"), (SUBMIT, "submit form")])
+def test_re_measuring_does_not_wait_on_an_animation_frame(page, name):
+    """requestAnimationFrame is suspended while the page is not being painted,
+    so a map that waits for one stays 0x0 in a background tab. invalidateSize
+    forces the layout it needs, so it can be called directly."""
+    assert "requestAnimationFrame(() => map.invalidateSize())" not in page
+    assert "requestAnimationFrame(remeasureMap)" not in page

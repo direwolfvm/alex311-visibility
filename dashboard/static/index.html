@@ -973,7 +973,7 @@ window.addEventListener('resize', () => {
     }
   }, 150);
 });
-requestAnimationFrame(remeasureMap);
+remeasureMap();      // sync: rAF is suspended when the page is not painting
 
 // Summarise the active filters on the collapsed control, so a phone user can
 // see what is being applied without opening it.
