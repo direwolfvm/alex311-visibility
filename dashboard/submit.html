@@ -296,18 +296,52 @@ window.addEventListener('resize', () => {
   clearTimeout(mapResizeTimer);
   mapResizeTimer = setTimeout(remeasureMap, 150);
 });
-map.on('click', e => setLocation(e.latlng.lat, e.latlng.lng, {zoom: map.getZoom()}));
+map.on('click', e => setLocation(e.latlng.lat, e.latlng.lng, {zoom: map.getZoom(), lookup: true}));
 // ---------- location: by GPS, by address, or by dropping a pin ----------
-function setLocation(lat, long, {label = null, address = null, zoom = 17} = {}) {
+// Alexandria is about 15 square miles and the map pans anywhere, so a pin can
+// easily land in Arlington or across the river in DC. The City cannot act on
+// those, and the form should say so rather than preparing a request the City
+// will discard. A generous rectangle around the city, not the real boundary:
+// this warns, never blocks, so an address near the edge is never refused.
+const CITY_BOX = {minLat: 38.760, maxLat: 38.860, minLong: -77.170, maxLong: -77.020};
+const inAlexandria = (lat, long) =>
+  lat >= CITY_BOX.minLat && lat <= CITY_BOX.maxLat &&
+  long >= CITY_BOX.minLong && long <= CITY_BOX.maxLong;
+
+function setLocation(lat, long, {label = null, address = null, zoom = 17, lookup = false} = {}) {
   state.lat = +(+lat).toFixed(6);
   state.long = +(+long).toFixed(6);
+  state.outsideCity = !inAlexandria(state.lat, state.long);
   pin ? pin.setLatLng([state.lat, state.long]) : (pin = L.marker([state.lat, state.long]).addTo(map));
   map.setView([state.lat, state.long], Math.max(map.getZoom(), zoom));
   if (address !== null) $('address').value = address;
   $('loc-label').textContent = `location set: ${state.lat}, ${state.long}`;
-  $('loc-status').textContent = label || '';
+  // Tell them here, where the pin is, rather than making them reach the last
+  // step to find out the point cannot be served.
+  $('loc-status').textContent = state.outsideCity
+    ? 'That point looks outside Alexandria — the City cannot act on it. Move the pin inside the city.'
+    : (label || '');
   $('addr-cands').innerHTML = '';
   checkDupes(); renderResult();
+  if (lookup) fillAddressFromPoint();
+}
+
+// Whatever placed the pin, name it. Dropping a pin and typing the address by
+// hand was the odd one out: geolocation filled the box and the map did not.
+async function fillAddressFromPoint() {
+  if (state.lat == null || $('address').value.trim()) return;
+  try {
+    const r = await (await fetch(`/submit/api/reverse?lat=${state.lat}&long=${state.long}`)).json();
+    if (r.nearest) {
+      $('address').value = r.nearest.address;
+      $('loc-status').textContent =
+        `Nearest address the City has used: ${r.nearest.address} (${r.nearest.meters} m away). Edit it if that is not right.`;
+      if (state.valid) $('review').textContent = summary();
+    } else if (!state.outsideCity) {
+      $('loc-status').textContent =
+        'No address on record near this point. Type one if you know it — it is optional.';
+    }
+  } catch { /* the pin is set; the address is optional */ }
 }
 
 $('use-loc').addEventListener('click', () => {
@@ -318,19 +352,12 @@ $('use-loc').addEventListener('click', () => {
   const btn = $('use-loc');
   btn.disabled = true;
   $('loc-status').textContent = 'Asking your browser for your location…';
-  navigator.geolocation.getCurrentPosition(async pos => {
+  navigator.geolocation.getCurrentPosition(pos => {
     btn.disabled = false;
     const {latitude, longitude, accuracy} = pos.coords;
-    setLocation(latitude, longitude, {label: `Located to about ${Math.round(accuracy)} m. Drag the map and tap to adjust.`});
-    // fill the address box from the City's own wording for this spot
-    try {
-      const r = await (await fetch(`/submit/api/reverse?lat=${state.lat}&long=${state.long}`)).json();
-      if (r.nearest && !$('address').value.trim()) {
-        $('address').value = r.nearest.address;
-        $('loc-status').textContent =
-          `Nearest address the City has used: ${r.nearest.address} (${r.nearest.meters} m away). Edit it if that is not right.`;
-      }
-    } catch { /* the pin is set; the address is optional */ }
+    setLocation(latitude, longitude, {
+      label: `Located to about ${Math.round(accuracy)} m. Drag the map and tap to adjust.`,
+      lookup: true});
   }, err => {
     btn.disabled = false;
     // Permission denied is a choice, not a failure — say what to do instead.
@@ -411,7 +438,12 @@ function renderResult() {
   if (adv.length) h += `<div class="box warn"><b>Before you submit:</b><ul>${adv.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
   if (notes.length) h += `<div class="box info"><ul>${notes.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
   if (state.lat == null) h += `<div class="box bad">Please set a location on the map.</div>`;
-  const ready = v.ok && state.lat != null;
+  else if (state.outsideCity) h += `<div class="box warn"><b>That point looks outside Alexandria.</b>
+    The City only handles requests inside its own boundary, so this one would be closed without action.
+    Move the pin, or use the right jurisdiction: Arlington County, Fairfax County, or DC 311.</div>`;
+  // Outside the city is not ready: the City would close it without action, so
+  // offering the handoff would be telling the resident something untrue.
+  const ready = v.ok && state.lat != null && !state.outsideCity;
   if (ready) h += `<div class="box ok">Ready. Copy the details and open the official portal to file it.</div>`;
   box.innerHTML = h;
   $('review').hidden = !ready; if (ready) $('review').textContent = summary();
