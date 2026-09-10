@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-10 01:06 UTC",
+ "generated": "2026-09-10 13:42 UTC",
  "sources": {
   "catalog": 111,
   "mined_categories": 45,
@@ -3078,7 +3078,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "advisory",
-        "message": ""
+        "message": "Please note that if your message is related to an item to be considered by City Council, the information you submit will be published on the City's website as an attachment to the agenda for the meeting at which the item will be considered. Please see the City's privacy policy for further information."
        },
        "reveals": [],
        "probe_error": null
@@ -7307,7 +7307,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "advisory",
-        "message": ""
+        "message": "To begin the permit process please visit www.alexandriava.gov/zoning/short-term-residential-rentals to review the regulations and gather the necessary documents and photos. When you're ready, apply for an annual permit by visiting www.alexandriava.gov/Permits."
        },
        "reveals": [],
        "probe_error": null
@@ -8447,7 +8447,9 @@
        "rendered": true,
        "seen_in_data": true,
        "rule": null,
-       "reveals": [],
+       "reveals": [
+        3
+       ],
        "probe_error": null
       }
      ],
@@ -8476,7 +8478,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "hard_stop",
-        "message": ""
+        "message": "The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'."
        },
        "reveals": [],
        "probe_error": null
@@ -8494,7 +8496,12 @@
      ],
      "parts": null,
      "source": "wizard+data",
-     "revealed_by": [],
+     "revealed_by": [
+      {
+       "question": "01PL-RPCTREESIDE",
+       "option": "No"
+      }
+     ],
      "conditional": false
     },
     {
@@ -8694,7 +8701,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "hard_stop",
-        "message": ""
+        "message": "The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'."
        },
        "reveals": [],
        "probe_error": null
@@ -8867,7 +8874,9 @@
        "rendered": true,
        "seen_in_data": true,
        "rule": null,
-       "reveals": [],
+       "reveals": [
+        3
+       ],
        "probe_error": null
       }
      ],
@@ -8896,7 +8905,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "hard_stop",
-        "message": ""
+        "message": "The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'."
        },
        "reveals": [],
        "probe_error": null
@@ -8914,7 +8923,12 @@
      ],
      "parts": null,
      "source": "wizard+data",
-     "revealed_by": [],
+     "revealed_by": [
+      {
+       "question": "01PL-RPCTREESIDE",
+       "option": "No"
+      }
+     ],
      "conditional": false
     },
     {
@@ -8965,7 +8979,10 @@
        "value": "Overgrown Sidewalk Vegetation",
        "rendered": true,
        "seen_in_data": false,
-       "rule": null,
+       "rule": {
+        "type": "hard_stop",
+        "message": ""
+       },
        "reveals": [],
        "probe_error": null
       }
@@ -8982,7 +8999,7 @@
     }
    ],
    "rules_summary": {
-    "hard_stops": 4,
+    "hard_stops": 5,
     "advisories": 0,
     "info": 0,
     "branching": true
@@ -10952,7 +10969,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "hard_stop",
-        "message": ""
+        "message": "Leaf collection services are only available to residents who currently receive City trash services. If you are a resident who receives trash services from the City, but are unable to submit a request based on your address, please contact 311 or 703.746.4311."
        },
        "reveals": [],
        "probe_error": null
@@ -11127,7 +11144,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "advisory",
-        "message": ""
+        "message": "The Neighborhood Transportation Improvements Program (NTIP) is a resident driven program that addresses neighborhood transportation issues like limited crossing opportunities, unsafe vehicle speeds, challenging intersections, and more. To learn more about the program and to apply visit the NTIP webpage."
        },
        "reveals": [],
        "probe_error": null
@@ -11138,7 +11155,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "advisory",
-        "message": ""
+        "message": "The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about current and upcoming projects at Transportation Planning."
        },
        "reveals": [],
        "probe_error": null
@@ -11149,7 +11166,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "advisory",
-        "message": ""
+        "message": "The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about current and upcoming projects at Transportation Planning."
        },
        "reveals": [],
        "probe_error": null
@@ -11182,7 +11199,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "advisory",
-        "message": ""
+        "message": "The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about the what staff is working on and upcoming projects at Transportation Planning."
        },
        "reveals": [],
        "probe_error": null
@@ -12586,7 +12603,7 @@
        "seen_in_data": false,
        "rule": {
         "type": "hard_stop",
-        "message": ""
+        "message": "The City has an application process for requesting residential sidewalks that were not identified in the Transportation Master Plan as a priority. To learn more about this process and submit an application, visit our Neighborhood Sidewalk Program."
        },
        "reveals": [],
        "probe_error": null

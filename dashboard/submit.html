@@ -149,11 +149,17 @@ function visibleWalked() {
   return state.svc.questions.filter(q => q.source !== 'data-only' &&
     (!q.conditional || (q.revealed_by || []).some(r => sel(r.question, r.option))));
 }
+// A few options are rejected by the City's form with no explanation at all.
+// Say so plainly rather than rendering a lead-in with nothing after it.
+const HARD_NO_REASON = 'Not accepted online. The City’s form rejects this answer without giving a reason.';
 function ruleHtml(o) {
   if (!o.rule) return '';
-  const cls = o.rule.type === 'hard_stop' ? 'hard' : o.rule.type === 'advisory' ? 'adv' : 'info';
-  const lead = o.rule.type === 'hard_stop' ? 'Not accepted online — ' : o.rule.type === 'advisory' ? 'Note: ' : '';
-  return `<span class="rule ${cls}">${lead}${esc(o.rule.message)}</span>`;
+  const type = o.rule.type, msg = (o.rule.message || '').trim();
+  const cls = type === 'hard_stop' ? 'hard' : type === 'advisory' ? 'adv' : 'info';
+  const text = type === 'hard_stop' ? (msg ? 'Not accepted online — ' + msg : HARD_NO_REASON)
+             : type === 'advisory'  ? (msg ? 'Note: ' + msg : '')
+             : msg;
+  return text ? `<span class="rule ${cls}">${esc(text)}</span>` : '';
 }
 function inputHtml(q, key) {
   const v = state.answers[key];
@@ -223,10 +229,12 @@ function renderResult() {
   const v = state.valid; const box = $('result');
   if (!v) { box.innerHTML = ''; $('review').hidden = true; $('copy').hidden = true; $('official').classList.add('disabled'); return; }
   let h = '';
-  if (v.blocking.length) h += `<div class="box bad"><b>The City won't accept this online:</b><ul>${v.blocking.map(b=>`<li>Q${b.order} “${esc(b.option)}” — ${esc(b.message||'not accepted on the web form')}</li>`).join('')}</ul></div>`;
+  if (v.blocking.length) h += `<div class="box bad"><b>The City won't accept this online:</b><ul>${v.blocking.map(b=>`<li>Q${b.order} “${esc(b.option)}” — ${esc(b.message||'the City’s form rejects this answer without giving a reason')}</li>`).join('')}</ul></div>`;
   if (v.errors.length) h += `<div class="box bad"><b>Please fix:</b><ul>${v.errors.map(e=>`<li><a href="#q-${e.question}">Q${e.order}</a> — ${esc(e.message)}</li>`).join('')}</ul></div>`;
-  if (v.advisories.length) h += `<div class="box warn"><b>Before you submit:</b><ul>${v.advisories.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
-  if (v.info.length) h += `<div class="box info"><ul>${v.info.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
+  const said = list => list.filter(a => (a.message || '').trim());   // a rule with no text has nothing to show
+  const adv = said(v.advisories), notes = said(v.info);
+  if (adv.length) h += `<div class="box warn"><b>Before you submit:</b><ul>${adv.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
+  if (notes.length) h += `<div class="box info"><ul>${notes.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
   if (state.lat == null) h += `<div class="box bad">Please set a location on the map.</div>`;
   const ready = v.ok && state.lat != null;
   if (ready) h += `<div class="box ok">Ready. Copy the details and open the official portal to file it.</div>`;

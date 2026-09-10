@@ -21,13 +21,15 @@ Results save incrementally to docs/data/wizard-rules.json; re-running resumes.
 
 Usage: uv run python spike/wizard_rules.py [top_n=15 | all] [screenshot_dir]
 """
-import asyncio, json, sys, time
+import asyncio, json, os, sys, time
 from pathlib import Path
 from playwright.async_api import async_playwright
 
 BASE = "https://alex311.alexandriava.gov/customer/s/"
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs/data/wizard-rules.json"
+# ALEX311_RULES_OUT lets a drift run write (and resume from) a scratch file
+# instead of the committed one, so the weekly re-crawl can be diffed against it.
+OUT = Path(os.environ.get("ALEX311_RULES_OUT") or ROOT / "docs/data/wizard-rules.json")
 SHOTS = Path(sys.argv[2]) if len(sys.argv) > 2 else None
 PLACEHOLDER = "Select an option"
 
@@ -129,13 +131,33 @@ def _css(v):
     return v.replace("\\", "\\\\").replace('"', '\\"')
 
 
-async def msgs(pg):
+# The Validation Alert body lives in its own node. Read it separately and with a
+# generous cap: the general scrape below is capped at 240 chars to keep whole
+# wizard panels out, and several City messages are longer than that (the leaf
+# collection one is 244), which silently produced rules with no explanation.
+ALERT_BODY = ".pop-up-message"
+ALERT_FALLBACK = ".validation-popup, .verify-popup, [class*=validation-popup]"
+
+
+async def _texts(pg, sel, cap):
     try:
-        got = await pg.locator("[class*=message], [role=alert], .slds-form-element__help, [class*=error], [class*=alert], [class*=modal] p, [class*=modal] h2").evaluate_all(
-            "els => els.filter(e => e.offsetParent !== null).map(e => e.innerText.replace(/\\s+/g,' ').trim()).filter(t => t && t.length > 2 && t.length < 240)")
-        return list(dict.fromkeys(got))
+        return await pg.locator(sel).evaluate_all(
+            "(els, cap) => els.filter(e => e.offsetParent !== null)"
+            ".map(e => e.innerText.replace(/\\s+/g,' ').trim().replace(/\\s*OK$/, ''))"
+            ".filter(t => t && t.length > 2 && t.length < cap)", cap)
     except Exception:
         return []
+
+
+async def msgs(pg):
+    body = await _texts(pg, ALERT_BODY, 900)
+    if not body:
+        body = await _texts(pg, ALERT_FALLBACK, 900)
+    general = await _texts(pg, "[class*=message], [role=alert], .slds-form-element__help, [class*=error], "
+                               "[class*=alert], [class*=modal] p, [class*=modal] h2", 240)
+    # drop general entries already covered by the (longer, cleaner) alert body
+    out = list(body) + [g for g in general if not any(g in b for b in body)]
+    return list(dict.fromkeys(out))
 
 
 async def settle(pg):

@@ -451,6 +451,24 @@ class Alex311Client:
             raise Alex311Error(f"detail returned non-dict: {str(result)[:200]}")
         return result
 
+    # ---------------------------------------------------------------- catalog
+
+    def get_service_types(self) -> list[dict]:
+        """The service catalog in Open311 shape (service_code, service_name,
+        description, keywords, group, definitions). Read-only; this is the only
+        schema the portal exposes — the per-service questions are not in it.
+        Used to regenerate docs/data/service-catalog.json and to detect drift."""
+        result = self._call("getServiceTypes", [{"language": "EN"}])
+        if isinstance(result, dict):
+            for key in ("serviceTypes", "service_types", "returnValue"):
+                if isinstance(result.get(key), list):
+                    return result[key]
+            raise Alex311Error(f"getServiceTypes returned a dict without a list: "
+                               f"{list(result)[:8]}")
+        if not isinstance(result, list):
+            raise Alex311Error(f"getServiceTypes returned {type(result).__name__}")
+        return result
+
     # ----------------------------------------------------------------- media
 
     def fetch_media(self, url: str) -> tuple[bytes, str]:
