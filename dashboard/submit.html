@@ -24,6 +24,9 @@
                        font-size: 14px; padding: 6px 16px 8px; color: var(--muted);
                        border-bottom: 2px solid transparent; }
   nav.tabs .tab-link:hover { color: var(--ink); border-bottom-color: var(--border); }
+  /* the class selector beats the browser's [hidden] rule; without this the
+     Admin tab is visible to everyone */
+  nav.tabs .tab-link[hidden] { display:none; }
   nav.tabs .tab-link[aria-current="page"] { color: var(--accent); font-weight: 600;
                                             border-bottom-color: var(--accent); }
   .tab-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
@@ -122,6 +125,7 @@
     <a class="tab-link" href="/#analytics">Analytics</a>
     <a class="tab-link" href="/submit" aria-current="page">Report an issue
       <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
   <span class="whoami" id="whoami"></span>
 </header>
@@ -601,9 +605,10 @@ $('copy').addEventListener('click', async () => { await navigator.clipboard.writ
   try {
     const {user} = await (await fetch('/submit/api/whoami')).json();
     $('whoami').innerHTML = user
-      ? `${esc(user.email)}${user.role === 'admin'
-          ? ' · <a href="/submit/users">Users</a>' : ''} · <a href="/submit/logout">Sign out</a>`
+      ? `${esc(user.email)} · <a href="/submit/logout">Sign out</a>`
       : '<a href="/submit/login">Sign in</a>';
+    // moderation and user management both live behind the Admin tab now
+    if (user && user.role === 'admin') $('nav-admin').hidden = false;
   } catch { /* the gate already refused if this mattered */ }
 })();
 

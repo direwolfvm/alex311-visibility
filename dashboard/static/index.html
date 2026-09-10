@@ -39,6 +39,9 @@
                        border-bottom: 2px solid transparent; }
   nav.tabs button:hover, nav.tabs .tab-link:hover { color: var(--ink);
                                                     border-bottom-color: var(--border); }
+  /* `display: flex` above beats the browser's own [hidden] rule, so the Admin
+     tab would sit there in plain sight for everyone. */
+  nav.tabs .tab-link[hidden] { display: none; }
   /* Two ways of being the current view — a selected tab here, a link to the page
      you are already on elsewhere — get one appearance. */
   nav.tabs button.active,
@@ -249,6 +252,9 @@
          honour. It sits outside the tablist for the same reason. -->
     <a class="tab-link" href="/submit">Report an issue
       <span class="tab-tag">beta</span></a>
+    <!-- Shown to administrators once they are signed in. Hiding it is a
+         courtesy; the page behind it does its own checking. -->
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
   <div class="stats">
     <span>Total <b id="stat-total">–</b></span>
@@ -721,6 +727,13 @@ document.querySelector('nav.tabs [role=tablist]').addEventListener('keydown', e 
   e.preventDefault();
   selectTab(tabButtons[(to + tabButtons.length) % tabButtons.length], true);
 });
+
+// The Admin tab, for the few people who have one. This page is public, so the
+// answer is usually "nobody" and nothing changes.
+fetch('/submit/api/whoami')
+  .then(r => r.ok ? r.json() : {user: null})
+  .then(({user}) => { if (user && user.role === 'admin') $('nav-admin').hidden = false; })
+  .catch(() => { /* the bar is fine without it */ });
 
 // default window: trailing 3 months (clamped to the data's actual start)
 function applyPreset(which) {

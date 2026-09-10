@@ -317,14 +317,25 @@ def approve_attempt(conn: psycopg.Connection, attempt_id: int, actor: str) -> bo
     return row is not None
 
 
-def submission_queue(conn: psycopg.Connection, states: tuple = ("queued", "approved",
-                                                                "filing", "failed"),
+def submission_queue(conn: psycopg.Connection,
+                     states: tuple = ("queued", "approved", "filing", "filed",
+                                      "failed", "cancelled"),
                      limit: int = 50) -> list[dict]:
-    """What is waiting to be filed, and what happened to what already was."""
+    """What is waiting to be filed, and what happened to what already was.
+
+    `filed` belongs in the default set: the page this feeds is where someone
+    checks whether releasing a request actually produced a City case number,
+    and a history that stops at the moment of release cannot answer that.
+
+    It carries the contact details and the policy's findings because they are
+    what a release decision turns on. Everything here is somebody else's
+    report, which is why only administrators can ask for it.
+    """
     return conn.execute(
-        """SELECT attempt_id, created_at, queued_at, approved_at, approved_by,
-                  submit_state, tries, submit_error, service_code, service_name,
-                  address, description, outcome, city_case_number, relayed_at
+        """SELECT attempt_id, submitter_id, created_at, queued_at, approved_at,
+                  approved_by, submit_state, tries, submit_error, service_code,
+                  service_name, address, description, contact, answers,
+                  outcome, findings, city_case_number, relayed_at
              FROM submission_attempts
             WHERE submit_state = ANY(%s)
             ORDER BY COALESCE(approved_at, queued_at, created_at) DESC
