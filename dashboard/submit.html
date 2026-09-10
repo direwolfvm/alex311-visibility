@@ -38,6 +38,26 @@
   .opt.hard { border-color:#fecaca; background:#fff7f7; }
   .hint { font-size:12px; color:var(--muted); margin-top:4px; }
   .composite { display:flex; gap:8px; } .composite input { flex:1; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+             overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .chosen { display:flex; gap:10px; align-items:flex-start; padding:11px 13px;
+            border:1px solid var(--accent); background:var(--infobg); border-radius:8px; }
+  .chosen .grow { flex:1; min-width:0; }
+  .linkish { background:none; border:none; color:var(--accent); font:inherit; font-size:13px;
+             cursor:pointer; padding:4px 6px; border-radius:6px; white-space:nowrap; }
+  .linkish:hover { background:#dbeafe; }
+  .locbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  .locbar input { flex:1; min-width:200px; margin:0; }
+  .btn-sm { border:1px solid var(--border); background:#fff; border-radius:8px; font:inherit;
+            font-size:13px; padding:8px 12px; cursor:pointer; white-space:nowrap; }
+  .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-sm[disabled] { opacity:.55; cursor:default; }
+  .cands { margin-top:6px; display:grid; gap:4px; }
+  .cand { text-align:left; width:100%; padding:7px 10px; border:1px solid var(--border);
+          border-radius:8px; background:#fff; font:inherit; font-size:13px; cursor:pointer; }
+  .cand:hover { border-color:var(--accent); background:var(--infobg); }
+  .cand small { color:var(--muted); margin-left:6px; }
+  @media (max-width: 560px) { .locbar .btn-sm { flex:1; } }
   .progress { height:8px; background:#e2e8f0; border-radius:99px; overflow:hidden; margin:4px 0 10px; }
   .progress i { display:block; height:100%; background:var(--accent); width:0; transition:width .2s; }
   details.more { margin-top:10px; } details.more summary { cursor:pointer; color:var(--muted); font-size:13px; }
@@ -82,8 +102,15 @@
 
   <div class="step" id="where" hidden>
     <h2>3 · Where? <span class="hint" id="loc-label">click the map to drop a pin</span></h2>
-    <div id="map"></div>
-    <input type="text" id="address" placeholder="Address (optional, helps the City locate it)" style="margin-top:8px">
+    <div class="locbar">
+      <button type="button" class="btn-sm" id="use-loc">Use my location</button>
+      <label class="sr-only" for="address">Address</label>
+      <input type="text" id="address" placeholder="Start typing an address, e.g. 100 King St">
+      <button type="button" class="btn-sm" id="find-addr">Find on map</button>
+    </div>
+    <div class="cands" id="addr-cands" role="group" aria-label="Address matches"></div>
+    <div id="loc-status" class="hint" role="status" aria-live="polite"></div>
+    <div id="map" style="margin-top:8px"></div>
     <div id="dupes"></div>
     <label class="hint" style="display:block;margin-top:10px">Additional information</label>
     <textarea id="desc" placeholder="Anything else the City should know"></textarea>
@@ -120,6 +147,24 @@ async function loadRegistry() {
   renderList('');
 }
 function renderList(q) {
+  // Once a type is chosen the other 110 are noise. Collapse to the choice,
+  // with one obvious way back.
+  if (state.svc && !state.picking) {
+    const s = state.svc;
+    $('svc-q').hidden = true;
+    $('svc-list').innerHTML = `<div class="chosen"><div class="grow">
+        <b>${esc(s.service_name)}</b>
+        <small class="hint" style="display:block;margin-top:2px">${esc((s.description||'').slice(0,120))}${(s.description||'').length>120?'…':''}</small>
+      </div><button type="button" class="linkish" id="change-svc">Change</button></div>`;
+    $('change-svc').addEventListener('click', () => {
+      state.picking = true;
+      $('svc-q').hidden = false;
+      renderList($('svc-q').value);
+      $('svc-q').focus();
+    });
+    return;
+  }
+  $('svc-q').hidden = false;
   q = q.trim().toLowerCase();
   const rows = state.services.filter(s => !q || (s.service_name + ' ' + s.keywords + ' ' + s.description).toLowerCase().includes(q))
     .sort((a,b) => (b.coverage.mined_records - a.coverage.mined_records)).slice(0, q ? 12 : 8);
@@ -135,6 +180,7 @@ $('svc-q').addEventListener('input', e => renderList(e.target.value));
 async function pick(code) {
   state.svc = await (await fetch('/submit/api/service/' + code)).json();
   state.answers = {}; state.valid = null;
+  state.picking = false;
   renderList($('svc-q').value);
   $('svc-desc').innerHTML = `${esc(state.svc.description||'')}${state.svc.departments?.length ? ` <br><b>Handled by:</b> ${esc(state.svc.departments.map(d=>d.name).join(', '))}` : ''}`;
   $('banners').innerHTML = (state.svc.banners||[]).map(b => `<div class="box info">${esc(b)}</div>`).join('');
@@ -175,12 +221,36 @@ function inputHtml(q, key) {
     return opts.map(o => `<label class="opt ${o.rule?.type==='hard_stop'?'hard':''}"><input type="radio" name="${key}" data-key="${key}" value="${esc(o.value)}" ${v===o.value?'checked':''}><span>${esc(o.value)}${ruleHtml(o)}</span></label>`).join('');
   }
   if (q.kind === 'composite' || (q.datatype||'').startsWith('date')) {
-    return `<div class="composite"><input type="date" data-key="${key}" data-part="date" value="${esc(v?.date||'')}"><input type="time" data-key="${key}" data-part="time" value="${esc(v?.time||'')}"></div>`;
+    const d = v || {};
+    return `<div class="composite"><input type="date" data-key="${key}" data-part="date" value="${esc(d.date||'')}"><input type="time" data-key="${key}" data-part="time" value="${esc(d.time||'')}"></div>`;
   }
   return `<textarea data-key="${key}" rows="2">${esc(v||'')}</textarea>`;
 }
+// Almost every date question on these forms asks when something happened, and
+// the answer is nearly always "just now" — a missed collection, a noise
+// complaint, a light that went out. Seeding now costs a resident one edit in
+// the rare case it is wrong and saves two in the common case. Seeded into
+// state.answers, not just the input, so validation and the summary see it.
+function nowParts() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return {date: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`,
+          time: `${p(d.getHours())}:${p(d.getMinutes())}`};
+}
+
+function seedDateDefaults(questions) {
+  questions.forEach(q => {
+    const key = qkey(q);
+    if (state.answers[key] !== undefined) return;       // never overwrite a person
+    if (q.kind === 'composite' || (q.datatype || '').startsWith('date')) {
+      state.answers[key] = nowParts();
+    }
+  });
+}
+
 function renderQuestions() {
   const vis = visibleWalked();
+  seedDateDefaults(vis);
   const html = q => `<div class="q" id="q-${qkey(q)}"><div class="qt"><span class="n">Q${q.order}</span>${esc(q.text)}${q.required?'<span class="req">*</span>':''}</div>${inputHtml(q, qkey(q))}</div>`;
   $('questions').innerHTML = vis.map(html).join('') || '<div class="hint">This request type has no extra questions — just location and details.</div>';
   const more = state.svc.questions.filter(q => q.source === 'data-only');
@@ -226,9 +296,93 @@ window.addEventListener('resize', () => {
   clearTimeout(mapResizeTimer);
   mapResizeTimer = setTimeout(remeasureMap, 150);
 });
-map.on('click', e => { state.lat = +e.latlng.lat.toFixed(6); state.long = +e.latlng.lng.toFixed(6);
-  pin ? pin.setLatLng(e.latlng) : (pin = L.marker(e.latlng).addTo(map));
-  $('loc-label').textContent = `location set: ${state.lat}, ${state.long}`; checkDupes(); renderResult(); });
+map.on('click', e => setLocation(e.latlng.lat, e.latlng.lng, {zoom: map.getZoom()}));
+// ---------- location: by GPS, by address, or by dropping a pin ----------
+function setLocation(lat, long, {label = null, address = null, zoom = 17} = {}) {
+  state.lat = +(+lat).toFixed(6);
+  state.long = +(+long).toFixed(6);
+  pin ? pin.setLatLng([state.lat, state.long]) : (pin = L.marker([state.lat, state.long]).addTo(map));
+  map.setView([state.lat, state.long], Math.max(map.getZoom(), zoom));
+  if (address !== null) $('address').value = address;
+  $('loc-label').textContent = `location set: ${state.lat}, ${state.long}`;
+  $('loc-status').textContent = label || '';
+  $('addr-cands').innerHTML = '';
+  checkDupes(); renderResult();
+}
+
+$('use-loc').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    $('loc-status').textContent = 'This browser cannot share a location. Type an address or tap the map.';
+    return;
+  }
+  const btn = $('use-loc');
+  btn.disabled = true;
+  $('loc-status').textContent = 'Asking your browser for your location…';
+  navigator.geolocation.getCurrentPosition(async pos => {
+    btn.disabled = false;
+    const {latitude, longitude, accuracy} = pos.coords;
+    setLocation(latitude, longitude, {label: `Located to about ${Math.round(accuracy)} m. Drag the map and tap to adjust.`});
+    // fill the address box from the City's own wording for this spot
+    try {
+      const r = await (await fetch(`/submit/api/reverse?lat=${state.lat}&long=${state.long}`)).json();
+      if (r.nearest && !$('address').value.trim()) {
+        $('address').value = r.nearest.address;
+        $('loc-status').textContent =
+          `Nearest address the City has used: ${r.nearest.address} (${r.nearest.meters} m away). Edit it if that is not right.`;
+      }
+    } catch { /* the pin is set; the address is optional */ }
+  }, err => {
+    btn.disabled = false;
+    // Permission denied is a choice, not a failure — say what to do instead.
+    $('loc-status').textContent = err.code === err.PERMISSION_DENIED
+      ? 'Location sharing is off. Type an address or tap the map instead.'
+      : 'Could not get a location. Type an address or tap the map instead.';
+  }, {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000});
+});
+
+async function findAddress() {
+  const q = $('address').value.trim();
+  $('addr-cands').innerHTML = '';
+  if (q.length < 3) { $('loc-status').textContent = ''; return; }
+  $('loc-status').textContent = 'Looking that up…';
+  let data;
+  try {
+    data = await (await fetch('/submit/api/geocode?q=' + encodeURIComponent(q))).json();
+  } catch {
+    $('loc-status').textContent = 'Could not look that up. Tap the map instead.';
+    return;
+  }
+  const cands = data.candidates || [];
+  if (!cands.length) {
+    $('loc-status').textContent =
+      'No match in the City\u2019s past requests for that address. Tap the map to place it.';
+    return;
+  }
+  if (cands.length === 1 && cands[0].exact) {
+    setLocation(cands[0].lat, cands[0].long,
+                {label: `Matched ${cands[0].address} from the City\u2019s own records.`});
+    return;
+  }
+  $('loc-status').textContent = 'Pick the closest match:';
+  $('addr-cands').innerHTML = cands.map((c, i) =>
+    `<button type="button" class="cand" data-i="${i}">${esc(c.address)}<small>${c.seen} past request${c.seen === 1 ? '' : 's'}</small></button>`).join('');
+  $('addr-cands').querySelectorAll('.cand').forEach(b => b.addEventListener('click', () => {
+    const c = cands[+b.dataset.i];
+    setLocation(c.lat, c.long, {label: `Matched ${c.address} from the City\u2019s own records.`,
+                                address: c.address});
+  }));
+}
+
+$('find-addr').addEventListener('click', findAddress);
+let addrTimer;
+$('address').addEventListener('input', () => {
+  clearTimeout(addrTimer);
+  addrTimer = setTimeout(findAddress, 500);
+});
+$('address').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); clearTimeout(addrTimer); findAddress(); }
+});
+
 async function checkDupes() {
   if (!state.svc || state.lat == null) { $('dupes').innerHTML = ''; return; }
   const p = new URLSearchParams({ lat: state.lat, long: state.long, category: state.svc.service_name });

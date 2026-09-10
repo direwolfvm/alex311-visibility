@@ -50,6 +50,27 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+def merge_candidates(rows: list[dict], key: str) -> list[dict]:
+    """Fold address spellings into one candidate each, best match first.
+
+    The City writes one address several ways — "1437 JANNEY'S LN" and
+    "1437 JANNEY'S LA" are 51 and 48 records of the same place. Offering both as
+    separate choices would be confusing and would split the confidence signal,
+    so they merge and the most-used spelling represents them.
+    """
+    merged: dict[str, dict] = {}
+    for r in rows:
+        k = abuse.normalize_address(r["address"])
+        if k not in merged:
+            merged[k] = {"address": r["address"], "key": k, "lat": r["lat"],
+                         "long": r["long"], "seen": 0, "exact": k == key}
+        elif r["seen"] > merged[k]["seen"]:
+            # a later row is the more common spelling; let it show its wording
+            merged[k]["address"] = r["address"]
+        merged[k]["seen"] += r["seen"]
+    return sorted(merged.values(), key=lambda c: (not c["exact"], -c["seen"]))
+
+
 class ValidateBody(BaseModel):
     service_code: str
     answers: dict = {}
@@ -252,6 +273,68 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                 ident.block_submitter(conn, row["submitter_id"],
                                       reason or "blocked from the review queue")
         return {"action_id": action_id, "attempt_id": attempt_id, "action": action}
+
+    @router.get("/api/geocode")
+    def geocode(q: str, limit: int = 6):
+        """Turn a typed address into coordinates, using the City's own records.
+
+        We hold 16,000-odd distinct Alexandria addresses that the City itself
+        geocoded when it logged a request there. Matching against those beats an
+        external geocoder on three counts: the resident's address never leaves
+        our infrastructure, there is no rate limit or third-party dependency,
+        and a match returns *the coordinates the City already uses for that
+        address*, so the request lands where they expect it.
+
+        The cost is coverage: an address that has never had a 311 request is not
+        in here. Those residents drop a pin or use their location instead, which
+        is why neither path is required.
+        """
+        key = abuse.normalize_address(q)
+        prefix = abuse.sql_prefix(q)
+        if not key or len(prefix) < 2:
+            return {"query": q, "candidates": [], "source": "city-records"}
+
+        with pool_getter().connection() as conn:
+            rows = conn.execute(
+                f"""SELECT address,
+                           percentile_disc(0.5) WITHIN GROUP (ORDER BY lat)  AS lat,
+                           percentile_disc(0.5) WITHIN GROUP (ORDER BY long) AS long,
+                           count(*) AS seen
+                      FROM service_requests
+                     WHERE lat IS NOT NULL AND long IS NOT NULL
+                       AND {abuse.SQL_ADDRESS_EXPR} LIKE %s
+                     GROUP BY address
+                     ORDER BY count(*) DESC
+                     LIMIT 60""",
+                (prefix.replace("%", r"\%").replace("_", r"\_") + "%",),
+            ).fetchall()
+
+        return {"query": q, "normalized": key, "source": "city-records",
+                "candidates": merge_candidates(rows, key)[:limit]}
+
+    @router.get("/api/reverse")
+    def reverse(lat: float, long: float, within_m: int = 250):
+        """The nearest address the City has used near a point.
+
+        Used after "use my location" so the address box fills itself. Same
+        gazetteer, same reason: it returns the City's own wording for the place.
+        """
+        dlat, dlng = within_m / 111_320, within_m / 87_000
+        with pool_getter().connection() as conn:
+            rows = conn.execute(
+                """SELECT address, lat, long FROM service_requests
+                    WHERE lat BETWEEN %s AND %s AND long BETWEEN %s AND %s
+                      AND address IS NOT NULL
+                    LIMIT 400""",
+                (lat - dlat, lat + dlat, long - dlng, long + dlng),
+            ).fetchall()
+        best = None
+        for r in rows:
+            d = _haversine_m(lat, long, r["lat"], r["long"])
+            if d <= within_m and (best is None or d < best["meters"]):
+                best = {"address": r["address"], "lat": r["lat"], "long": r["long"],
+                        "meters": round(d)}
+        return {"nearest": best, "source": "city-records"}
 
     @router.get("/api/nearby")
     def nearby(lat: float, long: float, category: str, days: int = 45):

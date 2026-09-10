@@ -121,10 +121,29 @@ portal. It does not file anything.
 
 ---
 
-## 4. Duplicate detection — the thing the City's form structurally cannot do
+## 4. Setting a location, and duplicate detection
 
-Set a location on the map in `/submit` and pick a common category. Recent
-same-category requests within 250 metres appear before you finish.
+There are three ways to place the request, because each one fails for someone:
+
+- **Use my location** — browser geolocation, then the address box fills itself
+  from the nearest address the City has used near that point.
+- **Type an address** — matched against the City's own records as you type.
+- **Tap the map** — always available, and the fallback when neither of the above
+  works.
+
+**Worth showing:** type `1437 Janneys Lane` without the apostrophe. It matches
+`1437 JANNEY'S LN` and reports 99 past requests, because the City writes that
+street two ways and we fold them into one place.
+
+**The point to make:** we geocode against **16,103 distinct Alexandria addresses
+that the City itself geocoded** when it logged a request there. No external
+geocoder, so the resident's address never leaves our infrastructure, there is no
+rate limit, and a match returns the coordinates the City already uses for that
+address — the request lands where they expect it. The cost is coverage: an
+address with no 311 history is not in there, which is why tapping the map is
+never taken away.
+
+Recent same-category requests within 250 metres then appear before you finish.
 
 **The point to make:** there were **837 same-address, same-category re-files
 within 7 days** in one 90-day window, across 562 addresses. The City's form
@@ -290,4 +309,6 @@ The technical questions are answered. These are not:
 - **The demo emails nothing.** Verification codes are written to the log by the
   console sender; a real deployment needs an SMTP provider.
 - **No reviewer interface.** The review queue is an API, not a screen.
+- **Address lookup only covers addresses with 311 history** — 16,103 of them.
+  Anywhere else needs a map tap or the device's location.
 - **Contact and review steps of the City's wizard were not re-walked.**
