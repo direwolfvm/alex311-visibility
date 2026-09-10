@@ -251,11 +251,16 @@ gcloud run jobs update alex311-submit --region=$REGION \
 The other key is per request: the worker only claims rows a person has moved to
 `approved`, and it records who did. Disarm by reversing that command.
 
+Once the job is armed, **approving is the moment a real request is created** —
+not a formality on the way to one. Whoever reviews the queue should understand
+that the City dispatches staff on what they release, and that nothing recalls it
+afterwards.
+
 | State | Means |
 |---|---|
 | `prepared` | evaluated by the anti-abuse policy, nothing more |
 | `queued` | a resident asked for it to be filed |
-| `approved` | a person said yes — the per-request half of the live gate |
+| `approved` | **the live action.** A person released it; the next armed run files it with the City and it cannot be recalled |
 | `filing` | a worker has claimed it; `SKIP LOCKED` stops a second worker taking it |
 | `filed` | the City accepted it; `city_case_number` holds their number |
 | `failed` | three tries did not get it filed; `submit_error` says why |

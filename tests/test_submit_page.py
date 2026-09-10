@@ -194,3 +194,11 @@ def test_choosing_a_different_type_clears_the_recorded_attempt():
 def test_the_page_no_longer_claims_it_cannot_file():
     assert "does not file with the City yet" not in PAGE
     assert "dry-run only in this prototype" not in PAGE
+
+
+def test_the_page_says_what_approval_actually_causes():
+    """"A reviewer approves it" reads like a formality on the way to filing. It
+    is the moment a real request is created, and nothing recalls it."""
+    assert "cannot be taken back" in PAGE
+    assert "point of no return" in PAGE
+    assert "reviewer approves each one first" not in PAGE

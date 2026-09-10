@@ -363,4 +363,7 @@ Things worth knowing before you do:
   are complete — check the review screenshot.
 - **It is recorded.** With `DATABASE_URL` set, the attempt is written to
   `submission_attempts` before the click and the case number written back after.
+- **Through the hosted job, approving is the live action.** A resident queuing a
+  request changes nothing; a reviewer releasing it is what creates a real City
+  record, and nothing recalls it afterwards.
 - **One request per run.** There is no batch mode and there should not be.
