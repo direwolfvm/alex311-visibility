@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Alex311 prototype</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#fff; --ink:#1c2733; --muted:#5c6675; --border:#e2e8f0;
+    --accent:#1d4ed8; --bad:#b91c1c; --badbg:#fef2f2; --ok:#047857; --okbg:#ecfdf5;
+    --warn:#b45309; --warnbg:#fef3c7;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--accent); }
+  /* The site bar, identical to the dashboard's and the form's. */
+  header { display:flex; align-items:baseline; gap:16px; padding:14px 20px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .mark { height:26px; width:26px; align-self:center; }
+  header h1 { font-size:18px; margin:0; }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; margin-left:22px; align-self:stretch; }
+  nav.tabs .tab-link { display:flex; align-items:center; gap:6px; text-decoration:none;
+                       font-size:14px; padding:6px 16px 8px; color:var(--muted);
+                       border-bottom:2px solid transparent; }
+  nav.tabs .tab-link:hover { color:var(--ink); border-bottom-color:var(--border); }
+  /* the class selector beats the browser's [hidden] rule; without this the
+     Admin tab is visible to everyone */
+  nav.tabs .tab-link[hidden] { display:none; }
+  nav.tabs .tab-link[aria-current="page"] { color:var(--accent); font-weight:600;
+                                            border-bottom-color:var(--accent); }
+  .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+             background:#dbeafe; color:var(--accent); padding:1px 6px; border-radius:99px; }
+  header .who { margin-left:auto; color:var(--muted); font-size:13px; }
+  @media (max-width:640px) {
+    header { gap:2px 10px; padding:8px 14px 0; }
+    header h1 { font-size:16px; }
+    header .sub { flex-basis:100%; font-size:11px; }
+    nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
+    nav.tabs .tab-link { flex:1; padding:8px 4px; justify-content:center; text-align:center; }
+    .tab-tag { display:none; }
+    header .who { order:2; }
+  }
+
+  .wrap { max-width:920px; margin:0 auto; padding:18px 18px 80px; }
+  /* Two views of one job, so they are tabs within the page rather than two
+     more items in the site bar. */
+  .subtabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .subtabs button { border:none; background:none; font:inherit; font-size:14px; cursor:pointer;
+                    padding:8px 14px; color:var(--muted); border-bottom:2px solid transparent;
+                    margin-bottom:-1px; }
+  .subtabs button:hover { color:var(--ink); }
+  .subtabs button.active { color:var(--accent); font-weight:600; border-bottom-color:var(--accent); }
+  .subtabs .n { font-variant-numeric:tabular-nums; background:var(--border); color:var(--ink);
+                border-radius:99px; padding:0 7px; font-size:12px; margin-left:6px; }
+  .subtabs button.active .n { background:#dbeafe; color:var(--accent); }
+
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+          padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em;
+             color:var(--muted); margin:0 0 4px; }
+  .card > .lede { color:var(--muted); font-size:13px; margin:0 0 14px; }
+  .empty { color:var(--muted); font-size:14px; padding:6px 0 2px; }
+
+  /* one queued request */
+  .req { border:1px solid var(--border); border-radius:9px; padding:14px 16px; margin-top:12px; }
+  .req.holding { border-color:#fcd34d; }
+  .req-top { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .req-top b { font-size:15px; }
+  .req-id { color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+  .req-when { color:var(--muted); font-size:12px; margin-left:auto; }
+  .req dl { display:grid; grid-template-columns:max-content 1fr; gap:4px 14px; margin:12px 0 0; }
+  .req dt { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .req dd { margin:0; overflow-wrap:anywhere; }
+  .findings { margin:12px 0 0; padding:9px 12px; border-radius:8px; font-size:13px;
+              background:var(--warnbg); color:var(--warn); }
+  .findings ul { margin:4px 0 0; padding-left:18px; }
+  .row-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px;
+                 padding-top:12px; border-top:1px solid var(--border); }
+  .row-actions .note { color:var(--muted); font-size:12px; }
+
+  button { padding:8px 13px; border:1px solid var(--border); border-radius:8px;
+           background:#fff; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  button.danger { border-color:#fca5a5; color:var(--bad); }
+  button.danger:hover { background:var(--bad); color:#fff; border-color:var(--bad); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+  button.primary:hover { background:#1740ad; color:#fff; }
+  button[disabled] { opacity:.55; cursor:default; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .pill { display:inline-block; padding:1px 9px; border-radius:99px; font-size:12px;
+          font-weight:600; white-space:nowrap; }
+  .pill.queued   { background:#dbeafe; color:var(--accent); }
+  .pill.approved { background:var(--warnbg); color:var(--warn); }
+  .pill.filing   { background:var(--warnbg); color:var(--warn); }
+  .pill.filed    { background:var(--okbg); color:var(--ok); }
+  .pill.failed   { background:var(--badbg); color:var(--bad); }
+  .pill.cancelled{ background:var(--border); color:var(--muted); }
+  .pill.admin    { background:#dbeafe; color:var(--accent); }
+  .pill.user     { background:#e2e8f0; color:#334155; }
+  .pill.off      { background:var(--badbg); color:var(--bad); }
+
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:9px 12px; border-top:1px solid var(--border);
+           vertical-align:top; }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);
+       border-top:none; white-space:nowrap; }
+  td.num { font-variant-numeric:tabular-nums; color:var(--muted); }
+  td.actions { text-align:right; white-space:nowrap; }
+  td.actions button { padding:5px 10px; font-size:13px; margin-left:4px; }
+  .table-wrap { overflow-x:auto; }
+
+  .box { padding:11px 13px; border-radius:8px; font-size:13px; margin-top:12px; }
+  .box.ok  { background:var(--okbg); border:1px solid #a7f3d0; color:var(--ok); }
+  .box.bad { background:var(--badbg); border:1px solid #fecaca; color:var(--bad); }
+  .hint { color:var(--muted); font-size:12px; }
+  label { display:block; font-size:11px; font-weight:600; color:var(--muted);
+          text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+  input, select { padding:9px 11px; border:1px solid var(--border); border-radius:8px;
+                  font:inherit; background:#fff; }
+  input { min-width:240px; flex:1; }
+  .form-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  code { font:500 13px ui-monospace,"SF Mono",Menlo,monospace; background:#eef2f7;
+         padding:2px 6px; border-radius:5px; }
+  @media (max-width:560px) {
+    input { min-width:100%; } .form-row > * { flex:1 1 100%; }
+    .req dl { grid-template-columns:1fr; gap:0 0; }
+    .req dt { margin-top:8px; }
+  }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <img src="/favicon.svg" alt="" class="mark">
+  <h1>Alex311 Visibility</h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs" aria-label="Views">
+    <a class="tab-link" href="/">Explore</a>
+    <a class="tab-link" href="/#analytics">Analytics</a>
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/admin" aria-current="page">Admin</a>
+  </nav>
+  <span class="who" id="who"></span>
+</header>
+
+<div class="wrap">
+  <div class="subtabs" role="tablist" aria-label="Admin views">
+    <button role="tab" class="active" id="st-moderation" data-panel="moderation"
+            aria-selected="true" aria-controls="panel-moderation">Moderation<span class="n" id="n-waiting">·</span></button>
+    <button role="tab" id="st-users" data-panel="users" tabindex="-1"
+            aria-selected="false" aria-controls="panel-users">Users<span class="n" id="n-users">·</span></button>
+  </div>
+
+  <div class="box bad" id="error" hidden role="alert"></div>
+
+  <section id="panel-moderation" role="tabpanel" aria-labelledby="st-moderation">
+    <div class="card">
+      <h2>Waiting for release</h2>
+      <p class="lede">Releasing a request is the live action. The submission job files it
+        with the City on its next run, real staff are dispatched, and it cannot be recalled.
+        Read the address and the description before you release anything.</p>
+      <div id="waiting"></div>
+    </div>
+
+    <div class="card">
+      <h2>Held for a look</h2>
+      <p class="lede">The anti-abuse policy stopped these before they reached the queue —
+        usually a repeat of something already reported at the same address.</p>
+      <div id="held"></div>
+    </div>
+
+    <div class="card">
+      <h2>Already handled</h2>
+      <p class="lede">Released, filed, failed or withdrawn. A case number means the City
+        has it.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>State</th><th>Request</th><th>Where</th>
+            <th>City case</th><th>When</th>
+          </tr></thead>
+          <tbody id="history"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="history-empty" hidden>Nothing has been released yet.</p>
+    </div>
+  </section>
+
+  <section id="panel-users" role="tabpanel" aria-labelledby="st-users" hidden>
+    <div class="card">
+      <h2>Add someone</h2>
+      <form class="form-row" id="add">
+        <div style="flex:1">
+          <label for="email">Email</label>
+          <input type="email" id="email" required placeholder="them@example.com">
+        </div>
+        <div>
+          <label for="role">Role</label>
+          <select id="role">
+            <option value="user">user</option>
+            <option value="admin">admin</option>
+          </select>
+        </div>
+        <button class="primary" type="submit">Create</button>
+      </form>
+      <p class="hint">A password is generated and shown once. There is no email sending
+        here, so pass it on yourself. Only administrators can release requests or see
+        this page; a user can prepare and queue their own.</p>
+      <div class="box ok" id="created" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2>Who has access</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Email</th><th>Role</th><th>Added</th><th>Last signed in</th><th></th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const day = v => v ? String(v).slice(0, 10) : '—';
+const when = v => v ? String(v).replace('T', ' ').slice(0, 16) + ' UTC' : '—';
+let me = null;
+
+function fail(err) { $('error').textContent = err.message || String(err); $('error').hidden = false; }
+
+async function api(path, opts = {}) {
+  const r = await fetch('/submit/api' + path, {
+    headers: {'Content-Type': 'application/json'}, ...opts});
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail || `HTTP ${r.status}`);
+  return body;
+}
+
+// ------------------------------------------------------------------ panels
+const tabs = [...document.querySelectorAll('.subtabs button')];
+function selectPanel(b, focus = false) {
+  tabs.forEach(x => {
+    const on = x === b;
+    x.classList.toggle('active', on);
+    x.setAttribute('aria-selected', String(on));
+    x.tabIndex = on ? 0 : -1;
+  });
+  $('panel-moderation').hidden = b.dataset.panel !== 'moderation';
+  $('panel-users').hidden = b.dataset.panel !== 'users';
+  if (focus) b.focus();
+}
+tabs.forEach(b => b.addEventListener('click', () => selectPanel(b)));
+document.querySelector('.subtabs').addEventListener('keydown', e => {
+  const i = tabs.indexOf(document.activeElement);
+  if (i < 0) return;
+  const to = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1
+           : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : null;
+  if (to === null) return;
+  e.preventDefault();
+  selectPanel(tabs[(to + tabs.length) % tabs.length], true);
+});
+// user management used to have its own address, and the old one still points here
+function panelFromHash() {
+  const b = tabs.find(x => x.dataset.panel === location.hash.replace('#', ''));
+  if (b) selectPanel(b);
+}
+addEventListener('hashchange', panelFromHash);
+
+// -------------------------------------------------------------- moderation
+function contactLine(c) {
+  if (!c) return '<span class="hint">none given</span>';
+  const parts = [[c.first_name, c.last_name].filter(Boolean).join(' '), c.email, c.phone];
+  return esc(parts.filter(Boolean).join(' · ')) || '<span class="hint">none given</span>';
+}
+
+function findingsBlock(r) {
+  const f = r.findings || [];
+  if (!f.length) return '';
+  const items = f.map(x => `<li>${esc(x.detail || x.rule || JSON.stringify(x))}</li>`).join('');
+  return `<div class="findings"><b>The policy said ${esc(r.outcome)}.</b><ul>${items}</ul></div>`;
+}
+
+function details(r) {
+  return `<dl>
+    <dt>Where</dt><dd>${esc(r.address) || '<span class="hint">no address</span>'}</dd>
+    <dt>What</dt><dd>${esc(r.description) || '<span class="hint">no description</span>'}</dd>
+    <dt>Contact</dt><dd>${contactLine(r.contact)}</dd>
+    <dt>Answers</dt><dd>${Object.keys(r.answers || {}).length} to the City's questions</dd>
+  </dl>${findingsBlock(r)}`;
+}
+
+// Two presses, and the second one says what it does. Releasing cannot be undone,
+// and a button that reads "Release" next to a list is too easy to hit by habit.
+function armRelease(btn, id) {
+  if (btn.dataset.armed) return;
+  btn.dataset.armed = '1';
+  // it stops being the ordinary primary action and becomes the dangerous one
+  btn.classList.remove('primary');
+  btn.classList.add('danger');
+  btn.textContent = 'Confirm: file this with the City';
+  const cancel = document.createElement('button');
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', () => load());
+  btn.after(cancel);
+}
+
+async function release(id) {
+  const r = await api(`/approve/${id}`, {method: 'POST'});
+  await load();
+  const box = document.createElement('div');
+  box.className = 'box ok';
+  box.textContent = `#${id}: ${r.message}`;
+  $('waiting').prepend(box);
+}
+
+async function moderate(id, action, reason) {
+  await api(`/review/${id}?action=${action}` + (reason ? `&reason=${encodeURIComponent(reason)}` : ''),
+            {method: 'POST'});
+  await load();
+}
+
+function renderWaiting(rows) {
+  $('n-waiting').textContent = rows.length;
+  if (!rows.length) {
+    $('waiting').innerHTML = '<p class="empty">Nothing is waiting. When a tester asks us to '
+      + 'file a request it appears here, and nothing reaches the City until you release it.</p>';
+    return;
+  }
+  $('waiting').innerHTML = rows.map(r => `<div class="req">
+    <div class="req-top"><b>${esc(r.service_name || r.service_code)}</b>
+      <span class="req-id">#${r.attempt_id}</span>
+      <span class="pill queued">queued</span>
+      <span class="req-when">asked ${when(r.queued_at || r.created_at)}</span></div>
+    ${details(r)}
+    <div class="row-actions">
+      <button class="primary" data-release="${r.attempt_id}">Release for filing</button>
+      <span class="note">files with the City on the job's next run</span>
+    </div></div>`).join('');
+}
+
+function renderHeld(rows) {
+  if (!rows.length) {
+    $('held').innerHTML = '<p class="empty">Nothing held.</p>';
+    return;
+  }
+  $('held').innerHTML = rows.map(r => `<div class="req holding">
+    <div class="req-top"><b>${esc(r.service_name)}</b>
+      <span class="req-id">#${r.attempt_id}</span>
+      <span class="req-when">${when(r.created_at)}</span></div>
+    ${details(r)}
+    <div class="row-actions">
+      <button data-mod="approve" data-id="${r.attempt_id}">Let it through</button>
+      <button data-mod="reject" data-id="${r.attempt_id}">Reject</button>
+      <button class="danger" data-mod="block_submitter" data-id="${r.attempt_id}">Block this submitter</button>
+      <span class="note">recorded either way; a reversal is a new entry</span>
+    </div></div>`).join('');
+}
+
+function renderHistory(rows) {
+  $('history-empty').hidden = rows.length > 0;
+  $('history').innerHTML = rows.map(r => `<tr>
+    <td class="num">${r.attempt_id}</td>
+    <td><span class="pill ${esc(r.submit_state)}">${esc(r.submit_state)}</span>
+        ${r.submit_error ? `<div class="hint">${esc(r.submit_error).slice(0, 120)}</div>` : ''}</td>
+    <td>${esc(r.service_name || r.service_code)}</td>
+    <td>${esc(r.address || '—')}</td>
+    <td>${r.city_case_number ? `<code>${esc(r.city_case_number)}</code>` : '—'}</td>
+    <td class="num">${when(r.relayed_at || r.approved_at || r.queued_at)}</td>
+  </tr>`).join('');
+}
+
+$('panel-moderation').addEventListener('click', async e => {
+  const rel = e.target.closest('button[data-release]');
+  const mod = e.target.closest('button[data-mod]');
+  $('error').hidden = true;
+  try {
+    if (rel) {
+      if (!rel.dataset.armed) return armRelease(rel, rel.dataset.release);
+      rel.disabled = true;
+      await release(rel.dataset.release);
+    } else if (mod) {
+      const reason = mod.dataset.mod === 'note' ? null
+        : prompt(`Why? (recorded against #${mod.dataset.id})`) || null;
+      await moderate(mod.dataset.id, mod.dataset.mod, reason);
+    }
+  } catch (err) { fail(err); }
+});
+
+// ------------------------------------------------------------------- users
+function renderUsers(users) {
+  $('n-users').textContent = users.length;
+  $('rows').innerHTML = users.map(u => {
+    const off = !!u.disabled_at;
+    // An admin cannot lock themselves out, and the last admin cannot be removed:
+    // there would be nobody left who could let anyone back in.
+    const self = me && u.user_id === me.user_id;
+    const lastAdmin = u.role === 'admin' && !off
+      && users.filter(x => x.role === 'admin' && !x.disabled_at).length === 1;
+    return `<tr>
+      <td>${esc(u.email)}${self ? ' <span class="hint">(you)</span>' : ''}</td>
+      <td><span class="pill ${off ? 'off' : u.role}">${off ? 'disabled' : esc(u.role)}</span></td>
+      <td class="num">${day(u.created_at)}</td>
+      <td class="num">${day(u.last_login_at)}</td>
+      <td class="actions">
+        <button data-act="reset" data-id="${u.user_id}">Reset password</button>
+        ${self || lastAdmin ? '' :
+          `<button class="danger" data-act="${off ? 'enable' : 'disable'}"
+                   data-id="${u.user_id}">${off ? 'Enable' : 'Disable'}</button>`}
+      </td></tr>`;
+  }).join('');
+}
+
+$('rows').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  $('error').hidden = true; $('created').hidden = true;
+  try {
+    if (b.dataset.act === 'reset') {
+      const r = await api(`/users/${b.dataset.id}/reset`, {method: 'POST'});
+      $('created').textContent = `New password for ${r.email}: ${r.password} — shown once.`;
+      $('created').hidden = false;
+    } else {
+      await api(`/users/${b.dataset.id}/${b.dataset.act}`, {method: 'POST'});
+    }
+    await load();
+  } catch (err) { fail(err); }
+});
+
+$('add').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('error').hidden = true; $('created').hidden = true;
+  try {
+    const r = await api('/users', {method: 'POST', body: JSON.stringify(
+      {email: $('email').value.trim(), role: $('role').value})});
+    $('created').textContent = `Created ${r.email}. Password: ${r.password} — shown once, pass it on.`;
+    $('created').hidden = false;
+    $('email').value = '';
+    await load();
+  } catch (err) { fail(err); }
+});
+
+// -------------------------------------------------------------------- boot
+async function load() {
+  const [who, sub, rev, users] = await Promise.all([
+    api('/whoami'), api('/submission-queue'), api('/review-queue'), api('/users')]);
+  me = who.user;
+  $('who').innerHTML = me
+    ? `${esc(me.email)} · ${esc(me.role)} · <a href="/submit/logout">Sign out</a>` : '';
+  const rows = sub.queue || [];
+  renderWaiting(rows.filter(r => r.submit_state === 'queued'));
+  renderHistory(rows.filter(r => r.submit_state !== 'queued'));
+  renderHeld(rev.queue || []);
+  renderUsers(users.users || []);
+}
+
+load().then(panelFromHash).catch(fail);
+</script>
+</body>
+</html>

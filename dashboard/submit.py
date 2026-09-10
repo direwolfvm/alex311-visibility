@@ -178,7 +178,7 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
     # else hangs off `gate`.
     public = APIRouter(prefix="/submit")
     login_page = Path(__file__).parent / "login.html"
-    users_page = Path(__file__).parent / "users.html"
+    admin_page = Path(__file__).parent / "admin.html"
 
     @public.get("/login", response_class=HTMLResponse)
     def login_form(request: Request):
@@ -218,6 +218,23 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
         resp.delete_cookie(pa.SESSION_COOKIE, path="/submit")
         return resp
 
+    @public.get("/api/whoami")
+    def whoami_portal(request: Request,
+                      creds: HTTPBasicCredentials | None = Depends(_security)):
+        """Who is at the door, including nobody.
+
+        On the public router on purpose: the dashboard is a page anybody may
+        open, and it asks this to decide whether to show the Admin tab. Behind
+        the gate the question could only ever be answered by someone who was
+        already through it.
+        """
+        try:
+            _actor, user = _identify(request, pool_getter, creds)
+        except Unauthenticated:
+            return {"user": None}
+        return {"user": ({"user_id": user.user_id, "email": user.email, "role": user.role}
+                         if user else None)}
+
     @app.exception_handler(Unauthenticated)
     def _needs_login(request: Request, exc: Unauthenticated):
         """A person gets the login page; a script gets a 401 it can act on."""
@@ -236,16 +253,16 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
     def submit_page():
         return page.read_text()
 
-    @router.get("/users", response_class=HTMLResponse)
-    def users_ui(actor: str = Depends(admin_only)):
-        return users_page.read_text()
+    @router.get("/admin", response_class=HTMLResponse)
+    def admin_ui(actor: str = Depends(admin_only)):
+        """Moderation and user management. The gate is here, not in the page:
+        a hidden link is a courtesy, not a permission."""
+        return admin_page.read_text()
 
-    @router.get("/api/whoami")
-    def whoami_portal(request: Request,
-                      creds: HTTPBasicCredentials | None = Depends(_security)):
-        _actor, user = _identify(request, pool_getter, creds)
-        return {"user": ({"user_id": user.user_id, "email": user.email, "role": user.role}
-                         if user else None)}
+    @router.get("/users")
+    def users_ui(actor: str = Depends(admin_only)):
+        # where user management used to live
+        return RedirectResponse("/submit/admin#users", status_code=308)
 
     @router.get("/api/users")
     def users_list(actor: str = Depends(admin_only)):
