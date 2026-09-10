@@ -95,8 +95,8 @@
   <div class="notice"><b>Testing prototype.</b> Every question for a request type is shown at once, with the
     City's own rules explained inline instead of surprising you mid-way. Every request is
     checked against the City's rules and against what has already been reported. You can copy the details and file
-    it yourself, or ask us to file it. Anything you send us waits for a reviewer, and the moment they release it
-    the City gets a real request. Not an official City of Alexandria service.</div>
+    it yourself, or ask us to file it. Anything you send us sits here until an administrator of this test releases
+    it, and that is the moment the City gets a real request. Not an official City of Alexandria service.</div>
 
   <div class="step">
     <h2>1 · What do you need? <span id="reg-meta"></span></h2>
@@ -144,9 +144,9 @@
     <div id="file-block" hidden>
       <h3 class="filing-head">Or have us file it for you</h3>
       <p class="hint">We send it to the City through their own form and give you back their
-        case number. It waits for a reviewer first, and once they release it the City has a
-        real request that dispatches real staff — so it should be something you would have
-        reported anyway.</p>
+        case number. An administrator of this test has to release it first, and once they do
+        the City has a real request that dispatches real staff — so it should be something you
+        would have reported anyway.</p>
       <div class="contact-grid">
         <div><label class="hint" for="c-first">First name</label>
           <input type="text" id="c-first" autocomplete="given-name"></div>
@@ -165,8 +165,8 @@
       <div id="queue-result" role="status" aria-live="polite"></div>
     </div>
 
-    <p class="foot">Nothing reaches the City until a reviewer releases it, and once released it
-      cannot be taken back. You can also copy the details and file it yourself on the official portal.</p>
+    <p class="foot">Nothing reaches the City until an administrator releases it, and once released
+      it cannot be taken back. You can also copy the details and file it yourself on the official portal.</p>
   </div>
 </div>
 
@@ -498,8 +498,8 @@ function renderResult() {
   }
 }
 // Checking answers also records the attempt, which is what gives us something
-// to queue: the abuse policy runs there, and the row it writes is the thing a
-// reviewer later approves.
+// to queue: the abuse policy runs there, and the row it writes is the thing an
+// administrator later releases.
 async function precheck() {
   try {
     const r = await fetch('/submit/api/precheck', {
@@ -549,9 +549,9 @@ $('queue-btn').addEventListener('click', async () => {
       body: JSON.stringify({attempt_id: state.attempt.attempt_id, ...who})});
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
-    box.innerHTML = `<div class="box ok"><b>Sent for review as request ${state.attempt.attempt_id}.</b>
-      It sits here until a reviewer releases it. That is the point of no return: the City
-      gets a real request, and you get their case number back.</div>`;
+    box.innerHTML = `<div class="box ok"><b>Held as request ${state.attempt.attempt_id}.</b>
+      It stays here until an administrator releases it. That is the point of no return: the
+      City gets a real request, and you get their case number back.</div>`;
     btn.hidden = true;
   } catch (e) {
     box.innerHTML = `<div class="box bad">${esc(e.message)}</div>`;

@@ -441,20 +441,26 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                 raise HTTPException(409, f"that request is already {row['submit_state']}")
             adb.queue_attempt(conn, body.attempt_id, contact)
         return {"attempt_id": body.attempt_id, "submit_state": "queued",
-                "message": "Queued. A reviewer has to approve it before it is filed."}
+                "message": "Queued. An administrator has to release it before it is filed."}
 
     @router.get("/api/submission-queue")
-    def submission_queue(limit: int = 50):
-        """Everything waiting to be filed, and what became of what already was."""
+    def submission_queue(limit: int = 50, actor: str = Depends(admin_only)):
+        """Everything waiting to be filed, and what became of what already was.
+
+        A moderation view: it carries other residents' addresses and what they
+        reported, so it is not for every signed-in tester.
+        """
         with pool_getter().connection() as conn:
             return {"queue": adb.submission_queue(conn, limit=limit)}
 
     @router.post("/api/approve/{attempt_id}")
-    def approve(attempt_id: int, actor: str = Depends(gate)):
-        """Approve a queued request for filing.
+    def approve(attempt_id: int, actor: str = Depends(admin_only)):
+        """Release a queued request for filing. Administrators only.
 
-        This is the per-request half of the live gate. The other half is the
-        environment variable on the live job; neither alone files anything.
+        This is the per-request half of the live gate, and the reason it is not
+        self-service: with `gate` any signed-in tester could release their own
+        request, which collapses the two keys into one and means a real City
+        record can be created with nobody else involved.
         """
         with pool_getter().connection() as conn:
             ok = adb.approve_attempt(conn, attempt_id, actor)
@@ -463,19 +469,22 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
             adb.record_moderation(conn, attempt_id=attempt_id, actor=actor,
                                   action="approve", reason="approved for filing")
         return {"attempt_id": attempt_id, "submit_state": "approved",
-                "message": "Approved. This is the live action: the submission job will "
+                "message": "Released. This is the live action: the submission job will "
                            "file it with the City on its next run, and it cannot be "
                            "recalled afterwards."}
 
     @router.get("/api/review-queue")
-    def queue(limit: int = 50):
-        """Attempts a human still needs to look at."""
+    def queue(limit: int = 50, actor: str = Depends(admin_only)):
+        """Attempts a human still needs to look at.
+
+        Same reasoning as the submission queue: other people's reports.
+        """
         with pool_getter().connection() as conn:
             return {"queue": adb.review_queue(conn, limit)}
 
     @router.post("/api/review/{attempt_id}")
     def moderate(attempt_id: int, action: str, reason: str | None = None,
-                 actor: str = Depends(gate)):
+                 actor: str = Depends(admin_only)):
         """Record a human decision. Append-only: a reversal is a new row."""
         if action not in ("approve", "reject", "block_submitter", "note"):
             raise HTTPException(400, "unknown action")

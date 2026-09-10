@@ -226,3 +226,27 @@ def test_the_login_page_does_not_promise_public_sign_up():
 
 def test_you_can_get_back_to_the_dashboard_from_both_pages():
     assert 'href="/"' in LOGIN and 'href="/"' in PAGE
+
+
+def test_releasing_is_not_self_service():
+    """A signed-in tester releasing their own request collapses the two keys
+    into one: a real City record with nobody else involved."""
+    src = (Path(__file__).resolve().parents[1] / "dashboard/submit.py").read_text()
+    approve = src.split("def approve(")[1].split("def ")[0]
+    assert "Depends(admin_only)" in src.split("def approve(")[0].rsplit("\n", 2)[-1] \
+        or "admin_only" in src[src.index("def approve(") - 120:src.index("def approve(") + 80]
+
+
+def test_the_moderation_views_are_not_open_to_every_tester():
+    """They carry other residents' addresses and what they reported."""
+    src = (Path(__file__).resolve().parents[1] / "dashboard/submit.py").read_text()
+    for endpoint in ("def submission_queue(", "def queue(limit"):
+        line = src[src.index(endpoint):src.index(endpoint) + 140]
+        assert "admin_only" in line, f"{endpoint} is not restricted"
+
+
+def test_the_page_names_who_releases_a_request():
+    """"A reviewer" implied a review desk that does not exist; only an
+    administrator can release, so the page says so."""
+    assert "reviewer" not in PAGE
+    assert "administrator" in PAGE

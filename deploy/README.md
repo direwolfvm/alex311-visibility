@@ -260,7 +260,7 @@ afterwards.
 |---|---|
 | `prepared` | evaluated by the anti-abuse policy, nothing more |
 | `queued` | a resident asked for it to be filed |
-| `approved` | **the live action.** A person released it; the next armed run files it with the City and it cannot be recalled |
+| `approved` | **the live action.** An administrator released it; the next armed run files it with the City and it cannot be recalled. Releasing is admin-only, so a tester cannot file their own request |
 | `filing` | a worker has claimed it; `SKIP LOCKED` stops a second worker taking it |
 | `filed` | the City accepted it; `city_case_number` holds their number |
 | `failed` | three tries did not get it filed; `submit_error` says why |
