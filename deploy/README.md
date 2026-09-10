@@ -287,6 +287,33 @@ range, counts, error text) — the dashboard header shows the latest one, and
 `SELECT * FROM ingest_runs WHERE NOT ok ORDER BY started_at DESC` is the
 first thing to check when an alert fires.
 
+## Prototype accounts
+
+The gate on `/submit` is a login page, not the browser's Basic-auth popup: that
+popup cannot be styled, cannot say what the site is, and cannot be signed out
+of. Accounts live in `portal_users`; passwords are scrypt hashes with a
+per-user salt.
+
+Seed the first admin once, against the production database:
+
+```bash
+DATABASE_URL=... python -m alex311.portal_auth seed --email you@example.com
+```
+
+It prints a generated password once and does nothing if an admin already
+exists. After that, administrators add people at **`/submit/users`** — a
+password is generated and shown once, and there is no email sending here, so it
+has to be passed on by hand.
+
+**HTTP Basic still works alongside it**, with the shared `SUBMIT_PASSWORD`.
+That is deliberate: scripts, the `curl` examples in the demo guide and the CLI
+keep one credential, while people get a page. The shared credential also counts
+as an administrator, which is how a locked-out admin gets back in.
+
+The last remaining administrator cannot be disabled — there would be nobody left
+who could let anyone back in. Disabling someone, or changing their password,
+ends their open sessions immediately rather than at expiry.
+
 ## When the portal redeploys
 
 Expected failure mode. The client already re-bootstraps automatically on

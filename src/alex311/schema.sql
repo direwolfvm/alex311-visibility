@@ -196,3 +196,34 @@ ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS contact      JSONB;
 
 CREATE INDEX IF NOT EXISTS sa_state_idx ON submission_attempts (submit_state, approved_at)
     WHERE submit_state IN ('queued', 'approved', 'filing');
+
+-- ---------------------------------------------------------------------------
+-- Who may open the gated prototype at all. Separate from `submitters`, which
+-- records which *resident* filed a request: this is the front door, and its job
+-- is keeping out passers-by while the authorization question with the City is
+-- open. Passwords are scrypt hashes with a per-user salt; the plaintext exists
+-- only in the browser and in whatever the admin wrote down.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS portal_users (
+    user_id         TEXT PRIMARY KEY,
+    email           TEXT UNIQUE NOT NULL,
+    password_hash   TEXT NOT NULL,
+    salt            TEXT NOT NULL,
+    role            TEXT NOT NULL DEFAULT 'user',   -- admin | user
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by      TEXT,
+    last_login_at   TIMESTAMPTZ,
+    disabled_at     TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS portal_sessions (
+    token_hash      TEXT PRIMARY KEY,               -- the token itself lives in the cookie
+    user_id         TEXT NOT NULL REFERENCES portal_users (user_id) ON DELETE CASCADE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at      TIMESTAMPTZ NOT NULL,
+    revoked_at      TIMESTAMPTZ,
+    user_agent      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS ps_user_idx ON portal_sessions (user_id, expires_at DESC);

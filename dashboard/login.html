@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · Alex311 prototype</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg:#f5f7fa; --panel:#fff; --ink:#1c2733; --muted:#5c6675;
+    --border:#dde3ec; --accent:#1d4ed8; --bad:#b91c1c; --badbg:#fef2f2;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--ink); padding:24px;
+         font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+          padding:28px; width:100%; max-width:400px;
+          box-shadow:0 1px 2px rgba(28,39,51,.05), 0 12px 32px -20px rgba(28,39,51,.4); }
+  .brand { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .brand img { width:26px; height:26px; }
+  h1 { font-size:18px; margin:0; }
+  .beta { font-size:10px; font-weight:700; letter-spacing:.06em; background:#dbeafe;
+          color:var(--accent); padding:2px 7px; border-radius:99px; }
+  .sub { color:var(--muted); font-size:13px; margin:0 0 20px; }
+  label { display:block; font-size:12px; font-weight:600; color:var(--muted);
+          text-transform:uppercase; letter-spacing:.04em; margin:14px 0 5px; }
+  input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+          font:inherit; background:#fff; }
+  input:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button { width:100%; margin-top:20px; padding:11px; border:none; border-radius:8px;
+           background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button:hover { background:#1740ad; }
+  button[disabled] { opacity:.6; cursor:default; }
+  .box { margin-top:16px; padding:10px 12px; border-radius:8px; font-size:13px;
+         background:var(--badbg); border:1px solid #fecaca; color:var(--bad); }
+  .foot { margin-top:20px; padding-top:16px; border-top:1px solid var(--border);
+          color:var(--muted); font-size:12px; }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">
+    <img src="/favicon.svg" alt="">
+    <h1>Alex311 prototype</h1>
+    <span class="beta">BETA</span>
+  </div>
+  <p class="sub">Sign in to reach the submission prototype. Not an official City of
+    Alexandria service.</p>
+
+  <form id="form" method="post" action="/submit/login">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" autocomplete="username" required autofocus>
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+    <button type="submit" id="go">Sign in</button>
+  </form>
+
+  <div class="box" id="error" hidden role="alert"></div>
+
+  <p class="foot">Access is limited while the authorization question with the City is
+    open. Ask an administrator for an account.</p>
+</main>
+
+<script>
+const params = new URLSearchParams(location.search);
+if (params.get('error')) {
+  const box = document.getElementById('error');
+  // One message for a wrong password, an unknown address and a disabled
+  // account: saying which would tell someone whether an address has an account.
+  box.textContent = params.get('error') === 'disabled'
+    ? 'That account cannot sign in. Ask an administrator.'
+    : 'That email and password did not match.';
+  box.hidden = false;
+}
+document.getElementById('form').addEventListener('submit', () => {
+  const b = document.getElementById('go');
+  b.disabled = true; b.textContent = 'Signing in…';
+});
+</script>
+</body>
+</html>

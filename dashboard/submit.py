@@ -13,32 +13,48 @@ from __future__ import annotations
 import math
 import os
 import secrets
+from urllib.parse import parse_qs
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
-from alex311 import abuse, db as adb, identity as ident
+from alex311 import abuse, db as adb, identity as ident, portal_auth as pa
 
 from . import registry as R
 
-_security = HTTPBasic()
+#: Basic auth is kept alongside the login page on purpose. People get a real
+#: page they can read, style and sign out of; scripts, the runbook's curl
+#: examples and the CLI keep the one shared credential they already use.
+_security = HTTPBasic(auto_error=False)
 
 
-def _auth(creds: HTTPBasicCredentials = Depends(_security)) -> str:
+def _basic_ok(creds: HTTPBasicCredentials | None) -> bool:
+    if creds is None:
+        return False
     user = os.environ.get("SUBMIT_USER", "alex311user")
     pw = os.environ.get("SUBMIT_PASSWORD", "")
-    ok = bool(pw) and secrets.compare_digest(creds.username, user) \
+    return bool(pw) and secrets.compare_digest(creds.username, user) \
         and secrets.compare_digest(creds.password, pw)
-    if not ok:
-        raise HTTPException(
-            status_code=401, detail="invalid credentials",
-            headers={"WWW-Authenticate": 'Basic realm="Alex311 submit (beta)"'},
-        )
-    return creds.username
+
+
+def _wants_html(request: Request) -> bool:
+    """A browser gets sent to the login page; anything else gets a 401.
+
+    Redirecting an API call would hand the caller a login form with a 200 on it,
+    which is a confusing thing for a script to receive.
+    """
+    return "text/html" in request.headers.get("accept", "")
+
+
+class Unauthenticated(HTTPException):
+    """Raised when nobody is signed in. Turned into a redirect for browsers."""
+
+    def __init__(self):
+        super().__init__(status_code=401, detail="sign in at /submit/login")
 
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -69,6 +85,11 @@ def merge_candidates(rows: list[dict], key: str) -> list[dict]:
             merged[k]["address"] = r["address"]
         merged[k]["seen"] += r["seen"]
     return sorted(merged.values(), key=lambda c: (not c["exact"], -c["seen"]))
+
+
+class NewUser(BaseModel):
+    email: str
+    role: str = "user"
 
 
 class ValidateBody(BaseModel):
@@ -113,6 +134,21 @@ class PrecheckBody(BaseModel):
     # fresh one per request and every per-submitter limit would be decorative.
 
 
+def _identify(request: Request, pool_getter,
+              creds: HTTPBasicCredentials | None) -> tuple[str, pa.PortalUser | None]:
+    """Who is at the door: a signed-in user, a script with the shared password,
+    or nobody."""
+    token = request.cookies.get(pa.SESSION_COOKIE)
+    if token:
+        with pool_getter().connection() as conn:
+            user = pa.session_user(conn, token)
+        if user is not None:
+            return user.email, user
+    if _basic_ok(creds):
+        return os.environ.get("SUBMIT_USER", "alex311user"), None
+    raise Unauthenticated()
+
+
 def register_submit_routes(app, pool_getter, sender=None) -> None:
     """Attach the gated /submit routes. pool_getter() returns the live pool.
 
@@ -122,13 +158,136 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
     what the per-submitter abuse rules need.
     """
     sender = sender or ident.sender_from_env()
-    router = APIRouter(prefix="/submit", dependencies=[Depends(_auth)])
+
+    def gate(request: Request,
+             creds: HTTPBasicCredentials | None = Depends(_security)) -> str:
+        actor, _user = _identify(request, pool_getter, creds)
+        return actor
+
+    def admin_only(request: Request,
+                   creds: HTTPBasicCredentials | None = Depends(_security)) -> str:
+        """User management is for admins. The shared script credential counts as
+        one: it is how the first admin is seeded and how a locked-out admin
+        recovers."""
+        actor, user = _identify(request, pool_getter, creds)
+        if user is not None and not user.is_admin:
+            raise HTTPException(403, "that page is for administrators")
+        return actor
+
+    # The login page and its POST are the only unguarded routes: everything
+    # else hangs off `gate`.
+    public = APIRouter(prefix="/submit")
+    login_page = Path(__file__).parent / "login.html"
+    users_page = Path(__file__).parent / "users.html"
+
+    @public.get("/login", response_class=HTMLResponse)
+    def login_form(request: Request):
+        if request.cookies.get(pa.SESSION_COOKIE):
+            with pool_getter().connection() as conn:
+                if pa.session_user(conn, request.cookies[pa.SESSION_COOKIE]):
+                    return RedirectResponse("/submit", status_code=303)
+        return HTMLResponse(login_page.read_text())
+
+    @public.post("/login")
+    async def do_login(request: Request):
+        # Parsed by hand rather than with fastapi's Form(), which would pull in
+        # python-multipart. A urlencoded body needs no such thing, and the
+        # dependency would ship in every image for one endpoint.
+        fields = parse_qs((await request.body()).decode("utf-8", "replace"))
+        email = (fields.get("email") or [""])[0]
+        password = (fields.get("password") or [""])[0]
+        with pool_getter().connection() as conn:
+            token = pa.login(conn, email, password,
+                             user_agent=request.headers.get("user-agent"))
+        if not token:
+            return RedirectResponse("/submit/login?error=1", status_code=303)
+        resp = RedirectResponse("/submit", status_code=303)
+        resp.set_cookie(pa.SESSION_COOKIE, token, httponly=True, samesite="lax",
+                        secure=request.url.scheme == "https", path="/submit",
+                        max_age=int(pa.SESSION_TTL.total_seconds()))
+        return resp
+
+    @public.post("/logout")
+    @public.get("/logout")
+    def do_logout(request: Request):
+        token = request.cookies.get(pa.SESSION_COOKIE)
+        if token:
+            with pool_getter().connection() as conn:
+                pa.logout(conn, token)
+        resp = RedirectResponse("/submit/login", status_code=303)
+        resp.delete_cookie(pa.SESSION_COOKIE, path="/submit")
+        return resp
+
+    @app.exception_handler(Unauthenticated)
+    def _needs_login(request: Request, exc: Unauthenticated):
+        """A person gets the login page; a script gets a 401 it can act on."""
+        if _wants_html(request):
+            return RedirectResponse("/submit/login", status_code=303)
+        return JSONResponse({"detail": exc.detail}, status_code=401,
+                            headers={"WWW-Authenticate": 'Basic realm="Alex311 (beta)"'})
+
+    app.include_router(public)
+
+    router = APIRouter(prefix="/submit", dependencies=[Depends(gate)])
     page = Path(__file__).parent / "submit.html"
 
     @router.get("", response_class=HTMLResponse)
     @router.get("/", response_class=HTMLResponse)
     def submit_page():
         return page.read_text()
+
+    @router.get("/users", response_class=HTMLResponse)
+    def users_ui(actor: str = Depends(admin_only)):
+        return users_page.read_text()
+
+    @router.get("/api/whoami")
+    def whoami_portal(request: Request,
+                      creds: HTTPBasicCredentials | None = Depends(_security)):
+        _actor, user = _identify(request, pool_getter, creds)
+        return {"user": ({"user_id": user.user_id, "email": user.email, "role": user.role}
+                         if user else None)}
+
+    @router.get("/api/users")
+    def users_list(actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            return {"users": pa.list_users(conn)}
+
+    @router.post("/api/users")
+    def users_create(body: NewUser, actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            try:
+                user, password = pa.create_user(conn, body.email, body.role, created_by=actor)
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+            except Exception:
+                raise HTTPException(409, "that email already has an account")
+        return {"user_id": user.user_id, "email": user.email, "role": user.role,
+                "password": password}
+
+    @router.post("/api/users/{user_id}/reset")
+    def users_reset(user_id: str, actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            row = conn.execute("SELECT email FROM portal_users WHERE user_id = %s",
+                               (user_id,)).fetchone()
+            if not row:
+                raise HTTPException(404, "no such user")
+            password = pa.set_password(conn, user_id)
+        return {"user_id": user_id, "email": row["email"], "password": password}
+
+    @router.post("/api/users/{user_id}/disable")
+    def users_disable(user_id: str, actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            if not pa.count_admins(conn, excluding=user_id):
+                # with nobody left holding the keys there is no way back in
+                raise HTTPException(409, "that is the last administrator")
+            pa.set_disabled(conn, user_id, True)
+        return {"user_id": user_id, "disabled": True}
+
+    @router.post("/api/users/{user_id}/enable")
+    def users_enable(user_id: str, actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            pa.set_disabled(conn, user_id, False)
+        return {"user_id": user_id, "disabled": False}
 
     @router.get("/api/registry")
     def registry_index():
@@ -291,7 +450,7 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
             return {"queue": adb.submission_queue(conn, limit=limit)}
 
     @router.post("/api/approve/{attempt_id}")
-    def approve(attempt_id: int, actor: str = Depends(_auth)):
+    def approve(attempt_id: int, actor: str = Depends(gate)):
         """Approve a queued request for filing.
 
         This is the per-request half of the live gate. The other half is the
@@ -314,7 +473,7 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
 
     @router.post("/api/review/{attempt_id}")
     def moderate(attempt_id: int, action: str, reason: str | None = None,
-                 actor: str = Depends(_auth)):
+                 actor: str = Depends(gate)):
         """Record a human decision. Append-only: a reversal is a new row."""
         if action not in ("approve", "reject", "block_submitter", "note"):
             raise HTTPException(400, "unknown action")

@@ -50,9 +50,16 @@ uv run uvicorn dashboard.app:app --port 8311
 ```
 
 The public dashboard is at `http://localhost:8311`. The gated prototype is at
-`http://localhost:8311/submit` (user `alex311user`, password from
-`SUBMIT_PASSWORD`; in production it is in Secret Manager as
-`alex311-submit-password`).
+`http://localhost:8311/submit`, which now shows a **login page**.
+
+Two ways in, on purpose:
+
+- **People** sign in with an account. Seed the first admin with
+  `python -m alex311.portal_auth seed --email you@example.com`, then add others
+  at `/submit/users`.
+- **Scripts** keep using HTTP Basic with `alex311user` and `SUBMIT_PASSWORD`
+  (in production, Secret Manager `alex311-submit-password`). Every `curl`
+  example below uses that path.
 
 ---
 
