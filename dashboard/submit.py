@@ -1,12 +1,12 @@
-"""Prototype submission intake (Option A: prefill & hand off to the city).
+"""Gated submission prototype: a registry-driven, single-page 311 intake.
 
-Gated behind HTTP Basic auth for testing — this is write-adjacent and must
-NOT be publicly reachable until the authorization question with the city is
-settled. Nothing here submits to the city portal; it collects a clean
-request, warns about likely duplicates using our own data, and produces a
-handoff (portal link + copyable summary) the resident completes officially.
-
-Scoped to the "missed yard waste collection" scenario for this first cut.
+Behind HTTP Basic auth for testing — write-adjacent, must not be publicly
+reachable while the authorization question with the City is open. Nothing
+here submits to the city portal: the page renders every question of a
+category at once from docs/data/form-registry.json, validates answers
+server-side against the same registry (so nothing the wizard would reject
+gets prepared), warns about likely duplicates using our own data, and hands
+off to the official portal with a copyable summary.
 """
 from __future__ import annotations
 
@@ -18,20 +18,11 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel
+
+from . import registry as R
 
 _security = HTTPBasic()
-
-# The three real categories a "missed yard waste" report maps to, with the
-# plain-language prompt we show the resident. Verified present in our data.
-YARD_WASTE_SCENARIOS = [
-    {"key": "missed", "category": "Missed Collection",
-     "label": "My yard waste wasn't picked up on my collection day"},
-    {"key": "bulk", "category": "Bulk Yard Waste Pickup",
-     "label": "I need a pickup for a large pile of branches/yard debris"},
-    {"key": "leaf", "category": "Missed Leaf Collection",
-     "label": "My leaf collection was missed"},
-]
-_VALID_CATEGORIES = {s["category"] for s in YARD_WASTE_SCENARIOS}
 
 
 def _auth(creds: HTTPBasicCredentials = Depends(_security)) -> str:
@@ -56,6 +47,11 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+class ValidateBody(BaseModel):
+    service_code: str
+    answers: dict = {}
+
+
 def register_submit_routes(app, pool_getter) -> None:
     """Attach the gated /submit routes. pool_getter() returns the live pool."""
     router = APIRouter(prefix="/submit", dependencies=[Depends(_auth)])
@@ -66,19 +62,34 @@ def register_submit_routes(app, pool_getter) -> None:
     def submit_page():
         return page.read_text()
 
-    @router.get("/api/scenarios")
-    def scenarios():
-        return {"scenarios": YARD_WASTE_SCENARIOS}
+    @router.get("/api/registry")
+    def registry_index():
+        reg = R.load_registry()
+        return {"generated": reg["generated"], "sources": reg.get("sources"),
+                "services": R.service_index(reg)}
+
+    @router.get("/api/service/{code}")
+    def service(code: str):
+        s = R.get_service(R.load_registry(), code)
+        if not s:
+            raise HTTPException(404, "unknown service code")
+        return s
+
+    @router.post("/api/validate")
+    def validate(body: ValidateBody):
+        """Server-authoritative check of a category's answers against the registry."""
+        s = R.get_service(R.load_registry(), body.service_code)
+        if not s:
+            raise HTTPException(404, "unknown service code")
+        return R.validate(s, body.answers)
 
     @router.get("/api/nearby")
     def nearby(lat: float, long: float, category: str, days: int = 45):
         """Recent same-category requests within ~250m — duplicate warning.
 
-        This is the feature the official portal structurally cannot offer:
-        we hold the full history, so we can tell a resident their issue is
-        already reported before they file a second ticket."""
-        if category not in _VALID_CATEGORIES:
-            raise HTTPException(400, "unsupported category for this prototype")
+        The feature the official portal structurally cannot offer: we hold
+        the full history, so a resident can see their issue is already
+        reported before filing a second ticket."""
         dlat, dlng = 0.00225, 0.00290  # ~250m box at Alexandria's latitude
         with pool_getter().connection() as conn:
             rows = conn.execute(

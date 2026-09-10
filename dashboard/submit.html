@@ -3,199 +3,247 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Report a yard waste issue (beta) · Alex311</title>
+<title>Report an issue (beta) · Alex311</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root { --bg:#f6f7f9; --panel:#fff; --ink:#1c2733; --muted:#64748b; --accent:#1d4ed8;
-          --border:#e2e8f0; --warn:#b45309; --warnbg:#fef3c7; --ok:#059669; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;
-         background:var(--bg); color:var(--ink); }
-  header { display:flex; align-items:center; gap:12px; padding:14px 22px; background:var(--panel);
-           border-bottom:1px solid var(--border); }
-  header img { height:26px; width:26px; }
-  header h1 { font-size:17px; margin:0; }
-  .beta { font-size:11px; font-weight:700; color:#fff; background:var(--accent);
-          padding:1px 7px; border-radius:99px; letter-spacing:.03em; }
-  .wrap { max-width:720px; margin:0 auto; padding:20px 18px 60px; }
-  .notice { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:10px;
-            padding:11px 14px; font-size:13px; margin-bottom:18px; }
-  .step { background:var(--panel); border:1px solid var(--border); border-radius:12px;
-          padding:16px 18px; margin-bottom:16px; }
-  .step h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
-             margin:0 0 12px; }
-  .opt { display:flex; gap:10px; align-items:flex-start; padding:9px 11px; border:1px solid var(--border);
-         border-radius:8px; margin-bottom:8px; cursor:pointer; }
-  .opt:hover { border-color:var(--accent); }
-  .opt input { margin-top:3px; }
-  .opt .cat { font-size:12px; color:var(--muted); }
-  #map { height:280px; border-radius:8px; border:1px solid var(--border); }
-  .maphint { font-size:12px; color:var(--muted); margin:8px 0 0; }
-  label.fld { display:block; font-size:12px; color:var(--muted); margin:12px 0 4px; text-transform:uppercase;
-              letter-spacing:.03em; }
-  input[type=text], textarea, input[type=date] { width:100%; padding:8px 10px; border:1px solid var(--border);
-        border-radius:7px; font:inherit; background:#fff; }
+          --border:#e2e8f0; --warn:#b45309; --warnbg:#fef3c7; --ok:#059669; --bad:#b91c1c; --badbg:#fee2e2; --infobg:#eff6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:12px; padding:14px 22px; background:var(--panel); border-bottom:1px solid var(--border); }
+  header img { height:26px; width:26px; } header h1 { font-size:17px; margin:0; }
+  .beta { font-size:11px; font-weight:700; color:#fff; background:var(--accent); padding:1px 7px; border-radius:99px; }
+  .wrap { max-width:760px; margin:0 auto; padding:20px 18px 80px; }
+  .notice { background:var(--infobg); border:1px solid #bfdbfe; color:#1e40af; border-radius:10px; padding:11px 14px; font-size:13px; margin-bottom:18px; }
+  .step { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  .step h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 12px; display:flex; justify-content:space-between; }
+  input[type=text], input[type=search], input[type=date], input[type=time], textarea, select {
+    width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:7px; font:inherit; background:#fff; }
   textarea { min-height:78px; resize:vertical; }
-  #dupes:empty { display:none; }
-  .dupe-box { border-radius:8px; padding:11px 13px; font-size:13px; margin-top:10px; }
-  .dupe-box.warn { background:var(--warnbg); border:1px solid #fcd34d; color:var(--warn); }
-  .dupe-box.clear { background:#ecfdf5; border:1px solid #a7f3d0; color:var(--ok); }
-  .dupe-box a { color:inherit; font-weight:600; }
-  .dupe-list { margin:8px 0 0; padding-left:18px; }
-  .dupe-list li { margin:2px 0; }
-  .review { background:#f8fafc; border:1px dashed var(--border); border-radius:8px; padding:12px 14px;
-            font-size:13px; white-space:pre-wrap; font-family:ui-monospace,Menlo,monospace; }
-  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
-  button.primary, a.primary { background:var(--accent); color:#fff; border:none; border-radius:8px;
-        padding:10px 16px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
-  button.ghost { background:#fff; color:var(--accent); border:1px solid var(--border); border-radius:8px;
-        padding:10px 16px; font:inherit; cursor:pointer; }
-  button.ghost:hover { border-color:var(--accent); }
+  .svc { padding:9px 11px; border:1px solid var(--border); border-radius:8px; margin-top:8px; cursor:pointer; }
+  .svc:hover, .svc.sel { border-color:var(--accent); background:var(--infobg); }
+  .svc b { display:block; } .svc small { color:var(--muted); }
+  .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:99px; background:#e2e8f0; color:#334155; margin-left:6px; }
+  .tag.ok { background:#d1fae5; color:#065f46; } .tag.warn { background:var(--warnbg); color:var(--warn); }
+  .q { padding:12px 0; border-top:1px solid var(--border); }
+  .q:first-of-type { border-top:none; }
+  .q .qt { font-weight:600; margin-bottom:6px; } .q .qt .n { color:var(--muted); font-weight:500; margin-right:6px; }
+  .req { color:var(--bad); margin-left:3px; }
+  .opt { display:flex; gap:9px; align-items:flex-start; padding:7px 10px; border:1px solid var(--border); border-radius:8px; margin-top:6px; cursor:pointer; }
+  .opt:hover { border-color:var(--accent); } .opt input { margin-top:4px; }
+  .opt .rule { display:block; font-size:12px; margin-top:3px; }
+  .rule.hard { color:var(--bad); } .rule.adv { color:var(--warn); } .rule.info { color:var(--muted); }
+  .opt.hard { border-color:#fecaca; background:#fff7f7; }
+  .hint { font-size:12px; color:var(--muted); margin-top:4px; }
+  .composite { display:flex; gap:8px; } .composite input { flex:1; }
+  .progress { height:8px; background:#e2e8f0; border-radius:99px; overflow:hidden; margin:4px 0 10px; }
+  .progress i { display:block; height:100%; background:var(--accent); width:0; transition:width .2s; }
+  details.more { margin-top:10px; } details.more summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  #map { height:260px; border-radius:8px; border:1px solid var(--border); }
+  .box { border-radius:8px; padding:11px 13px; font-size:13px; margin-top:10px; }
+  .box.bad { background:var(--badbg); border:1px solid #fecaca; color:var(--bad); }
+  .box.warn { background:var(--warnbg); border:1px solid #fcd34d; color:var(--warn); }
+  .box.ok { background:#ecfdf5; border:1px solid #a7f3d0; color:var(--ok); }
+  .box.info { background:var(--infobg); border:1px solid #bfdbfe; color:#1e40af; }
+  .box ul { margin:6px 0 0; padding-left:18px; }
+  .review { background:#f8fafc; border:1px dashed var(--border); border-radius:8px; padding:12px 14px; font-size:13px; white-space:pre-wrap; font-family:ui-monospace,Menlo,monospace; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; align-items:center; }
+  button.primary, a.primary { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 16px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
+  button.ghost { background:#fff; color:var(--accent); border:1px solid var(--border); border-radius:8px; padding:10px 16px; font:inherit; cursor:pointer; }
   button:disabled, a.disabled { opacity:.5; pointer-events:none; }
   .foot { color:var(--muted); font-size:12px; margin-top:8px; }
-  .copied { color:var(--ok); font-size:12px; margin-left:8px; }
+  [hidden] { display:none !important; }
 </style>
 </head>
 <body>
-<header>
-  <img src="/favicon.svg" alt="">
-  <h1>Report a yard waste issue</h1>
-  <span class="beta">BETA</span>
-</header>
+<header><img src="/favicon.svg" alt=""><h1>Report an issue</h1><span class="beta">BETA</span></header>
 
 <div class="wrap">
-  <div class="notice">
-    <b>Testing prototype.</b> This friendlier form helps you prepare a request and checks whether
-    your issue is already reported. It does <b>not</b> file with the City yet — the last step hands you
-    off to the official Alex311 portal. Not an official City of Alexandria service.
-  </div>
+  <div class="notice"><b>Testing prototype.</b> Every question for a request type is shown at once, with the
+    City's own rules explained inline instead of surprising you mid-way. This form <b>prepares</b> a request and
+    checks whether it's already been reported; it does not file with the City yet. Not an official City of Alexandria service.</div>
 
   <div class="step">
-    <h2>1 · What happened?</h2>
-    <div id="scenarios"></div>
+    <h2>1 · What do you need? <span id="reg-meta"></span></h2>
+    <input type="search" id="svc-q" placeholder="Search 111 request types — e.g. pothole, missed trash, streetlight, noise">
+    <div id="svc-list"></div>
   </div>
 
-  <div class="step">
-    <h2>2 · Where? (click the map to drop a pin)</h2>
+  <div class="step" id="details" hidden>
+    <h2>2 · Details <span id="progress-label"></span></h2>
+    <div class="progress"><i id="progress-bar"></i></div>
+    <div id="svc-desc" class="hint"></div>
+    <div id="banners"></div>
+    <div id="questions"></div>
+    <details class="more" id="more-wrap" hidden><summary>Additional questions the City may ask (depend on your answers above)</summary><div id="more"></div></details>
+  </div>
+
+  <div class="step" id="where" hidden>
+    <h2>3 · Where? <span class="hint" id="loc-label">click the map to drop a pin</span></h2>
     <div id="map"></div>
-    <p class="maphint" id="loc-label">No location set yet.</p>
-    <label class="fld">Address (optional, helps the City locate it)</label>
-    <input type="text" id="address" placeholder="e.g. 123 King St">
-  </div>
-
-  <div class="step">
-    <h2>3 · Details</h2>
-    <label class="fld">Describe the issue</label>
-    <textarea id="desc" placeholder="e.g. Yard waste bags left at the curb on my collection day were not picked up."></textarea>
-    <label class="fld">Collection / occurrence date (optional)</label>
-    <input type="date" id="occurred">
+    <input type="text" id="address" placeholder="Address (optional, helps the City locate it)" style="margin-top:8px">
     <div id="dupes"></div>
+    <label class="hint" style="display:block;margin-top:10px">Additional information</label>
+    <textarea id="desc" placeholder="Anything else the City should know"></textarea>
+    <label class="hint" style="display:block;margin-top:10px">Photos (optional — kept on your device in this prototype)</label>
+    <input type="file" id="photos" accept="image/*" multiple>
   </div>
 
-  <div class="step">
-    <h2>4 · Review &amp; submit officially</h2>
-    <div class="review" id="review">Fill in the steps above to see your request summary.</div>
+  <div class="step" id="check" hidden>
+    <h2>4 · Check &amp; prepare</h2>
+    <div id="result"></div>
+    <div class="review" id="review" hidden></div>
     <div class="actions">
-      <button class="ghost" id="copy" disabled>Copy details</button>
+      <button class="primary" id="validate">Check my answers</button>
+      <button class="ghost" id="copy" hidden>Copy details</button>
       <a class="primary disabled" id="official" target="_blank" rel="noopener">Open official Alex311 portal ↗</a>
-      <span class="copied" id="copied" hidden>copied ✓</span>
     </div>
-    <p class="foot">On the portal, start a new service request, choose the matching category, and
-      paste your details. (Automatic form pre-fill is still being evaluated — see the project notes.)</p>
+    <p class="foot">Direct submission is gated and dry-run only in this prototype; the handoff opens the official portal
+      with your prepared details ready to paste.</p>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-const PORTAL = 'https://alex311.alexandriava.gov/customer/s/';
-const state = { scenario: null, lat: null, long: null };
-let scenarios = [];
+const esc = s => (s ?? '').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const PORTAL = 'https://alex311.alexandriava.gov/customer/s/?servicerequested=all';
+const state = { services: [], svc: null, answers: {}, lat: null, long: null, valid: null };
+const qkey = q => q.code || ('q' + q.order);
 
-// ---- map ----
-const map = L.map('map').setView([38.815, -77.09], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
-let pin = null;
-map.on('click', e => {
-  state.lat = +e.latlng.lat.toFixed(6);
-  state.long = +e.latlng.lng.toFixed(6);
-  if (pin) pin.setLatLng(e.latlng);
-  else pin = L.marker(e.latlng).addTo(map);
-  $('loc-label').textContent = `Location set: ${state.lat}, ${state.long}`;
-  checkDupes();
-  render();
-});
+// ---------- 1. picker ----------
+async function loadRegistry() {
+  const r = await (await fetch('/submit/api/registry')).json();
+  state.services = r.services;
+  $('reg-meta').textContent = `registry ${r.generated} · ${r.services.filter(s=>s.coverage.walked).length} of ${r.services.length} types fully mapped`;
+  renderList('');
+}
+function renderList(q) {
+  q = q.trim().toLowerCase();
+  const rows = state.services.filter(s => !q || (s.service_name + ' ' + s.keywords + ' ' + s.description).toLowerCase().includes(q))
+    .sort((a,b) => (b.coverage.mined_records - a.coverage.mined_records)).slice(0, q ? 12 : 8);
+  $('svc-list').innerHTML = rows.map(s => `<div class="svc ${state.svc?.service_code===s.service_code?'sel':''}" data-code="${s.service_code}">
+      <b>${esc(s.service_name)}${s.coverage.walked ? '<span class="tag ok">rules mapped</span>' : s.coverage.mined_records ? '<span class="tag">from data</span>' : '<span class="tag warn">not yet mapped</span>'}
+      <span class="tag">${s.n_questions} question${s.n_questions===1?'':'s'}</span></b>
+      <small>${esc((s.description||'').slice(0,140))}${(s.description||'').length>140?'…':''}</small></div>`).join('')
+    || '<div class="hint">No matches — try a different word.</div>';
+  $('svc-list').querySelectorAll('.svc').forEach(d => d.addEventListener('click', () => pick(d.dataset.code)));
+}
+$('svc-q').addEventListener('input', e => renderList(e.target.value));
 
-// ---- scenarios ----
-async function loadScenarios() {
-  scenarios = (await (await fetch('/submit/api/scenarios')).json()).scenarios;
-  $('scenarios').innerHTML = scenarios.map(s => `
-    <label class="opt"><input type="radio" name="scn" value="${s.key}">
-      <span>${s.label}<br><span class="cat">→ files as "${s.category}"</span></span></label>`).join('');
-  $('scenarios').querySelectorAll('input').forEach(r => r.addEventListener('change', () => {
-    state.scenario = scenarios.find(s => s.key === r.value);
-    checkDupes(); render();
-  }));
+async function pick(code) {
+  state.svc = await (await fetch('/submit/api/service/' + code)).json();
+  state.answers = {}; state.valid = null;
+  renderList($('svc-q').value);
+  $('svc-desc').innerHTML = `${esc(state.svc.description||'')}${state.svc.departments?.length ? ` <br><b>Handled by:</b> ${esc(state.svc.departments.map(d=>d.name).join(', '))}` : ''}`;
+  $('banners').innerHTML = (state.svc.banners||[]).map(b => `<div class="box info">${esc(b)}</div>`).join('');
+  ['details','where','check'].forEach(id => $(id).hidden = false);
+  renderQuestions(); checkDupes(); renderResult();
+  $('details').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-const esc = s => (s ?? '').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-
-// ---- duplicate check (our data — the portal can't do this) ----
-async function checkDupes() {
-  if (!state.scenario || state.lat == null) { $('dupes').innerHTML = ''; return; }
-  const p = new URLSearchParams({ lat: state.lat, long: state.long, category: state.scenario.category });
-  let d;
-  try { d = await (await fetch('/submit/api/nearby?' + p)).json(); }
-  catch { $('dupes').innerHTML = ''; return; }
-  if (!d.nearby.length) {
-    $('dupes').innerHTML = `<div class="dupe-box clear">No recent "${esc(state.scenario.category)}"
-      reports within 250m — looks new. Good to submit.</div>`;
-    return;
+// ---------- 2. questions (all at once, conditionals live) ----------
+function visibleWalked() {
+  const sel = (key, val) => { const v = state.answers[key]; return v === val || (Array.isArray(v) && v.includes(val)); };
+  return state.svc.questions.filter(q => q.source !== 'data-only' &&
+    (!q.conditional || (q.revealed_by || []).some(r => sel(r.question, r.option))));
+}
+function ruleHtml(o) {
+  if (!o.rule) return '';
+  const cls = o.rule.type === 'hard_stop' ? 'hard' : o.rule.type === 'advisory' ? 'adv' : 'info';
+  const lead = o.rule.type === 'hard_stop' ? 'Not accepted online — ' : o.rule.type === 'advisory' ? 'Note: ' : '';
+  return `<span class="rule ${cls}">${lead}${esc(o.rule.message)}</span>`;
+}
+function inputHtml(q, key) {
+  const v = state.answers[key];
+  const opts = q.options.filter(o => o.rendered !== false || !q.kind);   // hide phone-only values
+  if (q.kind === 'checkbox' || q.kind === 'multiselect' || q.datatype === 'multivaluelist') {
+    return opts.map(o => `<label class="opt ${o.rule?.type==='hard_stop'?'hard':''}"><input type="checkbox" data-key="${key}" value="${esc(o.value)}" ${Array.isArray(v)&&v.includes(o.value)?'checked':''}><span>${esc(o.value)}${ruleHtml(o)}</span></label>`).join('');
   }
-  const items = d.nearby.slice(0, 6).map(n => `<li>
-    <b>${esc(n.service_request_id)}</b> · ${n.meters}m away · ${n.is_open ? 'OPEN' : 'closed'}
-    · ${(n.requested_datetime||'').slice(0,10)} · ${esc(n.address||'')}</li>`).join('');
-  $('dupes').innerHTML = `<div class="dupe-box warn">
-    Found <b>${d.nearby.length}</b> nearby "${esc(state.scenario.category)}" report(s)
-    (${d.open_count} still open) in the last 45 days. Yours may already be filed —
-    check these before adding a duplicate:
-    <ul class="dupe-list">${items}</ul></div>`;
+  if (opts.length) {
+    return opts.map(o => `<label class="opt ${o.rule?.type==='hard_stop'?'hard':''}"><input type="radio" name="${key}" data-key="${key}" value="${esc(o.value)}" ${v===o.value?'checked':''}><span>${esc(o.value)}${ruleHtml(o)}</span></label>`).join('');
+  }
+  if (q.kind === 'composite' || (q.datatype||'').startsWith('date')) {
+    return `<div class="composite"><input type="date" data-key="${key}" data-part="date" value="${esc(v?.date||'')}"><input type="time" data-key="${key}" data-part="time" value="${esc(v?.time||'')}"></div>`;
+  }
+  return `<textarea data-key="${key}" rows="2">${esc(v||'')}</textarea>`;
+}
+function renderQuestions() {
+  const vis = visibleWalked();
+  const html = q => `<div class="q" id="q-${qkey(q)}"><div class="qt"><span class="n">Q${q.order}</span>${esc(q.text)}${q.required?'<span class="req">*</span>':''}</div>${inputHtml(q, qkey(q))}</div>`;
+  $('questions').innerHTML = vis.map(html).join('') || '<div class="hint">This request type has no extra questions — just location and details.</div>';
+  const more = state.svc.questions.filter(q => q.source === 'data-only');
+  $('more-wrap').hidden = !more.length; $('more').innerHTML = more.map(html).join('');
+  document.querySelectorAll('[data-key]').forEach(el => el.addEventListener('input', onAnswer));
+  document.querySelectorAll('[data-key]').forEach(el => el.addEventListener('change', onAnswer));
+  renderProgress();
+}
+function onAnswer(e) {
+  const el = e.target, key = el.dataset.key;
+  if (el.type === 'checkbox') { const all = [...document.querySelectorAll(`input[type=checkbox][data-key="${key}"]:checked`)].map(x => x.value); state.answers[key] = all; }
+  else if (el.dataset.part) { state.answers[key] = {...(state.answers[key]||{}), [el.dataset.part]: el.value}; }
+  else state.answers[key] = el.value;
+  state.valid = null;
+  if (el.type === 'radio' || el.type === 'checkbox') renderQuestions(); else renderProgress();
+  renderResult();
+}
+function renderProgress() {
+  const req = visibleWalked().filter(q => q.required);
+  const done = req.filter(q => { const v = state.answers[qkey(q)]; return v && (!Array.isArray(v) || v.length) && (typeof v !== 'object' || Array.isArray(v) || Object.values(v).some(Boolean)); }).length;
+  $('progress-label').textContent = req.length ? `${done} of ${req.length} required answered` : 'no required questions';
+  $('progress-bar').style.width = req.length ? (100*done/req.length) + '%' : '100%';
 }
 
-// ---- review + handoff ----
+// ---------- 3. location + duplicates ----------
+const map = L.map('map').setView([38.815, -77.09], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:19 }).addTo(map);
+let pin = null;
+map.on('click', e => { state.lat = +e.latlng.lat.toFixed(6); state.long = +e.latlng.lng.toFixed(6);
+  pin ? pin.setLatLng(e.latlng) : (pin = L.marker(e.latlng).addTo(map));
+  $('loc-label').textContent = `location set: ${state.lat}, ${state.long}`; checkDupes(); renderResult(); });
+async function checkDupes() {
+  if (!state.svc || state.lat == null) { $('dupes').innerHTML = ''; return; }
+  const p = new URLSearchParams({ lat: state.lat, long: state.long, category: state.svc.service_name });
+  let d; try { d = await (await fetch('/submit/api/nearby?' + p)).json(); } catch { return; }
+  if (!d.nearby.length) { $('dupes').innerHTML = `<div class="box ok">No recent “${esc(state.svc.service_name)}” reports within 250 m — looks new.</div>`; return; }
+  $('dupes').innerHTML = `<div class="box warn">Found <b>${d.nearby.length}</b> nearby “${esc(state.svc.service_name)}” report(s) in the last 45 days (${d.open_count} still open). Yours may already be filed:
+    <ul>${d.nearby.slice(0,5).map(n => `<li><b>${esc(n.service_request_id)}</b> · ${n.meters} m · ${n.is_open?'OPEN':'closed'} · ${(n.requested_datetime||'').slice(0,10)} · ${esc(n.address||'')}</li>`).join('')}</ul></div>`;
+}
+
+// ---------- 4. validate + handoff ----------
 function summary() {
-  const s = state.scenario;
-  return [
-    `Category: ${s ? s.category : '—'}`,
-    `Location: ${state.lat != null ? state.lat + ', ' + state.long : '—'}`,
-    `Address: ${$('address').value.trim() || '—'}`,
-    `Occurred: ${$('occurred').value || '—'}`,
-    `Details: ${$('desc').value.trim() || '—'}`,
-  ].join('\n');
+  const lines = [`Request type: ${state.svc.service_name}`, `Location: ${state.lat!=null ? state.lat+', '+state.long : '—'}`, `Address: ${$('address').value.trim()||'—'}`];
+  visibleWalked().concat(state.svc.questions.filter(q=>q.source==='data-only')).forEach(q => { const v = state.answers[qkey(q)]; if (v && (!Array.isArray(v)||v.length))
+    lines.push(`${q.text}: ${Array.isArray(v)?v.join(', '):(typeof v==='object'?[v.date,v.time].filter(Boolean).join(' '):v)}`); });
+  lines.push(`Additional information: ${$('desc').value.trim()||'—'}`);
+  return lines.join('\n');
 }
-
-function render() {
-  const ready = state.scenario && state.lat != null;
-  $('review').textContent = ready ? summary()
-    : 'Fill in the steps above to see your request summary.';
-  $('copy').disabled = !ready;
-  const link = $('official');
-  if (ready) { link.classList.remove('disabled'); link.href = PORTAL + '?servicerequested=all'; }
-  else link.classList.add('disabled');
+function renderResult() {
+  const v = state.valid; const box = $('result');
+  if (!v) { box.innerHTML = ''; $('review').hidden = true; $('copy').hidden = true; $('official').classList.add('disabled'); return; }
+  let h = '';
+  if (v.blocking.length) h += `<div class="box bad"><b>The City won't accept this online:</b><ul>${v.blocking.map(b=>`<li>Q${b.order} “${esc(b.option)}” — ${esc(b.message||'not accepted on the web form')}</li>`).join('')}</ul></div>`;
+  if (v.errors.length) h += `<div class="box bad"><b>Please fix:</b><ul>${v.errors.map(e=>`<li><a href="#q-${e.question}">Q${e.order}</a> — ${esc(e.message)}</li>`).join('')}</ul></div>`;
+  if (v.advisories.length) h += `<div class="box warn"><b>Before you submit:</b><ul>${v.advisories.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
+  if (v.info.length) h += `<div class="box info"><ul>${v.info.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
+  if (state.lat == null) h += `<div class="box bad">Please set a location on the map.</div>`;
+  const ready = v.ok && state.lat != null;
+  if (ready) h += `<div class="box ok">Ready. Copy the details and open the official portal to file it.</div>`;
+  box.innerHTML = h;
+  $('review').hidden = !ready; if (ready) $('review').textContent = summary();
+  $('copy').hidden = !ready; $('official').classList.toggle('disabled', !ready); $('official').href = PORTAL;
 }
-
-$('desc').addEventListener('input', render);
-$('address').addEventListener('input', render);
-$('occurred').addEventListener('change', render);
-$('copy').addEventListener('click', async () => {
-  await navigator.clipboard.writeText(summary());
-  $('copied').hidden = false; setTimeout(() => $('copied').hidden = true, 2000);
+$('validate').addEventListener('click', async () => {
+  if (!state.svc) return;
+  state.valid = await (await fetch('/submit/api/validate', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ service_code: state.svc.service_code, answers: state.answers }) })).json();
+  renderResult(); $('check').scrollIntoView({behavior:'smooth', block:'start'});
 });
+$('copy').addEventListener('click', async () => { await navigator.clipboard.writeText(summary()); $('copy').textContent = 'Copied ✓'; setTimeout(() => $('copy').textContent = 'Copy details', 1800); });
+['address','desc'].forEach(id => $(id).addEventListener('input', () => { if (state.valid) $('review').textContent = summary(); }));
 
-loadScenarios();
-render();
+loadRegistry();
 </script>
 </body>
 </html>
