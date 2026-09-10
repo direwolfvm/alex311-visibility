@@ -117,13 +117,13 @@ Three things the backtest changed or proved:
    collapsing those, a per-address cap counts two half-sized addresses and never
    fires. The engine keys on a normalised form and SQL narrows on a
    punctuation-stripped prefix before the exact match.
-3. **The identity rules are the untested half.** Every historical record is
+3. **The identity rules cannot be backtested.** Every historical record is
    anonymous, so per-submitter limits, targeting concentration and duplicate-text
-   detection cannot be exercised against history at all — the backtest asserts
-   they stay silent. That is also why *493 N Armistead* barely trips: a single
-   voice spread thinly across two weeks is invisible to address caps and is
-   precisely what identity is for. **Identity is the open decision**, and until
-   it is made the layer is running on address rules alone.
+   detection have no history to run against — the backtest asserts they stay
+   silent. That is also why *493 N Armistead* barely trips: a single voice spread
+   thinly across two weeks is invisible to address caps and is precisely what
+   identity is for. Identity is now built (§5b); its rules are covered by unit
+   tests rather than by replay, and the numbers above describe the address half.
 
 Storage is in place (`submitters`, `submission_attempts`, `moderation_actions`)
 and every evaluation is recorded whatever its outcome, because rate limits need
@@ -131,6 +131,45 @@ real attempts to count and an audit trail holding only refusals explains
 nothing. The gated endpoints are `POST /submit/api/precheck`,
 `GET /submit/api/review-queue` and `POST /submit/api/review/{id}`. Nothing here
 relays anything: the City-facing step remains double-gated and unused.
+
+### 5b. Identity (2026-09-10)
+
+`src/alex311/identity.py`. A resident proves control of a mailbox with a
+six-digit code and then carries an opaque `submitter_id`. More friction than
+the City's anonymous flow, deliberately: it is the only lever that makes
+per-submitter limits mean anything, and a resident who will not identify can
+still be handed off to the official portal.
+
+Four decisions worth recording:
+
+1. **One mailbox is one submitter.** `a.user+311@gmail.com` and `auser@gmail.com`
+   are the same person, and the canonical form folds plus-tags always and dots
+   for providers that ignore them. Without this, every per-submitter limit is one
+   keystroke away from being defeated and the identity friction buys nothing.
+2. **The client cannot name its own submitter.** The id comes from the session
+   cookie and nowhere else. An endpoint that accepted a submitter id in its body
+   would let a caller pick a fresh one per request.
+3. **Nothing secret is stored in the clear.** Codes and session tokens are kept
+   as salted hashes (`SUBMIT_SECRET` is the pepper); the plaintext exists only in
+   the email and the cookie. A six-digit code is trivially reversed from a leaked
+   table without a pepper.
+4. **No vendor lock-in and no new dependency.** Codes go out through a pluggable
+   sender: a console sender that logs them (development and demos) or SMTP, which
+   every provider speaks. Choosing SES over SendGrid is an environment change.
+
+Enumeration is closed off: requesting a code returns the same response whether
+the address is known, unknown or rate limited. Guessing is capped at 5 attempts
+per code and 5 codes per mailbox per hour, codes expire in 15 minutes, and
+blocking a submitter from the review queue revokes their sessions immediately
+rather than at next sign-in.
+
+Two layers of access now sit in front of the prototype, doing different jobs.
+HTTP Basic decides *who may see it at all* while the authorization question with
+the City is open. The session decides *which resident is submitting*, which is
+what the abuse rules consume.
+
+Still open: CAPTCHA/Turnstile, a reviewer UI for the queue, and a real SMTP
+provider (the demo runs on the console sender).
 
 ## 6. Open questions and risks
 
@@ -144,7 +183,7 @@ relays anything: the City-facing step remains double-gated and unused.
 
 1. ~~**Rule discovery spike**~~ — **done for all 111 services** (§8).
 2. ~~**Schema registry + renderer**~~ — **done** (§8): registry + single-page form on the gated `/submit`, with drift detection to keep it current (§9).
-3. ~~**Abuse layer**~~ — **policy, storage and review queue done** (§5a), backtested over 8,187 real requests. Remaining: **identity** (a verified submitter, the one open decision), plus CAPTCHA/Turnstile and a reviewer UI.
+3. ~~**Abuse layer**~~ — **policy, storage and review queue done** (§5a), backtested over 8,187 real requests. Identity built too (§5b). Remaining: CAPTCHA/Turnstile, a reviewer UI, and an SMTP provider.
 4. **Harness**: land PR #14, add the iframe map click and schema-driven fills, run it as a Cloud Run Job, dry-run only.
 5. **One supervised live submission** per category family, with the City informed, before opening the gate any wider.
 
@@ -230,6 +269,7 @@ the City changed its mind, and the form should stop telling residents no.
 | `spike/build_registry.py` · `docs/data/form-registry.json` | merged form registry (catalog + mined data + wizard rules) that drives `/submit` |
 | `src/alex311/registry_drift.py` | browser-free drift check (live catalog + submitted answers); weekly Cloud Run job |
 | `src/alex311/abuse.py` | anti-abuse policy engine (pure; thresholds in one `Policy`) |
+| `src/alex311/identity.py` | verified-submitter identity: one-time codes, sessions, pluggable email |
 | `spike/backtest_abuse.py` | replays 90 days of real requests through the live policy |
 | `spike/rules_diff.py` · `scripts/weekly_drift.sh` | crawl-vs-committed rule diff and the weekly runner |
 | `dashboard/registry.py` · `dashboard/submit.py` · `dashboard/submit.html` | registry loader/validator and the gated single-page form |

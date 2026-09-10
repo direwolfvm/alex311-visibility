@@ -21,6 +21,7 @@ back to the official record.
 | `dashboard/` | FastAPI API + single-page frontend (Leaflet + Chart.js). |
 | `spike/` | Phase 0 de-risk spike + findings (how guest auth actually works). |
 | `deploy/README.md` | GCP runbook: Cloud Run jobs, Scheduler, alerting. |
+| `docs/demo-guide.md` | **Demo and evaluation script** for a session with the City. |
 
 ## Local quickstart
 

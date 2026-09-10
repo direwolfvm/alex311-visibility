@@ -16,12 +16,12 @@ import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
-from alex311 import abuse, db as adb
+from alex311 import abuse, db as adb, identity as ident
 
 from . import registry as R
 
@@ -55,6 +55,18 @@ class ValidateBody(BaseModel):
     answers: dict = {}
 
 
+SESSION_COOKIE = "alex311_submitter"
+
+
+class AuthStart(BaseModel):
+    email: str
+
+
+class AuthConfirm(BaseModel):
+    email: str
+    code: str
+
+
 class PrecheckBody(BaseModel):
     """A proposed submission, as the form would send it."""
     service_code: str
@@ -64,16 +76,22 @@ class PrecheckBody(BaseModel):
     long: float | None = None
     description: str = ""
     answers: dict = {}
-    #: Identity is not built yet. Until it is, per-submitter limits simply do
-    #: not apply, and the layer relies on the address rules alone — which is
-    #: exactly what the historical backtest measures. See §5 of the research doc.
-    submitter_id: str | None = None
     #: a field no real user can see; anything in it is a bot
     website: str = ""
+    # Note there is no submitter_id here. It comes from the session cookie and
+    # nowhere else: a client that could name its own submitter could pick a
+    # fresh one per request and every per-submitter limit would be decorative.
 
 
-def register_submit_routes(app, pool_getter) -> None:
-    """Attach the gated /submit routes. pool_getter() returns the live pool."""
+def register_submit_routes(app, pool_getter, sender=None) -> None:
+    """Attach the gated /submit routes. pool_getter() returns the live pool.
+
+    Two layers of access, doing different jobs. HTTP Basic decides who may see
+    the prototype at all while the authorization question with the City is
+    open. The session below decides *which resident* is submitting, which is
+    what the per-submitter abuse rules need.
+    """
+    sender = sender or ident.sender_from_env()
     router = APIRouter(prefix="/submit", dependencies=[Depends(_auth)])
     page = Path(__file__).parent / "submit.html"
 
@@ -103,19 +121,76 @@ def register_submit_routes(app, pool_getter) -> None:
             raise HTTPException(404, "unknown service code")
         return R.validate(s, body.answers)
 
+    def _submitter(request: Request) -> str | None:
+        """Who is signed in, according to the session cookie alone."""
+        token = request.cookies.get(SESSION_COOKIE)
+        if not token:
+            return None
+        with pool_getter().connection() as conn:
+            return ident.session_submitter(conn, token)
+
+    @router.get("/api/auth/me")
+    def whoami(request: Request):
+        sid = _submitter(request)
+        return {"signed_in": sid is not None, "submitter_id": sid}
+
+    @router.post("/api/auth/start")
+    def auth_start(body: AuthStart):
+        """Send a one-time code.
+
+        The reply is identical whether or not the address is known, and whether
+        or not it was rate limited. Anything else turns this into a way to test
+        which addresses have accounts.
+        """
+        try:
+            with pool_getter().connection() as conn:
+                ident.start_verification(conn, body.email, sender)
+        except ident.InvalidEmail:
+            raise HTTPException(400, "that does not look like an email address")
+        return {"sent": True,
+                "message": "If that address can receive mail, a code is on its way."}
+
+    @router.post("/api/auth/confirm")
+    def auth_confirm(body: AuthConfirm, request: Request, response: Response):
+        try:
+            with pool_getter().connection() as conn:
+                session = ident.confirm_verification(
+                    conn, body.email, body.code,
+                    user_agent=request.headers.get("user-agent"))
+        except ident.InvalidEmail:
+            raise HTTPException(400, "that does not look like an email address")
+        except ident.VerificationFailed:
+            raise HTTPException(400, "that code is not valid")
+        response.set_cookie(
+            SESSION_COOKIE, session.token, httponly=True, samesite="lax",
+            secure=request.url.scheme == "https", path="/submit",
+            expires=session.expires_at)
+        return {"submitter_id": session.submitter_id,
+                "expires_at": session.expires_at}
+
+    @router.post("/api/auth/signout")
+    def auth_signout(request: Request, response: Response):
+        token = request.cookies.get(SESSION_COOKIE)
+        if token:
+            with pool_getter().connection() as conn:
+                ident.revoke_session(conn, token)
+        response.delete_cookie(SESSION_COOKIE, path="/submit")
+        return {"signed_out": True}
+
     @router.post("/api/precheck")
-    def precheck(body: PrecheckBody):
+    def precheck(body: PrecheckBody, request: Request):
         """Run the anti-abuse policy over a proposed submission.
 
         Records every evaluation, whatever the outcome: the rate limits count
         real attempts, and an audit trail holding only the refusals explains
         nothing. Nothing here reaches the City — the relay stays gated.
         """
+        submitter_id = _submitter(request)
         key = abuse.normalize_address(body.address)
         proposed = abuse.Event(
             at=datetime.now(timezone.utc), address=body.address or "",
             category=body.service_name or body.service_code,
-            submitter_id=body.submitter_id, description=body.description,
+            submitter_id=submitter_id, description=body.description,
             source="ours")
 
         history: list[abuse.Event] = []
@@ -123,7 +198,7 @@ def register_submit_routes(app, pool_getter) -> None:
             with pool_getter().connection() as conn:
                 rows = adb.abuse_history(conn, address_key=key,
                                          sql_prefix=abuse.sql_prefix(body.address),
-                                         submitter_id=body.submitter_id)
+                                         submitter_id=submitter_id)
             for r in rows:
                 # SQL narrowed by prefix; this is the exact match
                 if r["source"] == "city" and abuse.normalize_address(r["address"]) != key:
@@ -140,7 +215,7 @@ def register_submit_routes(app, pool_getter) -> None:
                      "detail": f.detail} for f in decision.findings]
         with pool_getter().connection() as conn:
             attempt_id = adb.record_attempt(
-                conn, submitter_id=body.submitter_id, service_code=body.service_code,
+                conn, submitter_id=submitter_id, service_code=body.service_code,
                 service_name=body.service_name, address=body.address, address_key=key,
                 lat=body.lat, long=body.long, description=body.description,
                 answers=body.answers, outcome=decision.outcome, findings=findings,
@@ -151,7 +226,7 @@ def register_submit_routes(app, pool_getter) -> None:
                 "summary": abuse.summarize(decision),
                 "cooldown_until": decision.cooldown_until,
                 "history_considered": len(history),
-                "identity_enforced": body.submitter_id is not None}
+                "identity_enforced": submitter_id is not None}
 
     @router.get("/api/review-queue")
     def queue(limit: int = 50):
@@ -168,6 +243,14 @@ def register_submit_routes(app, pool_getter) -> None:
         with pool_getter().connection() as conn:
             action_id = adb.record_moderation(conn, attempt_id=attempt_id,
                                               actor=actor, action=action, reason=reason)
+            if action == "block_submitter":
+                row = conn.execute(
+                    "SELECT submitter_id FROM submission_attempts WHERE attempt_id = %s",
+                    (attempt_id,)).fetchone()
+                if not row or not row["submitter_id"]:
+                    raise HTTPException(400, "that attempt has no submitter to block")
+                ident.block_submitter(conn, row["submitter_id"],
+                                      reason or "blocked from the review queue")
         return {"action_id": action_id, "attempt_id": attempt_id, "action": action}
 
     @router.get("/api/nearby")

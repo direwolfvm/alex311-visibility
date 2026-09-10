@@ -1,0 +1,721 @@
+<title>Alex311 Demo Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    /* The project's own dashboard palette, so the guide and the thing it
+       documents read as one piece of work. */
+    --ink:        #1c2733;
+    --ink-soft:   #4a5768;
+    --ink-faint:  #6b788a;
+    --ground:     #f5f7fa;
+    --panel:      #ffffff;
+    --rule:       #dde3ec;
+    --rule-soft:  #eaeef4;
+    --accent:     #1d4ed8;
+    --accent-ink: #16389c;
+    --accent-wash:#eaf0fe;
+    --held:       #b45309;   /* the dashboard's "open" amber */
+    --held-wash:  #fdf3e6;
+    --clear:      #047857;   /* the dashboard's "closed" green */
+    --clear-wash: #e7f4ef;
+    --code-bg:    #16202c;
+    --code-ink:   #dbe4ef;
+    --code-dim:   #7d8ea3;
+    --shadow:     0 1px 2px rgba(28,39,51,.06), 0 8px 24px -16px rgba(28,39,51,.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ink:        #e6ecf4;
+      --ink-soft:   #a9b6c6;
+      --ink-faint:  #8593a5;
+      --ground:     #11171f;
+      --panel:      #18202a;
+      --rule:       #2b3644;
+      --rule-soft:  #222b37;
+      --accent:     #7ea6ff;
+      --accent-ink: #a8c4ff;
+      --accent-wash:#1b2740;
+      --held:       #e0a05a;
+      --held-wash:  #2c2318;
+      --clear:      #4dbd95;
+      --clear-wash: #142a24;
+      --code-bg:    #0d141c;
+      --code-ink:   #d3dded;
+      --code-dim:   #6f8095;
+      --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ink:        #e6ecf4;
+    --ink-soft:   #a9b6c6;
+    --ink-faint:  #8593a5;
+    --ground:     #11171f;
+    --panel:      #18202a;
+    --rule:       #2b3644;
+    --rule-soft:  #222b37;
+    --accent:     #7ea6ff;
+    --accent-ink: #a8c4ff;
+    --accent-wash:#1b2740;
+    --held:       #e0a05a;
+    --held-wash:  #2c2318;
+    --clear:      #4dbd95;
+    --clear-wash: #142a24;
+    --code-bg:    #0d141c;
+    --code-ink:   #d3dded;
+    --code-dim:   #6f8095;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 400 17px/1.62 "Public Sans", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1180px; margin: 0 auto; padding: 0 28px 96px; }
+
+  /* ---------------------------------------------------------- masthead */
+  header.mast {
+    display: grid; gap: 18px;
+    padding: 56px 0 30px;
+    border-bottom: 3px solid var(--ink);
+  }
+  .kicker {
+    font: 500 12px/1 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+  }
+  h1 {
+    font: 700 clamp(38px, 6vw, 60px)/1.04 "Source Serif 4", Georgia, serif;
+    margin: 0; letter-spacing: -.015em; text-wrap: balance; max-width: 15ch;
+  }
+  .standfirst {
+    font-size: 19px; line-height: 1.55; color: var(--ink-soft);
+    max-width: 62ch; margin: 0;
+  }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 26px;
+    font: 400 13px/1 "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--ink-faint); padding-top: 4px;
+  }
+  .meta b { color: var(--ink-soft); font-weight: 500; }
+
+  /* ------------------------------------------------------- ground rules */
+  .rules {
+    display: grid; gap: 14px; margin: 34px 0 0;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+  .rule-card {
+    background: var(--panel); border: 1px solid var(--rule);
+    border-left: 4px solid var(--held);
+    padding: 20px 22px; border-radius: 3px;
+  }
+  .rule-card h2 {
+    font: 700 15px/1.3 "Public Sans", sans-serif; margin: 0 0 7px;
+    letter-spacing: .005em;
+  }
+  .rule-card p { margin: 0; font-size: 15.5px; color: var(--ink-soft); line-height: 1.55; }
+
+  /* ------------------------------------------------------------ layout */
+  .body-grid {
+    display: grid; grid-template-columns: 200px minmax(0, 1fr);
+    gap: 56px; align-items: start; margin-top: 52px;
+  }
+  nav.toc { position: sticky; top: 28px; display: grid; gap: 2px; }
+  nav.toc .toc-label {
+    font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px;
+  }
+  nav.toc a {
+    display: grid; grid-template-columns: 22px 1fr; gap: 8px;
+    padding: 6px 8px 6px 0; text-decoration: none; color: var(--ink-soft);
+    font-size: 14.5px; line-height: 1.35; border-radius: 3px;
+  }
+  nav.toc a span:first-child {
+    font: 500 12px/1.5 "IBM Plex Mono", monospace; color: var(--ink-faint);
+  }
+  nav.toc a:hover { color: var(--accent); background: var(--accent-wash); }
+  nav.toc a:hover span:first-child { color: var(--accent); }
+
+  main { display: grid; gap: 0; min-width: 0; }
+
+  /* ------------------------------------------------------------- steps */
+  section.step { padding: 40px 0; border-top: 1px solid var(--rule); }
+  section.step:first-child { border-top: none; padding-top: 4px; }
+  .step-head { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: baseline; }
+  .step-num {
+    font: 500 13px/1 "IBM Plex Mono", monospace; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 999px;
+    padding: 6px 11px; letter-spacing: .04em;
+  }
+  h2.step-title {
+    font: 600 clamp(25px, 3.2vw, 33px)/1.18 "Source Serif 4", Georgia, serif;
+    margin: 0; letter-spacing: -.01em; text-wrap: balance;
+  }
+  .step p { max-width: 66ch; color: var(--ink-soft); }
+  .step p strong, .step li strong { color: var(--ink); font-weight: 600; }
+  .step > p:first-of-type { margin-top: 16px; }
+  .step ul { max-width: 66ch; color: var(--ink-soft); padding-left: 20px; }
+  .step li { margin: 7px 0; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+
+  /* ------------------------------------------------------------- code */
+  .run {
+    margin: 22px 0; border-radius: 5px; overflow: hidden;
+    border: 1px solid var(--rule); box-shadow: var(--shadow);
+  }
+  .run-label {
+    background: var(--panel); border-bottom: 1px solid var(--rule);
+    padding: 9px 16px;
+    font: 500 11px/1 "IBM Plex Mono", monospace; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+  pre {
+    margin: 0; background: var(--code-bg); color: var(--code-ink);
+    padding: 18px 20px; overflow-x: auto;
+    font: 400 14px/1.68 "IBM Plex Mono", ui-monospace, monospace;
+    tab-size: 2;
+  }
+  pre .c { color: var(--code-dim); }
+  code {
+    font: 500 .9em/1.4 "IBM Plex Mono", ui-monospace, monospace;
+    background: var(--rule-soft); padding: 1px 5px; border-radius: 3px;
+    color: var(--ink);
+  }
+
+  /* ------------------------------------------------------- the argument */
+  .point {
+    margin: 24px 0 0; padding: 18px 22px; max-width: 70ch;
+    background: var(--accent-wash); border-radius: 4px;
+    border-left: 4px solid var(--accent);
+  }
+  .point .point-label {
+    display: block; font: 500 11px/1 "IBM Plex Mono", monospace;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink);
+    margin-bottom: 8px;
+  }
+  .point p { margin: 0; color: var(--ink); max-width: none; font-size: 16.5px; }
+
+  /* ------------------------------------------------------------ tables */
+  .table-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--rule); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); font-size: 15.5px; }
+  th, td { text-align: left; padding: 11px 16px; border-top: 1px solid var(--rule-soft); }
+  thead th {
+    border-top: none; background: var(--rule-soft);
+    font: 500 11.5px/1.3 "IBM Plex Mono", monospace; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-faint); white-space: nowrap;
+  }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .addr { font: 500 14.5px/1.4 "IBM Plex Mono", monospace; white-space: nowrap; }
+  .verdict { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .verdict.held { color: var(--held); }
+  .verdict.clear { color: var(--clear); }
+
+  .pill {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font: 600 12px/1.6 "Public Sans", sans-serif; letter-spacing: .02em;
+  }
+  .pill.held  { background: var(--held-wash);  color: var(--held); }
+  .pill.clear { background: var(--clear-wash); color: var(--clear); }
+
+  /* ------------------------------------------------------------- asks */
+  ol.asks { counter-reset: ask; list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 14px; }
+  ol.asks li {
+    counter-increment: ask; position: relative; padding: 18px 22px 18px 58px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+    color: var(--ink-soft); max-width: 74ch;
+  }
+  ol.asks li::before {
+    content: counter(ask); position: absolute; left: 20px; top: 18px;
+    font: 500 13px/1.5 "IBM Plex Mono", monospace; color: var(--accent);
+  }
+  ol.asks b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 3px; }
+
+  ul.limits { list-style: none; padding: 0; margin: 22px 0 0; max-width: 74ch; }
+  ul.limits li {
+    padding: 12px 0 12px 26px; border-top: 1px solid var(--rule-soft);
+    position: relative; color: var(--ink-soft);
+  }
+  ul.limits li::before {
+    content: "—"; position: absolute; left: 0; color: var(--ink-faint);
+  }
+  ul.limits b { color: var(--ink); font-weight: 600; }
+
+  footer.end {
+    margin-top: 56px; padding-top: 22px; border-top: 3px solid var(--ink);
+    font-size: 14.5px; color: var(--ink-faint); max-width: 74ch;
+  }
+
+  @media (max-width: 900px) {
+    .body-grid { grid-template-columns: 1fr; gap: 0; }
+    nav.toc { position: static; margin-bottom: 30px; padding-bottom: 22px;
+              border-bottom: 1px solid var(--rule); }
+    .page { padding: 0 18px 64px; }
+    header.mast { padding-top: 36px; }
+    body { font-size: 16.5px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+  a:focus-visible, nav.toc a:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px;
+  }
+</style>
+
+<div class="page">
+
+<header class="mast">
+  <div class="kicker">Evaluation script · unofficial Alex311 project</div>
+  <h1>Alex311 Demo Walkthrough</h1>
+  <p class="standfirst">
+    What has been built, in the order that makes the argument, with the exact
+    commands to run each part. Written for a session with the City of Alexandria,
+    and for anyone repeating the evaluation afterwards.
+  </p>
+  <div class="meta">
+    <span><b>111</b> catalog services mapped</span>
+    <span><b>8,187</b> requests replayed</span>
+    <span><b>154</b> tests</span>
+    <span><b>0</b> submissions made</span>
+  </div>
+</header>
+
+<div class="rules">
+  <div class="rule-card">
+    <h2>Nothing here submits anything to the City</h2>
+    <p>
+      The rule-discovery probe asserts in code that it never presses Submit. The
+      form <em>prepares and checks</em> a request, then hands off to the official
+      portal. A real submission needs two separate gates — <code>live=True</code>
+      and <code>ALEX311_ALLOW_LIVE_SUBMIT=1</code> — and has never been used.
+    </p>
+  </div>
+  <div class="rule-card">
+    <h2>This is not an official City service</h2>
+    <p>
+      And “no Option B” is not the same as the City authorising scripted use of
+      the guest channel. This work proves feasibility. Whether to operate it is a
+      decision to make with the City, not a technical question.
+    </p>
+  </div>
+</div>
+
+<div class="body-grid">
+
+  <nav class="toc">
+    <div class="toc-label">Running order</div>
+    <a href="#setup"><span>00</span><span>Setup</span></a>
+    <a href="#dashboard"><span>01</span><span>The dashboard</span></a>
+    <a href="#rules"><span>02</span><span>The City's rules</span></a>
+    <a href="#form"><span>03</span><span>One page, all questions</span></a>
+    <a href="#dupes"><span>04</span><span>Duplicate detection</span></a>
+    <a href="#abuse"><span>05</span><span>Anti-abuse</span></a>
+    <a href="#drift"><span>06</span><span>Staying honest</span></a>
+    <a href="#ask"><span>07</span><span>What to ask</span></a>
+    <a href="#limits"><span>08</span><span>Honest limits</span></a>
+  </nav>
+
+  <main>
+
+  <section class="step" id="setup">
+    <div class="step-head">
+      <span class="step-num">00</span>
+      <h2 class="step-title">Setup</h2>
+    </div>
+    <div class="run">
+      <div class="run-label">Terminal</div>
+<pre>docker run -d --name alex311-pg -e POSTGRES_PASSWORD=alex311 \
+    -e POSTGRES_DB=alex311 -p 54329:5432 postgres:16
+export DATABASE_URL=postgresql://postgres:alex311@localhost:54329/alex311
+export MEDIA_DIR=./media_store
+uv sync --group dev
+uv run python -m alex311.ingest init-db
+uv run python -m alex311.ingest incremental --days 14 --max-details 200 --max-media 50</pre>
+    </div>
+    <p>
+      Run the test suite first. It is the fastest honest summary of what is
+      covered: expect <strong>154 passed</strong>. Without <code>DATABASE_URL</code>
+      set, 11 identity flow tests skip and the rest still run.
+    </p>
+    <div class="run">
+      <div class="run-label">Terminal</div>
+<pre>uv run pytest -q
+uv run uvicorn dashboard.app:app --port 8311</pre>
+    </div>
+    <p>
+      The public dashboard is at <code>localhost:8311</code>. The gated prototype
+      is at <code>localhost:8311/submit</code>, user <code>alex311user</code>,
+      password from <code>SUBMIT_PASSWORD</code> — in production that lives in
+      Secret Manager as <code>alex311-submit-password</code>.
+    </p>
+  </section>
+
+  <section class="step" id="dashboard">
+    <div class="step-head">
+      <span class="step-num">01</span>
+      <h2 class="step-title">The dashboard, which already works</h2>
+    </div>
+    <p>
+      A read-only mirror of the City's own public data. It never calls the city
+      portal in response to a visitor, so public traffic cannot generate load on
+      the municipal site.
+    </p>
+    <p>
+      <strong>Show:</strong> filter to a category and watch the map, open a row for
+      the full record with photos, then the Analytics tab for time-to-close by
+      type. Everything deep-links back to the official record.
+    </p>
+    <div class="point">
+      <span class="point-label">The point to make</span>
+      <p>
+        The City's portal shows a resident their own request. It cannot show
+        anyone the pattern — how long this category takes to close, what else is
+        happening on the street, whether the issue is already reported. That gap
+        is what the whole project exists to fill.
+      </p>
+    </div>
+    <p>
+      <strong>Mobile matters here.</strong> Of the last 90 days of requests, 42%
+      arrived from a phone, and 63% of self-service submissions did. Open it on a
+      phone, or at a 375px window, and check the map, the collapsed filter panel
+      and the charts.
+    </p>
+  </section>
+
+  <section class="step" id="rules">
+    <div class="step-head">
+      <span class="step-num">02</span>
+      <h2 class="step-title">What the City's form actually asks</h2>
+    </div>
+    <div class="run">
+      <div class="run-label">Terminal</div>
+<pre>uv run python spike/wizard_rules_report.py   <span class="c"># regenerates docs/wizard-rules.md</span>
+open docs/wizard-rules.md</pre>
+    </div>
+    <p>
+      Every one of the <strong>111 catalog services</strong> has been walked
+      read-only through the real wizard, recording each question, each option, and
+      what the portal does when you pick it: <strong>39 hard stops</strong> where
+      the answer is rejected outright, <strong>44 advisories</strong>, and the
+      skip-logic that decides which question appears next.
+    </p>
+    <p>
+      <strong>Show:</strong> a service with a redirect — <em>Tree Inspection
+      Request</em>, where answering “the tree is blocking the road” ejects the
+      resident with a phone number, after they have already answered other
+      questions.
+    </p>
+    <div class="point">
+      <span class="point-label">The point to make</span>
+      <p>
+        None of this is discoverable in advance on the City's form. A resident
+        meets it one question at a time, three questions in.
+      </p>
+    </div>
+  </section>
+
+  <section class="step" id="form">
+    <div class="step-head">
+      <span class="step-num">03</span>
+      <h2 class="step-title">The same questions, all at once</h2>
+    </div>
+    <p>
+      Open <code>/submit</code> and pick a request type. Every question is on one
+      page, with the City's own rules explained inline next to the option that
+      triggers them, instead of surprising the resident mid-way.
+    </p>
+    <ul>
+      <li><strong>Tree Inspection Request</strong> — the rejecting answers are
+        marked before you pick one, in the City's actual wording.</li>
+      <li><strong>Street Pavement Markings</strong> — a “select all applicable”
+        question the City's form renders as a custom dropdown.</li>
+      <li>Any type, then <strong>Check my answers</strong> — validation runs
+        server-side against the same registry, so nothing the wizard would reject
+        can be prepared.</li>
+    </ul>
+    <p>
+      The page ends with a review summary, a copy button and a link to the
+      official portal. It does not file anything.
+    </p>
+  </section>
+
+  <section class="step" id="dupes">
+    <div class="step-head">
+      <span class="step-num">04</span>
+      <h2 class="step-title">Duplicate detection</h2>
+    </div>
+    <p>
+      Set a location on the map in <code>/submit</code> and pick a common
+      category. Recent same-category requests within 250 metres appear before you
+      finish.
+    </p>
+    <div class="point">
+      <span class="point-label">The point to make</span>
+      <p>
+        There were <strong>837 same-address, same-category re-files within seven
+        days</strong> in one 90-day window, across 562 addresses. The City's form
+        cannot warn about these, because it does not show a resident anyone else's
+        requests. We hold the full history, so we can.
+      </p>
+    </div>
+  </section>
+
+  <section class="step" id="abuse">
+    <div class="step-head">
+      <span class="step-num">05</span>
+      <h2 class="step-title">Anti-abuse — spend the most time here</h2>
+    </div>
+    <p>
+      This answers the obvious objection: <em>if you relay requests, do you become
+      a spam pipe?</em>
+    </p>
+
+    <div class="run">
+      <div class="run-label">Terminal · replays the City's own history</div>
+<pre>uv run python spike/backtest_abuse.py --days 90</pre>
+    </div>
+    <p>
+      This replays <strong>8,187 real requests</strong> through the same function
+      the endpoint calls.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Outcome</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill held">Held for review</span></td>
+            <td class="num">66 of 8,187 (0.8%) — across 12 of 5,327 addresses</td>
+          </tr>
+          <tr>
+            <td><span class="pill clear">Duplicate notice</span></td>
+            <td class="num">127 (1.6%) — shown to the resident, never blocking</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>And on the four cases the research names by address:</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Address</th><th>What it is</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="addr">80 S Earley St</td>
+            <td>52 complaints in one day, one voice</td>
+            <td class="verdict held">50 of 53 held — first at request #4</td>
+          </tr>
+          <tr>
+            <td class="addr">493 N Armistead St</td>
+            <td>persistent single target</td>
+            <td class="verdict held">1 held, 1 notice</td>
+          </tr>
+          <tr>
+            <td class="addr">400 King St</td>
+            <td>legitimately busy commercial block</td>
+            <td class="verdict clear">0 held, 3 notices</td>
+          </tr>
+          <tr>
+            <td class="addr">1437 Janney's Ln</td>
+            <td>recurring defect, many reporters</td>
+            <td class="verdict clear">0 held, 1 notice</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="point">
+      <span class="point-label">The point to make</span>
+      <p>
+        The burst campaign is caught on its fourth request. The busy commercial
+        block and the genuine recurring defect are never held. That separation is
+        the whole design, and it is measured against the City's own data rather
+        than asserted.
+      </p>
+    </div>
+
+    <div class="run">
+      <div class="run-label">Terminal · show it live</div>
+<pre>A=alex311user:$SUBMIT_PASSWORD
+J=/tmp/demo-cookies.txt; rm -f $J
+
+<span class="c"># a first report is simply allowed; repeat it and watch the escalation</span>
+curl -s -u $A -c $J -b $J -X POST localhost:8311/submit/api/precheck \
+  -H 'content-type: application/json' \
+  -d '{"service_code":"TESNOISE","service_name":"Noise Issues",
+       "address":"77 DEMO ST","description":"loud trucks overnight"}'
+
+<span class="c"># allow → notice → notice → review</span></pre>
+    </div>
+    <p>Then the queue and the audit trail:</p>
+    <div class="run">
+      <div class="run-label">Terminal</div>
+<pre>curl -s -u $A localhost:8311/submit/api/review-queue
+
+ID=$(curl -s -u $A localhost:8311/submit/api/review-queue \
+     | python3 -c "import json,sys; print(json.load(sys.stdin)['queue'][0]['attempt_id'])")
+curl -s -u $A -X POST "localhost:8311/submit/api/review/$ID?action=approve&amp;reason=legitimate"</pre>
+    </div>
+    <p>
+      Every evaluation is recorded, not only the refusals — the rate limits count
+      real attempts, and an audit trail of nothing but rejections explains nothing.
+      Moderation is append-only: a reversal is a new row, so the trail of who
+      decided what survives.
+    </p>
+    <p>A filled honeypot field blocks outright:</p>
+    <div class="run">
+      <div class="run-label">Terminal</div>
+<pre>curl -s -u $A -X POST localhost:8311/submit/api/precheck \
+  -H 'content-type: application/json' \
+  -d '{"service_code":"TESNOISE","address":"1 A ST","website":"http://spam"}'</pre>
+    </div>
+    <div class="point">
+      <span class="point-label">The point to make</span>
+      <p>
+        Only bot signals block. Everything that looks human goes to a queue,
+        because the cost of a false positive is a resident whose real problem goes
+        unreported.
+      </p>
+    </div>
+
+    <h3 style="font:600 21px/1.3 'Source Serif 4',Georgia,serif;margin:38px 0 0;">Identity</h3>
+    <div class="run">
+      <div class="run-label">Terminal</div>
+<pre>curl -s -u $A -c $J -b $J -X POST localhost:8311/submit/api/auth/start \
+  -H 'content-type: application/json' -d '{"email":"Resident.Demo+311@Gmail.com"}'
+
+<span class="c"># the console sender prints the code in the server log</span>
+curl -s -u $A -c $J -b $J -X POST localhost:8311/submit/api/auth/confirm \
+  -H 'content-type: application/json' \
+  -d '{"email":"resident.demo@gmail.com","code":"THE-CODE"}'
+
+curl -s -u $A -b $J localhost:8311/submit/api/auth/me</pre>
+    </div>
+    <p>
+      Note the second command uses a <strong>different spelling of the same
+      mailbox</strong> and gets the same submitter. Plus-tags, and dots for
+      providers that ignore them, are folded — otherwise every per-submitter limit
+      is one keystroke away from being defeated.
+    </p>
+    <div class="point">
+      <span class="point-label">The point to make</span>
+      <p>
+        The City's own channel has no identity lever at all: its contact step is
+        optional. Ours requires a verified mailbox, which is deliberately
+        <em>more</em> friction than the official flow. It is the only thing that
+        makes per-submitter limits and accountability real — and residents who
+        will not identify can still be sent to the official portal.
+      </p>
+    </div>
+  </section>
+
+  <section class="step" id="drift">
+    <div class="step-head">
+      <span class="step-num">06</span>
+      <h2 class="step-title">Staying honest over time</h2>
+    </div>
+    <p>
+      The registry describes a form the City controls, so it starts going stale
+      the day it is built.
+    </p>
+    <div class="run">
+      <div class="run-label">Terminal</div>
+<pre>uv run python -m alex311.registry_drift --days 30   <span class="c"># weekly Cloud Run job</span>
+
+scripts/weekly_drift.sh --no-crawl   <span class="c"># the browser-free half</span>
+scripts/weekly_drift.sh              <span class="c"># both, ~1 hour, read-only</span></pre>
+    </div>
+    <p>
+      It watches the live service catalog and the answers residents actually
+      submit, and fails when a service is added or renamed, a question changes, an
+      unknown answer appears, or an answer we believe is rejected turns up in a
+      real web submission.
+    </p>
+    <div class="point">
+      <span class="point-label">The point to make</span>
+      <p>
+        This is a commitment not to drift silently out of sync with the City's
+        form. It is also how the City would learn that we noticed a change they
+        made.
+      </p>
+    </div>
+  </section>
+
+  <section class="step" id="ask">
+    <div class="step-head">
+      <span class="step-num">07</span>
+      <h2 class="step-title">What to ask the City</h2>
+    </div>
+    <p>The technical questions are answered. These are not.</p>
+    <ol class="asks">
+      <li>
+        <b>Authorisation</b>
+        Is the City willing to have a third party relay resident requests through
+        the guest channel, and under what conditions? Everything here is built;
+        none of it should run against the live portal without this.
+      </li>
+      <li>
+        <b>A real integration</b>
+        If relaying is acceptable in principle, a supported endpoint beats browser
+        automation for both sides — more reliable for us, more controllable for
+        them.
+      </li>
+      <li>
+        <b>What the City wants from the abuse layer</b>
+        The thresholds are calibrated against their data, but they are our
+        choices. The caps, the review queue and the identity requirement are all
+        adjustable, and the City is better placed to say what “too many” means.
+      </li>
+      <li>
+        <b>A supervised first submission</b>
+        One real request per category family, with the City informed, before
+        anything opens wider.
+      </li>
+    </ol>
+  </section>
+
+  <section class="step" id="limits">
+    <div class="step-head">
+      <span class="step-num">08</span>
+      <h2 class="step-title">Honest limits</h2>
+    </div>
+    <ul class="limits">
+      <li><b>Branching is first-order.</b> Each option's immediate follow-up
+        question is recorded; deeper chains are not.</li>
+      <li><b>Three hard stops have no explanation</b>, because the City's form
+        shows none. Verified by re-probing with a four-second wait; the form says
+        so plainly.</li>
+      <li><b>Free-text validation is shallow.</b> One plausible value per field
+        type was tried, not the full format rules.</li>
+      <li><b>The identity rules are not backtested.</b> Every historical record is
+        anonymous, so per-submitter limits and targeting detection have no history
+        to replay against. They are covered by unit tests instead — and it is why
+        the persistent-single-target case barely trips on address rules alone.</li>
+      <li><b>The demo emails nothing.</b> Verification codes go to the log via the
+        console sender; a real deployment needs an SMTP provider.</li>
+      <li><b>No reviewer interface.</b> The review queue is an API, not a screen.</li>
+      <li><b>Contact and review steps</b> of the City's wizard were not
+        re-walked.</li>
+    </ul>
+  </section>
+
+  </main>
+</div>
+
+<footer class="end">
+  Alex311 Visibility is an unofficial project. It mirrors public service-request
+  data published by the City of Alexandria, Virginia, and is not affiliated with
+  or endorsed by the City. No request has been submitted to the City by any part
+  of this system.
+</footer>
+
+</div>
