@@ -17,7 +17,7 @@ Verified by driving the guest flow headlessly for *Tree Inspection Request* (`sp
 | **"The button just won't work"** | **Continue and Next are silently disabled** until the current question is answered. No inline message, no field highlighting. `required` is never set in the DOM — it appears only inside an aria-label (*"Required Question 5 Please describe…"*), invisible to sighted users. |
 | **"It threw me out for no reason"** | Some answers trigger a modal **Validation Alert** that is a **hard stop**: "Is the tree blocking the road? → Yes" shows *"Please call the Police non-emergency line at 703.746.4444"*, and after OK the answer is rejected and the flow does not advance. "Tree Removal" fires an advisory alert too. These rules are not announced beforehand. |
 | Location step | An Esri map inside `iframe.map-loc-mobile`; Continue is disabled until a point is picked ("Select a location"). Address search alone does not satisfy it. |
-| Contact step | First/Last name, Email, Phone — **all optional**. Continue enables with nothing filled. Guest submission is fully anonymous. |
+| Contact step | First/Last name, Email, Phone. **Per-service**, and no longer always optional — see §10. On *Missed Collection* all four are marked Required and Continue stays disabled; on *Fire Department Comments* the same step is optional. |
 | Review step | Cancel / Previous / **Submit Request**. |
 
 Also on that page: two permanent banners ("If this is an immediate danger please call 911", "Please provide the details of your request in the Additional Information box below") plus an optional free-text *Additional Information* box on every category.
@@ -49,7 +49,7 @@ Repeat activity at one address is common and mostly legitimate; **bursts are rar
 | **Legitimately busy** | 400 King St: 19 requests, **9 categories, 18 distinct descriptions** | many categories, many voices, commercial |
 | **Genuine recurring defect** | 1437 Janney's La: 10 traffic-signal reports from different people | one category, many reporters, infrastructure |
 
-Only **3 addresses** exceeded 5 requests in a single day all quarter, so a per-address daily cap catches the burst case with essentially no collateral. Meanwhile **837 same-address, same-category re-files within 7 days** (562 addresses) show heavy duplicate pressure that a "this is already reported — add to it instead" flow would absorb. And because the official contact step is optional, **the portal itself offers no identity lever at all** — everything above was possible anonymously.
+Only **3 addresses** exceeded 5 requests in a single day all quarter, so a per-address daily cap catches the burst case with essentially no collateral. Meanwhile **837 same-address, same-category re-files within 7 days** (562 addresses) show heavy duplicate pressure that a "this is already reported — add to it instead" flow would absorb. And because the official contact step was optional for these records, **the portal offered no identity lever at all** — everything above was possible anonymously. That has since changed for some services (§10), which strengthens rather than weakens the case: the City has started asking for the same thing our layer asks for.
 
 ## 4. Proposed architecture
 
@@ -255,6 +255,32 @@ The rule the data check is most useful for is the one we cannot see any other
 way: an option the wizard rejects today appearing in tomorrow's submissions means
 the City changed its mind, and the form should stop telling residents no.
 
+## 10. Contact details are now required, per service (2026-09-10)
+
+Found by driving a submission to the end for the first time, which the
+rule-discovery probe never did: it stops at the details step and never reaches
+contact.
+
+On **Missed Collection** the contact step's four fields carry aria-labels ending
+`Required` and **Continue stays disabled** until name, email and phone are all
+filled. On **Alexandria Fire Department Comments** the same step is optional and
+Continue is live with nothing entered. So this is a per-service setting, not a
+site-wide change.
+
+Three consequences:
+
+1. **The earlier finding that guest submission is fully anonymous is now wrong
+   for some services.** §1 has been corrected. The 90 days of data behind §3 pre-date
+   the change, so those records were still filed anonymously.
+2. **A relayed request needs real contact details for those services.** The
+   harness will not invent them: `alex311.submit_browser` stops with
+   `needs_contact` and names the fields. Whose details those are is a question
+   for the City conversation, not something to answer by default.
+3. **The drift check cannot see this.** It watches the catalog and the answers
+   people submit; a change to the *shape of the wizard* only shows up in a walk.
+   Recording contact-required per service would need the probe extended past the
+   details step — worth doing, not done.
+
 ## Artifacts
 
 | File | What |
@@ -272,4 +298,6 @@ the City changed its mind, and the form should stop telling residents no.
 | `src/alex311/identity.py` | verified-submitter identity: one-time codes, sessions, pluggable email |
 | `spike/backtest_abuse.py` | replays 90 days of real requests through the live policy |
 | `spike/rules_diff.py` · `scripts/weekly_drift.sh` | crawl-vs-committed rule diff and the weekly runner |
+| `src/alex311/wizard.py` | the wizard driver, shared by the probe and the harness; **cannot submit** |
+| `src/alex311/submit_browser.py` | the only code that can file a request, behind two gates |
 | `dashboard/registry.py` · `dashboard/submit.py` · `dashboard/submit.html` | registry loader/validator and the gated single-page form |
