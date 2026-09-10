@@ -154,3 +154,19 @@ def test_re_measuring_does_not_wait_on_an_animation_frame(page, name):
     forces the layout it needs, so it can be called directly."""
     assert "requestAnimationFrame(() => map.invalidateSize())" not in page
     assert "requestAnimationFrame(remeasureMap)" not in page
+
+
+# ------------------------------------------------ reaching the prototype
+
+def test_the_dashboard_links_to_the_submission_prototype():
+    assert 'href="/submit"' in HTML and "Report an issue" in HTML
+
+
+def test_that_link_is_a_link_and_not_a_fake_tab():
+    """It navigates to another page rather than swapping a panel here. Giving it
+    role=tab would promise arrow-key behaviour it cannot honour, and would put a
+    third item in a tablist that only has two panels."""
+    assert HTML.count('role="tab"') == 2
+    assert HTML.count('role="tabpanel"') == 2
+    link = re.search(r'<a class="tab-link"[^>]*>', HTML)
+    assert link and "role=" not in link.group(0)
