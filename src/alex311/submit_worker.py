@@ -2,19 +2,25 @@
 
 Why a queue rather than arguments: a browser must not live in the public web
 image, and Cloud Run in this project rejects per-execution argument overrides,
-so the job cannot be told on the command line what to file. The gated form
-queues a prepared request, a human approves it, and this drains the approved
-rows.
+so the job cannot be told on the command line what to file. The form releases a
+prepared request and this drains the released rows.
 
-**Two keys, and both are per-request-shaped.** `ALEX311_ALLOW_LIVE_SUBMIT=1` is
-the environment key, set on the live job and absent from the rehearsal one. A
-row having `submit_state='approved'` with an `approved_by` is the request key,
-set by a person looking at that specific request. Neither alone files anything.
+**One key, since the moderation step was removed.** `ALEX311_ALLOW_LIVE_SUBMIT=1`
+is set on the live job and absent from the rehearsal one, and it is now the only
+thing standing between a tester pressing a button and a real City record. There
+used to be a second, per-request key held by an administrator; testers found
+waiting for it worse than useless during a test, and it was removed
+deliberately. Anyone changing this file should know that the environment
+variable is the whole gate.
 
-Runs are deliberately small: one request per execution by default. Every filing
-dispatches City staff, so there is no batch mode and there should not be.
+**One filing at a time, whoever asks.** The web service starts this job as soon
+as a tester releases a request, so several executions can be alive at once. A
+Postgres advisory lock means only one of them drives a browser against the
+City's site; the rest see the floor is taken and exit. The holder drains the
+queue and checks once more before letting go, so a request released during its
+run is picked up rather than stranded.
 
-    python -m alex311.submit_worker              # rehearse the next approved row
+    python -m alex311.submit_worker              # rehearse whatever is waiting
     ALEX311_ALLOW_LIVE_SUBMIT=1 python -m alex311.submit_worker --live
 """
 from __future__ import annotations
@@ -24,6 +30,7 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timezone
 
 from . import db
@@ -33,6 +40,28 @@ log = logging.getLogger("alex311.submit_worker")
 
 CLAIMABLE = "approved"
 MAX_TRIES = 3
+
+# One arbitrary but fixed number, shared by every execution of this job. Two
+# workers holding browsers against the City's form at the same time is the thing
+# this prevents.
+FLOOR_LOCK = 311_2026
+# The gap between "nothing waiting" and letting go of the lock is exactly when a
+# newly released request would be missed, so look again before leaving.
+RECHECK_SECONDS = 4
+# Between filings, so a burst of testers does not read as a burst on their site.
+PAUSE_SECONDS = 5
+
+
+def take_the_floor(conn) -> bool:
+    """True if this execution may drive a browser. Never waits."""
+    got = conn.execute("SELECT pg_try_advisory_lock(%s) AS ok", (FLOOR_LOCK,)).fetchone()
+    conn.commit()
+    return bool(got and got["ok"])
+
+
+def leave_the_floor(conn) -> None:
+    conn.execute("SELECT pg_advisory_unlock(%s)", (FLOOR_LOCK,))
+    conn.commit()
 
 
 def claim_next(conn) -> dict | None:
@@ -108,9 +137,9 @@ def main(argv: list[str] | None = None) -> int:
                     f"--live AND {ENV_GATE}=1.")
     p.add_argument("--live", action="store_true",
                    help=f"actually file. Also needs {ENV_GATE}=1. Creates REAL city records.")
-    p.add_argument("--max", type=int, default=1,
-                   help="how many to handle this run (default 1; every filing "
-                        "dispatches city staff)")
+    p.add_argument("--max", type=int, default=10,
+                   help="most requests to handle this run (default 10). The run "
+                        "stops when the queue is empty, which is the usual case.")
     p.add_argument("--screenshot-dir")
     p.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
@@ -122,12 +151,28 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     conn = db.connect()
+    if not take_the_floor(conn):
+        # Another execution is already driving a browser. Leaving is correct:
+        # the one holding the floor re-checks the queue before it lets go.
+        log.info("another worker holds the floor; nothing to do")
+        return 0
+
     handled = []
+    rechecked = False
     for n in range(max(1, a.max)):
         row = claim_next(conn)
         if row is None:
-            log.info("nothing approved and waiting")
-            break
+            if rechecked:
+                log.info("nothing released and waiting")
+                break
+            # the window in which a request released just now would be missed
+            log.info("queue empty; looking again in %ss before letting go", RECHECK_SECONDS)
+            time.sleep(RECHECK_SECONDS)
+            rechecked = True
+            continue
+        rechecked = False
+        if handled:
+            time.sleep(PAUSE_SECONDS)
 
         attempt_id = row["attempt_id"]
         log.info("claimed attempt %s: %s at %s (approved by %s)",
@@ -159,6 +204,8 @@ def main(argv: list[str] | None = None) -> int:
 
         handled.append({"attempt_id": attempt_id, "stage": result.stage,
                         "case_number": result.case_number, "note": result.note})
+
+    leave_the_floor(conn)
 
     if a.json:
         print(json.dumps({"live": allowed, "handled": handled}, indent=1, default=str))

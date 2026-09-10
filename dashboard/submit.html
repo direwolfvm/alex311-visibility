@@ -70,6 +70,21 @@
   .composite { display:flex; gap:8px; } .composite input { flex:1; }
   .filing-head { font-size:14px; margin:22px 0 4px; padding-top:18px;
                  border-top:1px solid var(--border); }
+  /* Where a request has got to. With nobody standing in the way, this is the
+     only feedback there is, so it is a first-class part of the page. */
+  .track { list-style:none; margin:14px 0 0; padding:0; }
+  .track li { position:relative; padding:0 0 14px 26px; color:var(--muted); font-size:13px; }
+  .track li::before { content:""; position:absolute; left:5px; top:4px; width:9px; height:9px;
+                      border-radius:99px; background:var(--border); }
+  .track li:not(:last-child)::after { content:""; position:absolute; left:9px; top:15px;
+                                      bottom:0; width:1px; background:var(--border); }
+  .track li b { display:block; color:var(--ink); font-weight:600; }
+  .track li.done::before { background:var(--ok); }
+  .track li.now::before { background:var(--accent); box-shadow:0 0 0 3px #dbeafe; }
+  .track li.bad::before { background:var(--bad); }
+  .track li.bad b { color:var(--bad); }
+  .track li.waiting b { color:var(--muted); font-weight:500; }
+  .case { font:600 15px ui-monospace,"SF Mono",Menlo,monospace; color:var(--ok); }
   .contact-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 4px; }
   .contact-grid input { width:100%; margin:0; }
   @media (max-width:520px) { .contact-grid { grid-template-columns:1fr; } }
@@ -134,8 +149,9 @@
   <div class="notice"><b>Testing prototype.</b> Every question for a request type is shown at once, with the
     City's own rules explained inline instead of surprising you mid-way. Every request is
     checked against the City's rules and against what has already been reported. You can copy the details and file
-    it yourself, or ask us to file it. Anything you send us sits here until an administrator of this test releases
-    it, and that is the moment the City gets a real request. Not an official City of Alexandria service.</div>
+    it yourself, or ask us to file it. Sending goes straight to the City — nobody reviews it
+    first — and you get their case number back here, usually within a minute or two. Not an
+    official City of Alexandria service.</div>
 
   <div class="step">
     <h2>1 · What do you need? <span id="reg-meta"></span></h2>
@@ -183,8 +199,8 @@
     <div id="file-block" hidden>
       <h3 class="filing-head">Or have us file it for you</h3>
       <p class="hint">We send it to the City through their own form and give you back their
-        case number. An administrator of this test has to release it first, and once they do
-        the City has a real request that dispatches real staff — so it should be something you
+        case number, usually within a minute or two. Nobody reviews it first: pressing send
+        creates a real request that dispatches real staff, so it should be something you
         would have reported anyway.</p>
       <div class="contact-grid">
         <div><label class="hint" for="c-first">First name</label>
@@ -198,14 +214,22 @@
       </div>
       <p class="hint">The City requires all four on some request types and refuses the
         request without them. They go to the City exactly as typed.</p>
+      <div id="policy-warning"></div>
       <div class="actions">
-        <button class="primary" id="queue-btn">File this for me</button>
+        <button class="primary" id="queue-btn">Send to the City</button>
       </div>
       <div id="queue-result" role="status" aria-live="polite"></div>
+      <ol class="track" id="track" hidden>
+        <li id="tr-sent"><b>Sent</b><span></span></li>
+        <li id="tr-filing"><b>Filing with the City</b><span>the submission job is
+          working through their form</span></li>
+        <li id="tr-filed"><b>Filed</b><span></span></li>
+      </ol>
     </div>
 
-    <p class="foot">Nothing reaches the City until an administrator releases it, and once released
-      it cannot be taken back. You can also copy the details and file it yourself on the official portal.</p>
+    <p class="foot">Sending is the point of no return: the City gets a real request and it
+      cannot be taken back. You can also copy the details and file it yourself on the
+      official portal.</p>
   </div>
 </div>
 
@@ -537,8 +561,8 @@ function renderResult() {
   }
 }
 // Checking answers also records the attempt, which is what gives us something
-// to queue: the abuse policy runs there, and the row it writes is the thing an
-// administrator later releases.
+// to send: the abuse policy runs there, and the row it writes is the one the
+// send button releases and the tracker then follows.
 async function precheck() {
   try {
     const r = await fetch('/submit/api/precheck', {
@@ -548,6 +572,7 @@ async function precheck() {
         address: $('address').value.trim(), lat: state.lat, long: state.long,
         description: $('desc').value.trim(), answers: state.answers})});
     state.attempt = await r.json();
+    showPolicy();
   } catch { state.attempt = null; }
 }
 
@@ -565,11 +590,101 @@ function contact() {
           email: $('c-email').value.trim(), phone: $('c-phone').value.trim()};
 }
 
+// ---------------------------------------------------------------- sending
+// Nobody stands between this button and the City any more, so the button has to
+// carry that weight itself: two presses, and the second says what it does.
+function armSend(btn) {
+  btn.dataset.armed = '1';
+  btn.classList.remove('primary');
+  btn.classList.add('danger');
+  btn.textContent = 'Confirm: send this to the City';
+  const cancel = document.createElement('button');
+  cancel.className = 'ghost';
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', () => resetSend(btn, cancel));
+  btn.after(cancel);
+}
+
+function resetSend(btn, cancel) {
+  delete btn.dataset.armed;
+  btn.classList.add('primary');
+  btn.classList.remove('danger');
+  btn.textContent = sendLabel();
+  btn.disabled = false;
+  cancel?.remove();
+}
+
+function sendLabel() {
+  return state.attempt?.outcome === 'review' ? 'Send it anyway' : 'Send to the City';
+}
+
+// A `review` verdict used to park the request until somebody looked at it.
+// Now it is said out loud to the person who can actually judge it, and they
+// decide. `block` is still a refusal.
+function showPolicy() {
+  const box = $('policy-warning');
+  const a = state.attempt;
+  if (!a || (a.outcome !== 'review' && a.outcome !== 'block')) { box.innerHTML = ''; return; }
+  const lines = (a.findings || []).map(f => `<li>${esc(f.message || f.detail || f.rule)}</li>`).join('');
+  if (a.outcome === 'block') {
+    box.innerHTML = `<div class="box bad"><b>We are not sending this one.</b>
+      <ul>${lines}</ul></div>`;
+    $('queue-btn').disabled = true;
+  } else {
+    box.innerHTML = `<div class="box warn"><b>This looks like something already reported.</b>
+      <ul>${lines}</ul>Sending it anyway is your call — a duplicate costs the City a trip.</div>`;
+  }
+  $('queue-btn').textContent = sendLabel();
+}
+
+const TRACK_TIMEOUT_MS = 5 * 60 * 1000;
+
+function drawTrack(st) {
+  $('track').hidden = false;
+  const sent = $('tr-sent'), filing = $('tr-filing'), filed = $('tr-filed');
+  sent.className = 'done';
+  sent.querySelector('span').textContent = 'you sent it' + (st.sent_at ? ` at ${String(st.sent_at).replace('T', ' ').slice(11, 16)} UTC` : '');
+  if (st.submit_state === 'filed') {
+    filing.className = 'done';
+    filed.className = 'done';
+    filed.querySelector('span').innerHTML = st.city_case_number
+      ? `the City's case number is <span class="case">${esc(st.city_case_number)}</span>`
+      : 'the City has it';
+  } else if (st.submit_state === 'failed') {
+    filing.className = 'bad';
+    filing.querySelector('span').textContent = st.error
+      ? `could not be filed — ${st.error}` : 'could not be filed';
+    filed.className = 'waiting';
+    filed.querySelector('span').textContent = 'nothing was sent to the City. '
+      + 'Copy the details above and file it on their portal, or tell an administrator.';
+  } else {
+    filing.className = 'now';
+    filed.className = 'waiting';
+    filed.querySelector('span').textContent = 'their case number appears here';
+  }
+}
+
+async function watch(attemptId) {
+  const until = Date.now() + TRACK_TIMEOUT_MS;
+  while (Date.now() < until) {
+    let st;
+    try {
+      st = await (await fetch(`/submit/api/status/${attemptId}`)).json();
+    } catch { await new Promise(r => setTimeout(r, 4000)); continue; }
+    drawTrack(st);
+    if (st.submit_state === 'filed' || st.submit_state === 'failed') return;
+    await new Promise(r => setTimeout(r, 2500));
+  }
+  $('tr-filing').querySelector('span').textContent =
+    'still working. It will finish without this page open; check back or ask an administrator.';
+}
+
 $('queue-btn').addEventListener('click', async () => {
   const box = $('queue-result');
+  const btn = $('queue-btn');
   const who = contact();
   // The City refuses some request types without all four, and the worker will
-  // not invent them, so a request queued without them would only fail later.
+  // not invent them, so a request sent without them would only fail later.
   const missing = Object.entries(who).filter(([, v]) => !v).map(([k]) => k.replace('_', ' '));
   if (missing.length) {
     box.innerHTML = `<div class="box warn">Please give your ${missing.join(', ')} —
@@ -580,21 +695,26 @@ $('queue-btn').addEventListener('click', async () => {
     box.innerHTML = '<div class="box bad">Check your answers first.</div>';
     return;
   }
-  const btn = $('queue-btn');
+  if (!btn.dataset.armed) { armSend(btn); return; }
+
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
     const r = await fetch('/submit/api/queue', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({attempt_id: state.attempt.attempt_id, ...who})});
+      body: JSON.stringify({attempt_id: state.attempt.attempt_id, ...who,
+                            acknowledged: state.attempt.outcome === 'review'})});
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
-    box.innerHTML = `<div class="box ok"><b>Held as request ${state.attempt.attempt_id}.</b>
-      It stays here until an administrator releases it. That is the point of no return: the
-      City gets a real request, and you get their case number back.</div>`;
+    box.innerHTML = `<div class="box ok"><b>Sent as request ${state.attempt.attempt_id}.</b>
+      ${esc(d.message)}</div>`;
     btn.hidden = true;
+    btn.nextElementSibling?.remove();
+    $('policy-warning').innerHTML = '';
+    drawTrack({submit_state: 'approved', sent_at: null});
+    watch(state.attempt.attempt_id);
   } catch (e) {
     box.innerHTML = `<div class="box bad">${esc(e.message)}</div>`;
-    btn.disabled = false; btn.textContent = 'File this for me';
+    resetSend(btn, btn.nextElementSibling);
   }
 });
 $('copy').addEventListener('click', async () => { await navigator.clipboard.writeText(summary()); $('copy').textContent = 'Copied ✓'; setTimeout(() => $('copy').textContent = 'Copy details', 1800); });

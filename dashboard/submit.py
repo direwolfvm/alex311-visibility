@@ -17,12 +17,14 @@ from urllib.parse import parse_qs
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Request,
+                     Response)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
-from alex311 import abuse, db as adb, identity as ident, portal_auth as pa
+from alex311 import (abuse, db as adb, identity as ident, job_runner,
+                     portal_auth as pa)
 
 from . import registry as R
 
@@ -116,6 +118,8 @@ class QueueBody(BaseModel):
     last_name: str = ""
     email: str = ""
     phone: str = ""
+    # set when the person has read a policy warning and still means to send it
+    acknowledged: bool = False
 
 
 class PrecheckBody(BaseModel):
@@ -435,19 +439,27 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                 "identity_enforced": submitter_id is not None}
 
     @router.post("/api/queue")
-    def queue(body: QueueBody, request: Request):
-        """Hand a prepared request to the submission queue.
+    def queue(body: QueueBody, request: Request, background: BackgroundTasks,
+              actor: str = Depends(gate)):
+        """Send a prepared request to the City. This is the live action.
 
-        Queuing is not filing and not approval. A person still has to approve
-        the row, and only the live job can act on it — a browser cannot run in
-        this service.
+        There used to be an administrator between this and the City. Testers
+        found waiting for one worse than no feature at all, and it was removed
+        deliberately: the press that reaches this endpoint is the last human
+        step, and the environment gate on the job is the only thing left. The
+        answer says so rather than implying somebody is still checking.
+
+        The policy still speaks. `block` refuses outright; `review` is a warning
+        the person has to acknowledge, which is feedback rather than moderation,
+        and the acknowledgement is recorded against the request.
         """
         contact = {"first_name": body.first_name.strip(), "last_name": body.last_name.strip(),
                    "email": body.email.strip(), "phone": body.phone.strip()}
         with pool_getter().connection() as conn:
             row = conn.execute(
-                "SELECT attempt_id, submitter_id, submit_state FROM submission_attempts "
-                "WHERE attempt_id = %s", (body.attempt_id,)).fetchone()
+                "SELECT attempt_id, submitter_id, submit_state, outcome "
+                "FROM submission_attempts WHERE attempt_id = %s",
+                (body.attempt_id,)).fetchone()
             if row is None:
                 raise HTTPException(404, "no such attempt")
             mine = _submitter(request)
@@ -456,9 +468,62 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                 raise HTTPException(403, "that request was prepared by someone else")
             if row["submit_state"] not in ("prepared", "queued"):
                 raise HTTPException(409, f"that request is already {row['submit_state']}")
+            if row["outcome"] == abuse.BLOCK:
+                raise HTTPException(409, "the anti-abuse policy refused this one. "
+                                         "Nothing was sent.")
+            if row["outcome"] == abuse.REVIEW and not body.acknowledged:
+                raise HTTPException(409, "this one looks like a repeat. Read the warning "
+                                         "and send it again if you still mean to.")
+
             adb.queue_attempt(conn, body.attempt_id, contact)
-        return {"attempt_id": body.attempt_id, "submit_state": "queued",
-                "message": "Queued. An administrator has to release it before it is filed."}
+            released = adb.approve_attempt(conn, body.attempt_id, actor)
+            if not released:                       # somebody else got there first
+                raise HTTPException(409, "that request is no longer waiting to be sent")
+            adb.record_moderation(
+                conn, attempt_id=body.attempt_id, actor=actor, action="release",
+                reason=("acknowledged the policy warning and sent it"
+                        if row["outcome"] == abuse.REVIEW else "sent by the person who made it"))
+
+        # Fire and forget: a released request that the job did not start for is
+        # still released, and the next release or the schedule collects it.
+        background.add_task(job_runner.kick)
+        return {"attempt_id": body.attempt_id, "submit_state": "approved",
+                "filing": job_runner.configured(),
+                "message": ("Sent. It is being filed with the City now — watch below for "
+                            "their case number." if job_runner.configured() else
+                            "Sent. It will be filed on the next run of the submission job.")}
+
+    @router.get("/api/status/{attempt_id}")
+    def attempt_status(attempt_id: int, request: Request,
+                       creds: HTTPBasicCredentials | None = Depends(_security)):
+        """Where one request has got to. Watched by whoever sent it.
+
+        This is the real-time half: with nobody in the way, the feedback a
+        tester gets has to come from the request itself.
+
+        Ownership is decided by who pressed send, not by the resident-identity
+        cookie: that cookie is optional in this deployment, so a check that
+        skipped when it was absent would hand every signed-in tester the address
+        on anybody's request. An administrator can read any of them, which is
+        the same thing the status board already shows them.
+        """
+        actor, user = _identify(request, pool_getter, creds)
+        with pool_getter().connection() as conn:
+            row = adb.attempt_status(conn, attempt_id)
+        if row is None:
+            raise HTTPException(404, "no such request")
+        an_admin = user is None or user.is_admin      # the shared credential counts
+        mine = _submitter(request)
+        owner = ((row["submitter_id"] is not None and row["submitter_id"] == mine)
+                 or (row["approved_by"] is not None and row["approved_by"] == actor))
+        if not (owner or an_admin):
+            raise HTTPException(403, "that request was sent by someone else")
+        return {"attempt_id": row["attempt_id"], "submit_state": row["submit_state"],
+                "city_case_number": row["city_case_number"],
+                "error": row["submit_error"], "tries": row["tries"],
+                "sent_at": row["approved_at"] or row["queued_at"],
+                "filed_at": row["relayed_at"],
+                "service_name": row["service_name"], "address": row["address"]}
 
     @router.get("/api/submission-queue")
     def submission_queue(limit: int = 50, actor: str = Depends(admin_only)):
@@ -470,25 +535,30 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
         with pool_getter().connection() as conn:
             return {"queue": adb.submission_queue(conn, limit=limit)}
 
-    @router.post("/api/approve/{attempt_id}")
-    def approve(attempt_id: int, actor: str = Depends(admin_only)):
-        """Release a queued request for filing. Administrators only.
+    @router.get("/api/instrument")
+    def instrument(days: int = 30, actor: str = Depends(admin_only)):
+        """Numbers for the status board: what the system did, and how fast."""
+        with pool_getter().connection() as conn:
+            data = adb.instrumentation(conn, days=days)
+        data["filing_starts_immediately"] = job_runner.configured()
+        return data
 
-        This is the per-request half of the live gate, and the reason it is not
-        self-service: with `gate` any signed-in tester could release their own
-        request, which collapses the two keys into one and means a real City
-        record can be created with nobody else involved.
+    @router.post("/api/retry/{attempt_id}")
+    def retry(attempt_id: int, background: BackgroundTasks,
+              actor: str = Depends(admin_only)):
+        """Put a failed request back in the queue.
+
+        Not a moderation step returning by another name: the person who made
+        the request already sent it, and this only applies to rows the worker
+        could not file — usually because the City's form moved.
         """
         with pool_getter().connection() as conn:
-            ok = adb.approve_attempt(conn, attempt_id, actor)
-            if not ok:
-                raise HTTPException(409, "that request is not queued")
-            adb.record_moderation(conn, attempt_id=attempt_id, actor=actor,
-                                  action="approve", reason="approved for filing")
+            ok = adb.retry_attempt(conn, attempt_id, actor)
+        if not ok:
+            raise HTTPException(409, "that request is not one that failed")
+        background.add_task(job_runner.kick)
         return {"attempt_id": attempt_id, "submit_state": "approved",
-                "message": "Released. This is the live action: the submission job will "
-                           "file it with the City on its next run, and it cannot be "
-                           "recalled afterwards."}
+                "message": "Back in the queue. It will be filed with the City."}
 
     @router.get("/api/review-queue")
     def queue(limit: int = 50, actor: str = Depends(admin_only)):
@@ -502,8 +572,13 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
     @router.post("/api/review/{attempt_id}")
     def moderate(attempt_id: int, action: str, reason: str | None = None,
                  actor: str = Depends(admin_only)):
-        """Record a human decision. Append-only: a reversal is a new row."""
-        if action not in ("approve", "reject", "block_submitter", "note"):
+        """Record a human decision. Append-only: a reversal is a new row.
+
+        `approve` and `reject` used to live here and were dropped with the
+        review desk: there is nothing left to approve, and a recorded rejection
+        of a request the City already has would only mislead whoever read it.
+        """
+        if action not in ("block_submitter", "note"):
             raise HTTPException(400, "unknown action")
         with pool_getter().connection() as conn:
             action_id = adb.record_moderation(conn, attempt_id=attempt_id,

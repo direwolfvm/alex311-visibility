@@ -1,11 +1,15 @@
-"""The admin page: moderation and user management behind one tab.
+"""The admin page, now a status board rather than a review desk.
 
-Releasing a request is the only irreversible thing this prototype can do, so
-most of what is pinned here is about that button: what it says, how many
-presses it takes, and whether the person pressing it can see what they are
-releasing.
+Testers objected to moderation, and it was removed: a tester's own press sends
+their request to the City. That makes two things load-bearing. The tester needs
+to see what happened to their request, because nobody will tell them. And an
+administrator needs to see what the system did, because approving each one is
+no longer how they would find out.
+
+What these pin, then, is that the release step is really gone, that nothing
+quietly reintroduces it, and that the instrumentation which replaced it
+actually answers the questions it exists to answer.
 """
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,118 +17,124 @@ PAGE = (ROOT / "dashboard/admin.html").read_text()
 ROUTES = (ROOT / "dashboard/submit.py").read_text()
 DB = (ROOT / "src/alex311/db.py").read_text()
 FORM = (ROOT / "dashboard/submit.html").read_text()
+WORKER = (ROOT / "src/alex311/submit_worker.py").read_text()
 
 
-# ------------------------------------------------------------- the release
+# --------------------------------------------------- the review desk is gone
 
-def test_releasing_takes_two_presses():
-    """A button reading "Release" beside a list is too easy to press by habit,
-    and there is no undo once the City has the request."""
-    assert "armRelease" in PAGE
-    assert "if (!rel.dataset.armed) return armRelease" in PAGE
-
-
-def test_the_second_press_says_what_it_does():
-    """Not "Confirm" — what is being confirmed."""
-    arm = PAGE.split("function armRelease")[1].split("async function")[0]
-    assert "file this with the city" in arm.lower()
+def test_there_is_no_way_to_release_somebody_elses_request():
+    """The endpoint is gone, not hidden. A button that only administrators can
+    see is still a moderation step to whoever is waiting on it."""
+    assert '@router.post("/api/approve/{attempt_id}")' not in ROUTES
+    assert "data-release" not in PAGE
+    assert "armRelease" not in PAGE
 
 
-def test_the_page_says_releasing_cannot_be_recalled():
-    lede = PAGE.split('<h2>Waiting for release</h2>')[1].split("</p>")[0]
-    for phrase in ("live action", "cannot be recalled", "real staff"):
-        assert phrase in lede, f"the warning no longer mentions {phrase!r}"
+def test_the_board_says_it_is_not_a_queue_to_work():
+    lede = PAGE.split("<h2>Last 30 days")[1].split("</p>")[0]
+    assert "not a queue to work through" in lede
 
 
-def test_you_can_see_what_you_are_releasing():
-    """Address and description are the two fields worth re-reading before a
-    request becomes a City record, and contact goes to the City as typed."""
-    details = PAGE.split("function details(")[1].split("\n}")[0]
-    for field in ("r.address", "r.description", "contactLine(r.contact)"):
-        assert field in details
+def test_the_one_lever_left_is_for_abuse_and_says_so():
+    """Blocking a submitter is not moderating a request. Letting one through
+    and rejecting one both went, because there is nothing to let through."""
+    flagged = PAGE.split("function renderHeld")[1].split("\n}")[0]
+    assert 'data-mod="block_submitter"' in flagged
+    assert 'data-mod="approve"' not in PAGE and 'data-mod="reject"' not in PAGE
+    assert "for abuse, not for a duplicate" in PAGE
 
 
-def test_the_policys_own_verdict_travels_with_the_request():
-    """Some of these were held once already. Releasing without seeing why is
-    the mistake this view exists to prevent."""
-    assert "findingsBlock" in PAGE
-    assert "r.findings" in PAGE
+def test_retrying_a_failure_is_not_moderation_by_another_name():
+    """It only applies to rows the worker could not file, and the person who
+    made the request already sent it."""
+    retry = ROUTES.split('@router.post("/api/retry/{attempt_id}")')[1].split("@router")[0]
+    assert "admin_only" in retry
+    fn = DB.split("def retry_attempt(")[1].split("\ndef ")[0]
+    assert "submit_state = 'failed'" in fn
 
 
-# ---------------------------------------------------------------- the lists
+# ------------------------------------------------------- what replaced it
 
-def test_only_queued_requests_offer_a_release_button():
-    boot = PAGE.split("async function load()")[1]
-    assert "renderWaiting(rows.filter(r => r.submit_state === 'queued'))" in boot
-    assert "renderHistory(rows.filter(r => r.submit_state !== 'queued'))" in boot
-
-
-def test_the_empty_state_explains_the_gate_rather_than_saying_nothing():
-    empty = PAGE.split("Nothing is waiting.")[1].split("</p>")[0]
-    assert "nothing reaches the City until you release it" in empty
+def test_the_board_answers_did_it_work_and_how_fast():
+    for key in ("filed", "median_seconds", "slowest_seconds", "last_filed_at"):
+        assert key in DB.split("def instrumentation(")[1].split("\ndef ")[0]
+    for label in ("filed with the City", "in flight", "failed", "refused by policy",
+                  "typical time to a case number"):
+        assert label in PAGE
 
 
-def test_history_reaches_past_the_moment_of_release():
-    """A history that stops at "approved" cannot answer the question the page
-    is for: did releasing it actually produce a City case number?"""
-    states = DB.split("def submission_queue(")[1].split(")")[0]
-    assert "filed" in states
-    assert "city_case_number" in DB.split("def submission_queue(")[1].split("fetchall")[0]
+def test_the_board_keeps_up_with_what_testers_are_doing():
+    """A request goes from sent to filed in about a minute, so a board someone
+    has to reload is a board that is always wrong."""
+    assert "setInterval" in PAGE and "REFRESH_MS" in PAGE
+    assert "document.hidden" in PAGE          # not while nobody is looking
 
 
-def test_the_queue_carries_what_a_release_decision_turns_on():
-    query = DB.split("def submission_queue(")[1].split("fetchall")[0]
-    for column in ("contact", "findings", "address", "description"):
-        assert column in query
+def test_in_flight_is_the_thing_worth_watching():
+    """It is where a request sits when the job never picked it up, which is the
+    failure this design can actually have."""
+    assert "IN_FLIGHT = ['queued', 'approved', 'filing']" in PAGE
+    assert "the job did not pick up" in PAGE
 
 
-# ------------------------------------------------------------ getting there
+# ---------------------------------------------- feedback for the tester
 
-def test_both_jobs_live_behind_the_one_tab():
-    assert 'id="panel-moderation"' in PAGE and 'id="panel-users"' in PAGE
+def test_the_tester_is_told_what_happened_because_nobody_else_will():
+    for piece in ("id=\"track\"", "function watch(", "city_case_number", "Filing with the City"):
+        assert piece in FORM
+
+
+def test_a_failure_tells_them_nothing_was_sent():
+    """The worst outcome is a tester assuming the City has it when it does
+    not, and reporting nothing themselves."""
+    assert "nothing was sent to the City" in FORM
+
+
+# ------------------------------------------------------ filing starts itself
+
+def test_the_web_service_starts_the_job_rather_than_waiting_for_a_person():
+    assert "job_runner.kick" in ROUTES
+    assert "background.add_task" in ROUTES
+
+
+def test_a_job_that_will_not_start_does_not_lose_the_request():
+    """The request is released either way; a kick that fails is a slower
+    filing, not a lost one."""
+    runner = (ROOT / "src/alex311/job_runner.py").read_text()
+    assert "return" in runner.split("def kick(")[1]
+    assert "raise" not in runner.split("def kick(")[1]
+
+
+def test_only_one_worker_drives_a_browser_at_the_city():
+    """Several executions can be alive at once now that each send starts one."""
+    assert "pg_try_advisory_lock" in WORKER
+    assert "take_the_floor" in WORKER
+    assert "RECHECK_SECONDS" in WORKER          # closes the stranding window
+
+
+# ------------------------------------------------------------ still gated
+
+def test_the_admin_views_are_still_administrator_only():
+    for name in ("def submission_queue(", "def queue(limit", "def users_list(",
+                 "def admin_ui(", "def instrument(", "def retry("):
+        head = ROUTES.split(name)[1].split(")")[0]
+        assert "admin_only" in head, f"{name} is not administrator-only"
+
+
+def test_both_jobs_still_live_behind_the_one_tab():
+    assert 'id="panel-status"' in PAGE and 'id="panel-users"' in PAGE
     assert PAGE.count('role="tabpanel"') == 2
     assert PAGE.count('role="tab"') == 2
 
 
 def test_the_old_address_for_user_management_still_works():
-    """It was linked from the form and may be in somebody's history."""
     users = ROUTES.split('@router.get("/users")')[1].split("@router")[0]
     assert "/submit/admin#users" in users
     assert "admin_only" in users
 
 
-def test_the_page_opens_on_the_panel_the_link_asked_for():
-    assert "panelFromHash" in PAGE and "hashchange" in PAGE
-
-
-def test_the_form_no_longer_offers_its_own_way_in():
-    """Two doors to user management is one more than needs maintaining."""
-    assert "/submit/users" not in FORM
-    assert not (ROOT / "dashboard/users.html").exists()
-
-
-def test_signing_out_is_still_reachable_from_here():
-    assert "/submit/logout" in PAGE
-
-
-# ------------------------------------------------------- who may see it all
-
-def test_the_page_asks_for_admin_data_and_the_routes_check():
-    for endpoint in ("/submission-queue", "/review-queue", "/users"):
-        assert f"api('{endpoint}')" in PAGE
-    for name in ("def submission_queue(", "def queue(limit", "def users_list(",
-                 "def admin_ui("):
-        head = ROUTES.split(name)[1].split(")")[0] if name.endswith("(") else \
-            ROUTES.split(name)[1].split("\n")[0]
-        assert "admin_only" in head, f"{name} is not administrator-only"
-
-
 def test_the_public_page_can_ask_who_is_there_without_being_refused():
-    """The dashboard is public and asks whoami to decide whether to show the
-    Admin tab. A 401 there would be noise on every anonymous visit."""
     fn = ROUTES.split("def whoami_portal(")[1].split("@app.exception_handler")[0]
     assert "except Unauthenticated" in fn
     assert 'return {"user": None}' in fn
-    # and it has to sit on the public router, or the gate answers first and the
-    # try/except above never runs
     assert '@public.get("/api/whoami")' in ROUTES

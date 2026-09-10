@@ -215,7 +215,7 @@ Then the queue and the audit trail:
 curl -s -u $A localhost:8311/submit/api/review-queue
 ID=$(curl -s -u $A localhost:8311/submit/api/review-queue \
      | python3 -c "import json,sys; print(json.load(sys.stdin)['queue'][0]['attempt_id'])")
-curl -s -u $A -X POST "localhost:8311/submit/api/review/$ID?action=approve&reason=legitimate"
+curl -s -u $A -X POST "localhost:8311/submit/api/review/$ID?action=note&reason=looked+legitimate"
 ```
 
 Every evaluation is recorded, not only the refusals, because the rate limits

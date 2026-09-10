@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin · Alex311 prototype</title>
+<title>Alex311 Status Board</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
   :root {
@@ -62,6 +62,18 @@
   .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em;
              color:var(--muted); margin:0 0 4px; }
   .card > .lede { color:var(--muted); font-size:13px; margin:0 0 14px; }
+  .card h2 { display:flex; align-items:center; gap:8px; }
+  .live-dot { width:7px; height:7px; border-radius:99px; background:var(--ok);
+              box-shadow:0 0 0 3px var(--okbg); }
+  .live-dot.stale { background:var(--muted); box-shadow:none; }
+  .stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));
+               gap:12px; }
+  .stat { border:1px solid var(--border); border-radius:9px; padding:11px 13px; }
+  .stat b { display:block; font-size:24px; line-height:1.1; font-variant-numeric:tabular-nums; }
+  .stat span { font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+               color:var(--muted); }
+  .stat.good b { color:var(--ok); } .stat.bad b { color:var(--bad); }
+  .stat.busy b { color:var(--accent); }
   .empty { color:var(--muted); font-size:14px; padding:6px 0 2px; }
 
   /* one queued request */
@@ -150,44 +162,52 @@
 
 <div class="wrap">
   <div class="subtabs" role="tablist" aria-label="Admin views">
-    <button role="tab" class="active" id="st-moderation" data-panel="moderation"
-            aria-selected="true" aria-controls="panel-moderation">Moderation<span class="n" id="n-waiting">·</span></button>
+    <button role="tab" class="active" id="st-status" data-panel="status"
+            aria-selected="true" aria-controls="panel-status">Status<span class="n" id="n-live">·</span></button>
     <button role="tab" id="st-users" data-panel="users" tabindex="-1"
             aria-selected="false" aria-controls="panel-users">Users<span class="n" id="n-users">·</span></button>
   </div>
 
   <div class="box bad" id="error" hidden role="alert"></div>
 
-  <section id="panel-moderation" role="tabpanel" aria-labelledby="st-moderation">
+  <section id="panel-status" role="tabpanel" aria-labelledby="st-status">
     <div class="card">
-      <h2>Waiting for release</h2>
-      <p class="lede">Releasing a request is the live action. The submission job files it
-        with the City on its next run, real staff are dispatched, and it cannot be recalled.
-        Read the address and the description before you release anything.</p>
-      <div id="waiting"></div>
+      <h2>Last 30 days <span class="live-dot" id="live-dot" title="refreshing"></span></h2>
+      <p class="lede">Testers send their own requests straight to the City. This is where
+        you find out what that produced — not a queue to work through.</p>
+      <div class="stat-grid" id="stats"></div>
+      <p class="hint" id="stat-note"></p>
     </div>
 
     <div class="card">
-      <h2>Held for a look</h2>
-      <p class="lede">The anti-abuse policy stopped these before they reached the queue —
-        usually a repeat of something already reported at the same address.</p>
-      <div id="held"></div>
+      <h2>In flight</h2>
+      <p class="lede">Sent, and not yet answered by the City. A request that sits here for
+        more than a few minutes is a request the job did not pick up.</p>
+      <div id="inflight"></div>
     </div>
 
     <div class="card">
-      <h2>Already handled</h2>
-      <p class="lede">Released, filed, failed or withdrawn. A case number means the City
-        has it.</p>
+      <h2>Recent requests</h2>
+      <p class="lede">Everything testers have sent. A case number means the City has it; a
+        failure says why, and can be put back in the queue.</p>
       <div class="table-wrap">
         <table>
           <thead><tr>
             <th>#</th><th>State</th><th>Request</th><th>Where</th>
-            <th>City case</th><th>When</th>
+            <th>City case</th><th>Sent</th><th></th>
           </tr></thead>
           <tbody id="history"></tbody>
         </table>
       </div>
-      <p class="empty" id="history-empty" hidden>Nothing has been released yet.</p>
+      <p class="empty" id="history-empty" hidden>Nothing has been sent yet.</p>
+    </div>
+
+    <div class="card">
+      <h2>Flagged by the policy</h2>
+      <p class="lede">The policy warned the tester about these and they sent them anyway,
+        or they were never sent. Nothing here is waiting on you. Blocking a submitter is
+        the one lever, and it is for abuse rather than for a debatable duplicate.</p>
+      <div id="held"></div>
     </div>
   </section>
 
@@ -255,7 +275,7 @@ function selectPanel(b, focus = false) {
     x.setAttribute('aria-selected', String(on));
     x.tabIndex = on ? 0 : -1;
   });
-  $('panel-moderation').hidden = b.dataset.panel !== 'moderation';
+  $('panel-status').hidden = b.dataset.panel !== 'status';
   $('panel-users').hidden = b.dataset.panel !== 'users';
   if (focus) b.focus();
 }
@@ -299,28 +319,48 @@ function details(r) {
   </dl>${findingsBlock(r)}`;
 }
 
-// Two presses, and the second one says what it does. Releasing cannot be undone,
-// and a button that reads "Release" next to a list is too easy to hit by habit.
-function armRelease(btn, id) {
-  if (btn.dataset.armed) return;
-  btn.dataset.armed = '1';
-  // it stops being the ordinary primary action and becomes the dangerous one
-  btn.classList.remove('primary');
-  btn.classList.add('danger');
-  btn.textContent = 'Confirm: file this with the City';
-  const cancel = document.createElement('button');
-  cancel.textContent = 'Cancel';
-  cancel.addEventListener('click', () => load());
-  btn.after(cancel);
+const secs = v => v == null ? '—' : (v < 90 ? `${Math.round(v)}s` : `${(v / 60).toFixed(1)}m`);
+const ago = v => {
+  if (!v) return '—';
+  const s = (Date.now() - new Date(v).getTime()) / 1000;
+  return s < 90 ? `${Math.round(s)}s ago` : s < 5400 ? `${Math.round(s / 60)}m ago`
+       : `${Math.round(s / 3600)}h ago`;
+};
+
+function renderStats(m) {
+  const st = m.states || {};
+  const inflight = (st.approved || 0) + (st.filing || 0) + (st.queued || 0);
+  const cells = [
+    {n: st.filed || 0, label: 'filed with the City', cls: 'good'},
+    {n: inflight, label: 'in flight', cls: inflight ? 'busy' : ''},
+    {n: st.failed || 0, label: 'failed', cls: (st.failed ? 'bad' : '')},
+    {n: (m.outcomes || {}).block || 0, label: 'refused by policy'},
+    {n: secs(m.median_seconds), label: 'typical time to a case number'},
+  ];
+  $('stats').innerHTML = cells.map(c =>
+    `<div class="stat ${c.cls || ''}"><b>${esc(c.n)}</b><span>${c.label}</span></div>`).join('');
+  const bits = [];
+  bits.push(m.filing_starts_immediately
+    ? 'Filing starts the moment a tester sends one.'
+    : 'This service cannot start the submission job, so sending waits for the schedule.');
+  if (m.last_filed_at) bits.push(`Last filed ${ago(m.last_filed_at)}.`);
+  if (m.slowest_seconds) bits.push(`Slowest ${secs(m.slowest_seconds)}.`);
+  $('stat-note').textContent = bits.join(' ');
 }
 
-async function release(id) {
-  const r = await api(`/approve/${id}`, {method: 'POST'});
-  await load();
-  const box = document.createElement('div');
-  box.className = 'box ok';
-  box.textContent = `#${id}: ${r.message}`;
-  $('waiting').prepend(box);
+function renderInflight(rows) {
+  $('n-live').textContent = rows.length;
+  if (!rows.length) {
+    $('inflight').innerHTML = '<p class="empty">Nothing in flight.</p>';
+    return;
+  }
+  $('inflight').innerHTML = rows.map(r => `<div class="req">
+    <div class="req-top"><b>${esc(r.service_name || r.service_code)}</b>
+      <span class="req-id">#${r.attempt_id}</span>
+      <span class="pill ${esc(r.submit_state)}">${esc(r.submit_state)}</span>
+      <span class="req-when">sent ${ago(r.approved_at || r.queued_at)}${
+        r.tries > 1 ? ` · try ${r.tries}` : ''}</span></div>
+    ${details(r)}</div>`).join('');
 }
 
 async function moderate(id, action, reason) {
@@ -329,28 +369,9 @@ async function moderate(id, action, reason) {
   await load();
 }
 
-function renderWaiting(rows) {
-  $('n-waiting').textContent = rows.length;
-  if (!rows.length) {
-    $('waiting').innerHTML = '<p class="empty">Nothing is waiting. When a tester asks us to '
-      + 'file a request it appears here, and nothing reaches the City until you release it.</p>';
-    return;
-  }
-  $('waiting').innerHTML = rows.map(r => `<div class="req">
-    <div class="req-top"><b>${esc(r.service_name || r.service_code)}</b>
-      <span class="req-id">#${r.attempt_id}</span>
-      <span class="pill queued">queued</span>
-      <span class="req-when">asked ${when(r.queued_at || r.created_at)}</span></div>
-    ${details(r)}
-    <div class="row-actions">
-      <button class="primary" data-release="${r.attempt_id}">Release for filing</button>
-      <span class="note">files with the City on the job's next run</span>
-    </div></div>`).join('');
-}
-
 function renderHeld(rows) {
   if (!rows.length) {
-    $('held').innerHTML = '<p class="empty">Nothing held.</p>';
+    $('held').innerHTML = '<p class="empty">Nothing flagged.</p>';
     return;
   }
   $('held').innerHTML = rows.map(r => `<div class="req holding">
@@ -359,10 +380,8 @@ function renderHeld(rows) {
       <span class="req-when">${when(r.created_at)}</span></div>
     ${details(r)}
     <div class="row-actions">
-      <button data-mod="approve" data-id="${r.attempt_id}">Let it through</button>
-      <button data-mod="reject" data-id="${r.attempt_id}">Reject</button>
       <button class="danger" data-mod="block_submitter" data-id="${r.attempt_id}">Block this submitter</button>
-      <span class="note">recorded either way; a reversal is a new entry</span>
+      <span class="note">for abuse, not for a duplicate somebody meant to send</span>
     </div></div>`).join('');
 }
 
@@ -375,22 +394,24 @@ function renderHistory(rows) {
     <td>${esc(r.service_name || r.service_code)}</td>
     <td>${esc(r.address || '—')}</td>
     <td>${r.city_case_number ? `<code>${esc(r.city_case_number)}</code>` : '—'}</td>
-    <td class="num">${when(r.relayed_at || r.approved_at || r.queued_at)}</td>
+    <td class="num">${when(r.approved_at || r.queued_at)}</td>
+    <td class="actions">${r.submit_state === 'failed'
+      ? `<button data-retry="${r.attempt_id}">Try again</button>` : ''}</td>
   </tr>`).join('');
 }
 
-$('panel-moderation').addEventListener('click', async e => {
-  const rel = e.target.closest('button[data-release]');
+$('panel-status').addEventListener('click', async e => {
+  const again = e.target.closest('button[data-retry]');
   const mod = e.target.closest('button[data-mod]');
   $('error').hidden = true;
   try {
-    if (rel) {
-      if (!rel.dataset.armed) return armRelease(rel, rel.dataset.release);
-      rel.disabled = true;
-      await release(rel.dataset.release);
+    if (again) {
+      again.disabled = true;
+      await api(`/retry/${again.dataset.retry}`, {method: 'POST'});
+      await load();
     } else if (mod) {
-      const reason = mod.dataset.mod === 'note' ? null
-        : prompt(`Why? (recorded against #${mod.dataset.id})`) || null;
+      const reason = prompt(`Why? (recorded against #${mod.dataset.id})`) || null;
+      if (reason === null) return;
       await moderate(mod.dataset.id, mod.dataset.mod, reason);
     }
   } catch (err) { fail(err); }
@@ -450,20 +471,37 @@ $('add').addEventListener('submit', async e => {
 });
 
 // -------------------------------------------------------------------- boot
+const IN_FLIGHT = ['queued', 'approved', 'filing'];
+
 async function load() {
-  const [who, sub, rev, users] = await Promise.all([
-    api('/whoami'), api('/submission-queue'), api('/review-queue'), api('/users')]);
+  const [who, sub, rev, users, metrics] = await Promise.all([
+    api('/whoami'), api('/submission-queue'), api('/review-queue'), api('/users'),
+    api('/instrument')]);
   me = who.user;
   $('who').innerHTML = me
     ? `${esc(me.email)} · ${esc(me.role)} · <a href="/submit/logout">Sign out</a>` : '';
   const rows = sub.queue || [];
-  renderWaiting(rows.filter(r => r.submit_state === 'queued'));
-  renderHistory(rows.filter(r => r.submit_state !== 'queued'));
+  renderStats(metrics);
+  renderInflight(rows.filter(r => IN_FLIGHT.includes(r.submit_state)));
+  renderHistory(rows);
   renderHeld(rev.queue || []);
   renderUsers(users.users || []);
 }
 
-load().then(panelFromHash).catch(fail);
+// The board is only useful if it keeps up with what testers are doing, and a
+// request goes from sent to filed in about a minute.
+const REFRESH_MS = 5000;
+let refreshing = null;
+function autoRefresh() {
+  clearInterval(refreshing);
+  refreshing = setInterval(() => {
+    if (document.hidden) return;                 // no work while nobody is looking
+    load().then(() => $('live-dot').classList.remove('stale'))
+          .catch(() => $('live-dot').classList.add('stale'));
+  }, REFRESH_MS);
+}
+
+load().then(panelFromHash).then(autoRefresh).catch(fail);
 </script>
 </body>
 </html>
