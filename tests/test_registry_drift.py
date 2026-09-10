@@ -3,13 +3,15 @@
 Synthetic fixtures, not the real registry — these assert the *rules* of the
 check, so they stay meaningful after the next crawl changes the real numbers.
 """
+from datetime import datetime, timezone
+
 import pytest
 
 from alex311.registry_drift import catalog_drift, data_drift, is_web, observed
 
 
-def reg(*services):
-    return {"generated": "test", "services": list(services)}
+def reg(*services, generated=None):
+    return {"generated": generated or CRAWLED, "services": list(services)}
 
 
 def service(code="TESNOISE", name="Noise Issues", questions=()):
@@ -24,9 +26,14 @@ def question(code="01PL-NOISESOUR", text="What is the source of the noise?",
     return q
 
 
-def row(code="TESNOISE", attrs=None, source="iOS", origin="API"):
+RECENT = datetime(2026, 9, 20, tzinfo=timezone.utc)     # after CRAWLED
+BEFORE = datetime(2026, 8, 14, tzinfo=timezone.utc)     # before CRAWLED
+CRAWLED = "2026-09-01 00:00 UTC"
+
+
+def row(code="TESNOISE", attrs=None, source="iOS", origin="API", at=RECENT):
     return {"service_code": code, "source": source, "origin": origin,
-            "attrs": attrs if attrs is not None else []}
+            "requested_datetime": at, "attrs": attrs if attrs is not None else []}
 
 
 def attr(code="01PL-NOISESOUR", description="What is the source of the noise?",
@@ -66,19 +73,24 @@ def test_catalog_reports_a_service_that_disappeared():
 # ---------------------------------------------------------------- channel
 
 @pytest.mark.parametrize("source,origin,expected", [
+    ("Web", "API", True),
     ("iOS", "API", True),
     ("Android Browser", "API", True),
-    ("Agent", "API", False),        # entered by staff: bypasses the wizard
-    ("iOS", "Phone", False),
-    ("agent", None, False),         # case-insensitive
-    (None, None, True),
+    ("ios browser", "API", True),   # case-insensitive
+    ("Agent", "Phone", False),      # staff typing a phone call
+    ("Web", "Phone", False),
+    (None, "Email", False),         # emailed report, transcribed by staff
+    (None, "Facebook", False),
+    ("snap311", "API", False),      # third-party app with its own form
+    (None, None, False),            # unknown channel: excluded, never assumed
 ])
-def test_is_web_excludes_agent_and_phone(source, origin, expected):
+def test_is_web_allows_only_wizard_channels(source, origin, expected):
     assert is_web({"source": source, "origin": origin}) is expected
 
 
 def test_observed_counts_only_web_rows():
-    rows = [row(source="iOS"), row(source="Agent"), row(origin="Phone")]
+    rows = [row(source="iOS"), row(source="Agent", origin="Phone"),
+            row(source=None, origin="Email")]
     seen = observed(rows)
     assert seen["TESNOISE"]["rows"] == 1
 
@@ -131,19 +143,45 @@ def test_free_text_answers_are_never_option_drift():
     assert data_drift(rows, registry) == []
 
 
-def test_hard_stopped_answer_appearing_in_web_data_is_drift():
+def test_hard_stopped_answer_submitted_after_the_crawl_is_drift():
     opt = {"value": "Private", "rule": {"type": "hard_stop", "message": "not City property"}}
     registry = reg(service(questions=[question(options=["Public", opt])]))
-    rows = rows_for(attrs=[attr(answers=("Private",))])
+    rows = rows_for(attrs=[attr(answers=("Private",))], at=RECENT)
     found = data_drift(rows, registry)
     assert [f.kind for f in found] == ["rule_contradicted"]
+    assert "2026-09-20" in found[0].summary
+
+
+def test_hard_stopped_answer_from_before_the_crawl_is_not_drift():
+    """Only a submission newer than the walk can mean the rule was relaxed;
+    older ones are the phone-channel skew the registry already records."""
+    opt = {"value": "Private", "rule": {"type": "hard_stop", "message": "not City property"}}
+    registry = reg(service(questions=[question(options=["Public", opt])]))
+    rows = rows_for(attrs=[attr(answers=("Private",))], at=BEFORE)
+    assert data_drift(rows, registry) == []
 
 
 def test_hard_stopped_answer_from_an_agent_is_not_drift():
     """Phone agents bypass the wizard's rules, so their records prove nothing."""
     opt = {"value": "Private", "rule": {"type": "hard_stop", "message": "not City property"}}
     registry = reg(service(questions=[question(options=["Public", opt])]))
-    rows = rows_for(attrs=[attr(answers=("Private",))], source="Agent")
+    rows = rows_for(attrs=[attr(answers=("Private",))], source="Agent", origin="Phone")
+    assert data_drift(rows, registry) == []
+
+
+def test_padded_answers_are_not_drift():
+    """The portal stores some answers with surrounding spaces."""
+    registry = reg(service(questions=[question(options=["Construction", "Other"])]))
+    rows = rows_for(attrs=[attr(answers=(" Construction ",))])
+    assert data_drift(rows, registry) == []
+
+
+def test_data_only_questions_are_never_option_drift():
+    """We never saw the question rendered, so its vocabulary is not a claim
+    about what the form offers — comparing answers to it is pure noise."""
+    q = question(options=["N/A", "Yes", "No"], source="data-only")
+    registry = reg(service(questions=[q]))
+    rows = rows_for(attrs=[attr(answers=("NA",))])
     assert data_drift(rows, registry) == []
 
 

@@ -16,7 +16,7 @@ Live in project **permitting-ai-helper** (us-east4):
 | Media bucket | `gs://permitting-ai-helper-alex311-media` (prefix `alex311-media/`) |
 | Ingest schedule | 03:20 / 09:20 / 15:20 / 21:20 America/New_York (`alex311-ingest-schedule`) |
 | Health schedule | hourly at :45 (`alex311-health-schedule`) |
-| Drift schedule | Mondays 06:30 America/New_York (`alex311-drift-schedule`, §6 — not yet created) |
+| Drift schedule | Mondays 06:30 America/New_York (`alex311-drift-schedule`) |
 | Alerting | policy "Alex311 job failures" → email channel (jke314@outlook.com) |
 
 Redeploy after a code change:
@@ -181,12 +181,23 @@ gcloud scheduler jobs create http alex311-drift-schedule \
 It exits non-zero — so the same "job failed" alert below covers it — when a
 service is added, removed or renamed, when a question code, wording or datatype
 changes, when an answer value appears that the registry does not list, or when
-an answer the registry marks a **hard stop** shows up in a real web submission
-(meaning the City relaxed that rule). Agent- and phone-entered records are
-excluded throughout: they bypass the wizard's validation and prove nothing about
-the web form. `--min-rows` (default 5) keeps a thinly used service from tripping
-the alarm on one odd record. `--record` writes the outcome to `ingest_runs`
-(`kind='drift'`) alongside ingest and health.
+an answer the registry marks a **hard stop** is submitted through the web form
+*after* the crawl that recorded the rule (meaning the City relaxed it).
+
+Only wizard channels count. About a third of records arrive another way — staff
+typing a phone call, an emailed or tweeted report transcribed by staff, a
+third-party app with its own form — and in all of those a human keys in answers
+the wizard would have refused. The check uses an **allowlist** (`WEB_SOURCES`:
+Web, iOS, iOS Browser, Android, Android Browser), so an unrecognised channel is
+excluded rather than mistaken for the web form. The job prints the channels it
+skipped, which is how you would notice the City renaming one.
+
+`--min-rows` (default 5) keeps a thinly used service from tripping the alarm on
+one odd record. `--record` writes the outcome to `ingest_runs` (`kind='drift'`)
+alongside ingest and health.
+
+A run on 2026-09-10 over 1,799 wizard submissions from the previous 30 days
+reported no drift.
 
 The third source, the wizard walk itself, needs Playwright and deliberately
 does **not** ship in this image. Run it from a workstation instead:
