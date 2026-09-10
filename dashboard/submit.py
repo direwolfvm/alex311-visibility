@@ -88,6 +88,15 @@ class AuthConfirm(BaseModel):
     code: str
 
 
+class QueueBody(BaseModel):
+    """Ask for an already-prechecked request to be filed on your behalf."""
+    attempt_id: int
+    first_name: str = ""
+    last_name: str = ""
+    email: str = ""
+    phone: str = ""
+
+
 class PrecheckBody(BaseModel):
     """A proposed submission, as the form would send it."""
     service_code: str
@@ -248,6 +257,54 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                 "cooldown_until": decision.cooldown_until,
                 "history_considered": len(history),
                 "identity_enforced": submitter_id is not None}
+
+    @router.post("/api/queue")
+    def queue(body: QueueBody, request: Request):
+        """Hand a prepared request to the submission queue.
+
+        Queuing is not filing and not approval. A person still has to approve
+        the row, and only the live job can act on it — a browser cannot run in
+        this service.
+        """
+        contact = {"first_name": body.first_name.strip(), "last_name": body.last_name.strip(),
+                   "email": body.email.strip(), "phone": body.phone.strip()}
+        with pool_getter().connection() as conn:
+            row = conn.execute(
+                "SELECT attempt_id, submitter_id, submit_state FROM submission_attempts "
+                "WHERE attempt_id = %s", (body.attempt_id,)).fetchone()
+            if row is None:
+                raise HTTPException(404, "no such attempt")
+            mine = _submitter(request)
+            if row["submitter_id"] and row["submitter_id"] != mine:
+                # an attempt belongs to whoever prepared it
+                raise HTTPException(403, "that request was prepared by someone else")
+            if row["submit_state"] not in ("prepared", "queued"):
+                raise HTTPException(409, f"that request is already {row['submit_state']}")
+            adb.queue_attempt(conn, body.attempt_id, contact)
+        return {"attempt_id": body.attempt_id, "submit_state": "queued",
+                "message": "Queued. A reviewer has to approve it before it is filed."}
+
+    @router.get("/api/submission-queue")
+    def submission_queue(limit: int = 50):
+        """Everything waiting to be filed, and what became of what already was."""
+        with pool_getter().connection() as conn:
+            return {"queue": adb.submission_queue(conn, limit=limit)}
+
+    @router.post("/api/approve/{attempt_id}")
+    def approve(attempt_id: int, actor: str = Depends(_auth)):
+        """Approve a queued request for filing.
+
+        This is the per-request half of the live gate. The other half is the
+        environment variable on the live job; neither alone files anything.
+        """
+        with pool_getter().connection() as conn:
+            ok = adb.approve_attempt(conn, attempt_id, actor)
+            if not ok:
+                raise HTTPException(409, "that request is not queued")
+            adb.record_moderation(conn, attempt_id=attempt_id, actor=actor,
+                                  action="approve", reason="approved for filing")
+        return {"attempt_id": attempt_id, "submit_state": "approved",
+                "message": "Approved. The submission job will file it on its next run."}
 
     @router.get("/api/review-queue")
     def queue(limit: int = 50):

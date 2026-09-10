@@ -170,3 +170,29 @@ CREATE TABLE IF NOT EXISTS submitter_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS ss_submitter_idx ON submitter_sessions (submitter_id, expires_at DESC);
+
+-- The submission queue. A browser cannot live in the public web image, and
+-- Cloud Run rejects per-execution argument overrides in this project, so the
+-- job cannot be told what to file on the command line. It takes its work from
+-- here instead: the gated form queues a prepared request, a human approves it,
+-- and the job drains approved rows one at a time.
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS submit_state TEXT NOT NULL DEFAULT 'prepared';
+--   prepared  evaluated by the policy, nothing more
+--   queued    a resident asked for it to be filed
+--   approved  a human said yes; this is the per-request half of the live gate
+--   filing    a worker has claimed it
+--   filed     the City accepted it; city_case_number holds their number
+--   failed    the worker could not file it; submit_error says why
+--   cancelled withdrawn before filing
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS queued_at    TIMESTAMPTZ;
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS approved_at  TIMESTAMPTZ;
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS approved_by  TEXT;
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS submit_error TEXT;
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS tries        INTEGER NOT NULL DEFAULT 0;
+-- Contact details travel with the request because some services refuse it
+-- without them. They are the resident's own, given for this purpose, and go
+-- to the City exactly as typed.
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS contact      JSONB;
+
+CREATE INDEX IF NOT EXISTS sa_state_idx ON submission_attempts (submit_state, approved_at)
+    WHERE submit_state IN ('queued', 'approved', 'filing');

@@ -1,0 +1,25 @@
+# The submission worker, and only the worker.
+#
+# It needs a real browser, which must never go into the public dashboard image:
+# that service is internet-facing and has no business carrying Chromium. This
+# is a separate image for a separate Cloud Run job, and the only thing it runs
+# is the queue worker.
+#
+# Noble, not jammy: the jammy image ships Python 3.10 and this package needs
+# 3.12. Ubuntu 24.04 ships 3.12.
+#
+# The tag must track the playwright pin in pyproject.toml, and the pip install
+# below pins the exact same version — the base image bundles browsers built for
+# one client version, and a mismatch fails at run time, not at build time.
+FROM mcr.microsoft.com/playwright/python:v1.61.0-noble
+
+WORKDIR /app
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY docs/data ./docs/data
+RUN pip install --no-cache-dir --break-system-packages ".[gcs]" "playwright==1.61.0"
+
+ENV PYTHONUNBUFFERED=1
+# Rehearses unless ALEX311_ALLOW_LIVE_SUBMIT=1 is set on the job AND --live is
+# passed. Both are deliberate acts.
+ENTRYPOINT ["python", "-m", "alex311.submit_worker"]
