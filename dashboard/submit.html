@@ -41,6 +41,11 @@
             gap:10px; align-items:center; }
   .whoami a { color:var(--accent); }
   .composite { display:flex; gap:8px; } .composite input { flex:1; }
+  .filing-head { font-size:14px; margin:22px 0 4px; padding-top:18px;
+                 border-top:1px solid var(--border); }
+  .contact-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 4px; }
+  .contact-grid input { width:100%; margin:0; }
+  @media (max-width:520px) { .contact-grid { grid-template-columns:1fr; } }
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
              overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
   .chosen { display:flex; gap:10px; align-items:flex-start; padding:11px 13px;
@@ -86,8 +91,9 @@
 
 <div class="wrap">
   <div class="notice"><b>Testing prototype.</b> Every question for a request type is shown at once, with the
-    City's own rules explained inline instead of surprising you mid-way. This form <b>prepares</b> a request and
-    checks whether it's already been reported; it does not file with the City yet. Not an official City of Alexandria service.</div>
+    City's own rules explained inline instead of surprising you mid-way. Every request is
+    checked against the City's rules and against what has already been reported. You can copy the details and file
+    it yourself, or have us file it for you — a reviewer approves each one first. Not an official City of Alexandria service.</div>
 
   <div class="step">
     <h2>1 · What do you need? <span id="reg-meta"></span></h2>
@@ -129,10 +135,33 @@
     <div class="actions">
       <button class="primary" id="validate">Check my answers</button>
       <button class="ghost" id="copy" hidden>Copy details</button>
-      <a class="primary disabled" id="official" target="_blank" rel="noopener">Open official Alex311 portal ↗</a>
+      <a class="ghost disabled" id="official" target="_blank" rel="noopener">Open official Alex311 portal ↗</a>
     </div>
-    <p class="foot">Direct submission is gated and dry-run only in this prototype; the handoff opens the official portal
-      with your prepared details ready to paste.</p>
+
+    <div id="file-block" hidden>
+      <h3 class="filing-head">Or have us file it for you</h3>
+      <p class="hint">We submit it to the City through their own form and give you back
+        their case number. A reviewer approves each request before it is filed.</p>
+      <div class="contact-grid">
+        <div><label class="hint" for="c-first">First name</label>
+          <input type="text" id="c-first" autocomplete="given-name"></div>
+        <div><label class="hint" for="c-last">Last name</label>
+          <input type="text" id="c-last" autocomplete="family-name"></div>
+        <div><label class="hint" for="c-email">Email</label>
+          <input type="email" id="c-email" autocomplete="email"></div>
+        <div><label class="hint" for="c-phone">Phone</label>
+          <input type="tel" id="c-phone" autocomplete="tel"></div>
+      </div>
+      <p class="hint">The City requires all four on some request types and refuses the
+        request without them. They go to the City exactly as typed.</p>
+      <div class="actions">
+        <button class="primary" id="queue-btn">File this for me</button>
+      </div>
+      <div id="queue-result" role="status" aria-live="polite"></div>
+    </div>
+
+    <p class="foot">Nothing is sent to the City until a reviewer approves it. You can also
+      copy the details and file it yourself on the official portal.</p>
   </div>
 </div>
 
@@ -140,7 +169,8 @@
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? '').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const PORTAL = 'https://alex311.alexandriava.gov/customer/s/?servicerequested=all';
-const state = { services: [], svc: null, answers: {}, lat: null, long: null, valid: null };
+const state = { services: [], svc: null, answers: {}, lat: null, long: null,
+                valid: null, attempt: null };
 const qkey = q => q.code || ('q' + q.order);
 
 // ---------- 1. picker ----------
@@ -183,7 +213,7 @@ $('svc-q').addEventListener('input', e => renderList(e.target.value));
 
 async function pick(code) {
   state.svc = await (await fetch('/submit/api/service/' + code)).json();
-  state.answers = {}; state.valid = null;
+  state.answers = {}; state.valid = null; state.attempt = null;
   state.picking = false;
   renderList($('svc-q').value);
   $('svc-desc').innerHTML = `${esc(state.svc.description||'')}${state.svc.departments?.length ? ` <br><b>Handled by:</b> ${esc(state.svc.departments.map(d=>d.name).join(', '))}` : ''}`;
@@ -452,12 +482,76 @@ function renderResult() {
   box.innerHTML = h;
   $('review').hidden = !ready; if (ready) $('review').textContent = summary();
   $('copy').hidden = !ready; $('official').classList.toggle('disabled', !ready); $('official').href = PORTAL;
+  // Only offer to file something the City would accept, and only once the
+  // abuse policy has seen it.
+  const blocked = state.attempt && state.attempt.outcome === 'block';
+  $('file-block').hidden = !(ready && state.attempt && !blocked);
+  if (ready && state.attempt?.outcome === 'review') {
+    $('queue-result').innerHTML = `<div class="box warn">This one will need a closer
+      look before it is filed: ${esc((state.attempt.findings || [])
+        .map(f => f.message).join(' '))}</div>`;
+  }
 }
+// Checking answers also records the attempt, which is what gives us something
+// to queue: the abuse policy runs there, and the row it writes is the thing a
+// reviewer later approves.
+async function precheck() {
+  try {
+    const r = await fetch('/submit/api/precheck', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        service_code: state.svc.service_code, service_name: state.svc.service_name,
+        address: $('address').value.trim(), lat: state.lat, long: state.long,
+        description: $('desc').value.trim(), answers: state.answers})});
+    state.attempt = await r.json();
+  } catch { state.attempt = null; }
+}
+
 $('validate').addEventListener('click', async () => {
   if (!state.svc) return;
   state.valid = await (await fetch('/submit/api/validate', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ service_code: state.svc.service_code, answers: state.answers }) })).json();
+  await precheck();
   renderResult(); $('check').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+// ---------- have us file it ----------
+function contact() {
+  return {first_name: $('c-first').value.trim(), last_name: $('c-last').value.trim(),
+          email: $('c-email').value.trim(), phone: $('c-phone').value.trim()};
+}
+
+$('queue-btn').addEventListener('click', async () => {
+  const box = $('queue-result');
+  const who = contact();
+  // The City refuses some request types without all four, and the worker will
+  // not invent them, so a request queued without them would only fail later.
+  const missing = Object.entries(who).filter(([, v]) => !v).map(([k]) => k.replace('_', ' '));
+  if (missing.length) {
+    box.innerHTML = `<div class="box warn">Please give your ${missing.join(', ')} —
+      the City needs all four on some request types.</div>`;
+    return;
+  }
+  if (!state.attempt?.attempt_id) {
+    box.innerHTML = '<div class="box bad">Check your answers first.</div>';
+    return;
+  }
+  const btn = $('queue-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/submit/api/queue', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({attempt_id: state.attempt.attempt_id, ...who})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
+    box.innerHTML = `<div class="box ok"><b>Queued as request ${state.attempt.attempt_id}.</b>
+      A reviewer approves it before anything is sent to the City. You will get their
+      case number once it is filed.</div>`;
+    btn.hidden = true;
+  } catch (e) {
+    box.innerHTML = `<div class="box bad">${esc(e.message)}</div>`;
+    btn.disabled = false; btn.textContent = 'File this for me';
+  }
 });
 $('copy').addEventListener('click', async () => { await navigator.clipboard.writeText(summary()); $('copy').textContent = 'Copied ✓'; setTimeout(() => $('copy').textContent = 'Copy details', 1800); });
 ['address','desc'].forEach(id => $(id).addEventListener('input', () => { if (state.valid) $('review').textContent = summary(); }));

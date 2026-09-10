@@ -154,3 +154,43 @@ def test_the_city_box_covers_alexandria_and_excludes_the_district():
     assert inside(38.7671, -77.1436), "the southern tip is in Alexandria"
     assert not inside(38.8997, -77.0382), "that point is across the river in DC"
     assert not inside(38.8816, -77.0910), "that is Arlington"
+
+
+# ------------------------------------------------ having us file it for you
+
+def test_the_form_records_an_attempt_so_there_is_something_to_queue():
+    """The abuse policy runs in precheck, and the row it writes is what a
+    reviewer later approves. Validation alone leaves nothing to act on."""
+    assert "/submit/api/precheck" in PAGE
+    assert "async function precheck()" in PAGE
+    assert "await precheck();" in PAGE
+
+
+def test_there_is_a_way_to_ask_us_to_file_it():
+    assert 'id="queue-btn"' in PAGE and "/submit/api/queue" in PAGE
+
+
+def test_filing_asks_for_all_four_contact_fields():
+    """The City refuses some request types without them, and the worker will
+    not invent them, so a request queued without them only fails later."""
+    for field in ("c-first", "c-last", "c-email", "c-phone"):
+        assert f'id="{field}"' in PAGE
+    assert "the City needs all four" in PAGE
+
+
+def test_the_filing_offer_is_hidden_until_the_request_is_fit_to_send():
+    assert "$('file-block').hidden = !(ready && state.attempt && !blocked)" in PAGE
+
+
+def test_a_blocked_request_is_never_offered_for_filing():
+    assert "state.attempt.outcome === 'block'" in PAGE
+
+
+def test_choosing_a_different_type_clears_the_recorded_attempt():
+    """Otherwise the queue button would file the previous request."""
+    assert "state.valid = null; state.attempt = null;" in PAGE
+
+
+def test_the_page_no_longer_claims_it_cannot_file():
+    assert "does not file with the City yet" not in PAGE
+    assert "dry-run only in this prototype" not in PAGE

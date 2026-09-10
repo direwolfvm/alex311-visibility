@@ -268,6 +268,20 @@ real traffic justifies it; until then run it by hand:
 gcloud run jobs execute alex311-submit --region=$REGION --wait
 ```
 
+> **Once armed, executing this job is a live-fire action.** It is not like the
+> other jobs: running `alex311-drift` or `alex311-health` to check that a new
+> image works is free, and doing the same to `alex311-submit` files whatever is
+> sitting in `approved`. Check before you run it, and leave it out of any
+> "do the jobs still work" sweep after a deploy:
+>
+> ```bash
+> gcloud run jobs describe alex311-submit --region=$REGION --format=json \
+>   | grep -c ALEX311_ALLOW_LIVE_SUBMIT      # 0 = rehearsal, 1 = it will file
+> ```
+>
+> The empty queue is the only thing that makes an armed run harmless, and an
+> empty queue is not something to rely on.
+
 ## 8. Alerting
 
 Alert on failed executions of any job (this catches ingest breakage, the health
