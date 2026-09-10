@@ -34,13 +34,16 @@
   nav.tabs button { border: none; background: none; font: inherit; font-size: 14px;
                     padding: 6px 16px 8px; cursor: pointer; color: var(--muted);
                     border-bottom: 2px solid transparent; }
-  nav.tabs button:hover { color: var(--ink); }
-  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent);
-                           font-weight: 600; }
   nav.tabs .tab-link { display: flex; align-items: center; gap: 6px; text-decoration: none;
                        font-size: 14px; padding: 6px 16px 8px; color: var(--muted);
                        border-bottom: 2px solid transparent; }
-  nav.tabs .tab-link:hover { color: var(--accent); border-bottom-color: var(--border); }
+  nav.tabs button:hover, nav.tabs .tab-link:hover { color: var(--ink);
+                                                    border-bottom-color: var(--border); }
+  /* Two ways of being the current view — a selected tab here, a link to the page
+     you are already on elsewhere — get one appearance. */
+  nav.tabs button.active,
+  nav.tabs .tab-link[aria-current="page"] { color: var(--accent); font-weight: 600;
+                                            border-bottom-color: var(--accent); }
   .tab-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
              background: #dbeafe; color: var(--accent); padding: 1px 6px; border-radius: 99px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -699,6 +702,16 @@ function selectTab(b, focus = false) {
 }
 
 tabButtons.forEach(b => b.addEventListener('click', () => selectTab(b)));
+
+// The bar is shared with the other pages, and from there Analytics is a link
+// rather than a button it can press. Honour the fragment it arrives with.
+function tabFromHash() {
+  const want = location.hash.replace('#', '');
+  const b = tabButtons.find(x => x.dataset.tab === want);
+  if (b) selectTab(b);
+}
+addEventListener('hashchange', tabFromHash);
+tabFromHash();
 document.querySelector('nav.tabs [role=tablist]').addEventListener('keydown', e => {
   const i = tabButtons.indexOf(document.activeElement);
   if (i < 0) return;
