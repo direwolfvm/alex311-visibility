@@ -86,3 +86,60 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
 ALTER TABLE ingest_runs ADD COLUMN IF NOT EXISTS windows_incomplete INTEGER NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS ingest_runs_started_idx ON ingest_runs (started_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Gated submission layer (Option C). Nothing here reaches the City: these
+-- tables record what our own layer was asked to do and what it decided, so
+-- rate limits have a history to count and every decision is auditable. We are
+-- the sender of record for anything we relay, so "who asked, when, and what we
+-- did about it" has to be answerable.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS submitters (
+    submitter_id    TEXT PRIMARY KEY,              -- opaque; not the email
+    email           TEXT UNIQUE,
+    verified_at     TIMESTAMPTZ,                   -- NULL until the address is proven
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    blocked_at      TIMESTAMPTZ,
+    blocked_reason  TEXT,
+    notes           TEXT
+);
+
+CREATE TABLE IF NOT EXISTS submission_attempts (
+    attempt_id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    submitter_id    TEXT REFERENCES submitters (submitter_id),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    service_code    TEXT NOT NULL,
+    service_name    TEXT,
+    address         TEXT,
+    address_key     TEXT,                          -- normalised; what caps count on
+    lat             DOUBLE PRECISION,
+    long            DOUBLE PRECISION,
+    description     TEXT,
+    answers         JSONB,
+    -- what the policy said, and why
+    outcome         TEXT NOT NULL,                 -- allow | notice | review | block
+    findings        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    cooldown_until  TIMESTAMPTZ,
+    -- the relay itself, still gated and unused
+    relayed_at      TIMESTAMPTZ,
+    city_case_number TEXT
+);
+
+CREATE INDEX IF NOT EXISTS sa_submitter_idx ON submission_attempts (submitter_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS sa_address_idx ON submission_attempts (address_key, created_at DESC);
+CREATE INDEX IF NOT EXISTS sa_pending_idx ON submission_attempts (created_at DESC)
+    WHERE outcome = 'review' AND relayed_at IS NULL;
+
+-- Every human decision on a held submission. Append-only by convention: a
+-- reversal is a new row, so the trail of who decided what survives.
+CREATE TABLE IF NOT EXISTS moderation_actions (
+    action_id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    attempt_id      BIGINT NOT NULL REFERENCES submission_attempts (attempt_id) ON DELETE CASCADE,
+    acted_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actor           TEXT NOT NULL,                 -- who decided
+    action          TEXT NOT NULL,                 -- approve | reject | block_submitter | note
+    reason          TEXT
+);
+
+CREATE INDEX IF NOT EXISTS ma_attempt_idx ON moderation_actions (attempt_id, acted_at);
