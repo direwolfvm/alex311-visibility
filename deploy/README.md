@@ -9,7 +9,8 @@ Live in project **permitting-ai-helper** (us-east4):
 
 | Thing | Value |
 |---|---|
-| Dashboard | https://alex311-dashboard-650621702399.us-east4.run.app |
+| Dashboard | https://alex311visibility.me (mapped domain) |
+| Cloud Run URL | https://alex311-dashboard-650621702399.us-east4.run.app — still works; the mapped domain is what people should be given |
 | Image | `us-east4-docker.pkg.dev/permitting-ai-helper/cloud-run-source-deploy/alex311-portal:latest` |
 | Database | `alex311` on Cloud SQL `metabase-sql` (user `alex311`) |
 | DB credentials | Secret Manager `alex311-database-url` |

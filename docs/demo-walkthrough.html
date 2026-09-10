@@ -159,6 +159,9 @@
     margin: 0; letter-spacing: -.01em; text-wrap: balance;
   }
   .step p { max-width: 66ch; color: var(--ink-soft); }
+  .live-line { font: 500 15px/1.5 "IBM Plex Mono", ui-monospace, monospace;
+               background: var(--accent-wash); border-radius: 4px;
+               padding: 10px 14px; display: inline-block; }
   .step p strong, .step li strong { color: var(--ink); font-weight: 600; }
   .step > p:first-of-type { margin-top: 16px; }
   .step ul { max-width: 66ch; color: var(--ink-soft); padding-left: 20px; }
@@ -361,6 +364,9 @@ uv run uvicorn dashboard.app:app --port 8311</pre>
       <span class="step-num">01</span>
       <h2 class="step-title">The dashboard, which already works</h2>
     </div>
+    <p class="live-line">
+      Live at <a href="https://alex311visibility.me">alex311visibility.me</a>
+    </p>
     <p>
       A read-only mirror of the City's own public data. It never calls the city
       portal in response to a visitor, so public traffic cannot generate load on
