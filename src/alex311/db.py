@@ -223,3 +223,92 @@ def finish_run(conn: psycopg.Connection, run_id: int, *, ok: bool,
          error[:1000] if error else None, run_id),
     )
     conn.commit()
+
+
+# --------------------------------------------------------- submission layer
+
+def abuse_history(conn: psycopg.Connection, *, address_key: str, sql_prefix: str,
+                  submitter_id: str | None, days: int = 30) -> list[dict]:
+    """Everything the abuse policy needs to judge one proposed submission.
+
+    Two sources, deliberately. The city's own records show what is already
+    happening at an address — a resident who filed directly should still see
+    "already reported" — and our attempts table shows what our layer has been
+    asked to relay. Rate limits counting only our own traffic would be
+    trivially sidestepped while most reports still go direct.
+
+    Address matching is two-stage: SQL narrows on a prefix (cheap, indexable,
+    deliberately loose), then the caller re-checks each row with the one
+    canonical `abuse.normalize_address`. Reimplementing that normaliser in SQL
+    would give us two copies to keep in step, and the suffix spellings are
+    exactly where they would drift.
+    """
+    like = sql_prefix.replace("%", r"\%").replace("_", r"\_") + "%"
+    from .abuse import SQL_ADDRESS_EXPR
+    return conn.execute(
+        """
+        SELECT requested_datetime AS at, address, service_name AS category,
+               description, closed_datetime AS closed_at,
+               NULL::text AS submitter_id, 'city' AS source
+          FROM service_requests
+         WHERE address IS NOT NULL
+           AND requested_datetime > now() - make_interval(days => %(days)s)
+           AND {addr} LIKE %(like)s
+        UNION ALL
+        SELECT created_at AS at, address, service_name AS category,
+               description, NULL::timestamptz AS closed_at,
+               submitter_id, 'ours' AS source
+          FROM submission_attempts
+         WHERE created_at > now() - make_interval(days => %(days)s)
+           AND outcome <> 'block'
+           AND (address_key = %(key)s
+                OR (%(sid)s::text IS NOT NULL AND submitter_id = %(sid)s))
+        """.format(addr=SQL_ADDRESS_EXPR),
+        {"days": days, "like": like, "key": address_key, "sid": submitter_id},
+    ).fetchall()
+
+
+def record_attempt(conn: psycopg.Connection, *, submitter_id: str | None,
+                   service_code: str, service_name: str | None, address: str | None,
+                   address_key: str, lat: float | None, long: float | None,
+                   description: str | None, answers: dict, outcome: str,
+                   findings: list, cooldown_until=None) -> int:
+    """Persist one evaluated attempt. Returns its id.
+
+    Written for every outcome, including `allow`: the rate limits count real
+    attempts, and an audit trail with only the refusals in it explains nothing.
+    """
+    row = conn.execute(
+        """INSERT INTO submission_attempts
+             (submitter_id, service_code, service_name, address, address_key,
+              lat, long, description, answers, outcome, findings, cooldown_until)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+           RETURNING attempt_id""",
+        (submitter_id, service_code, service_name, address, address_key, lat, long,
+         description, Jsonb(answers), outcome, Jsonb(findings), cooldown_until),
+    ).fetchone()
+    conn.commit()
+    return row["attempt_id"]
+
+
+def review_queue(conn: psycopg.Connection, limit: int = 50) -> list[dict]:
+    """Attempts held for a human, newest first."""
+    return conn.execute(
+        """SELECT attempt_id, created_at, submitter_id, service_name, address,
+                  address_key, description, outcome, findings
+             FROM submission_attempts
+            WHERE outcome = 'review' AND relayed_at IS NULL
+            ORDER BY created_at DESC LIMIT %s""",
+        (limit,),
+    ).fetchall()
+
+
+def record_moderation(conn: psycopg.Connection, *, attempt_id: int, actor: str,
+                      action: str, reason: str | None = None) -> int:
+    row = conn.execute(
+        """INSERT INTO moderation_actions (attempt_id, actor, action, reason)
+           VALUES (%s, %s, %s, %s) RETURNING action_id""",
+        (attempt_id, actor, action, reason),
+    ).fetchone()
+    conn.commit()
+    return row["action_id"]

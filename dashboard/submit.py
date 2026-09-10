@@ -13,12 +13,15 @@ from __future__ import annotations
 import math
 import os
 import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
+
+from alex311 import abuse, db as adb
 
 from . import registry as R
 
@@ -52,6 +55,23 @@ class ValidateBody(BaseModel):
     answers: dict = {}
 
 
+class PrecheckBody(BaseModel):
+    """A proposed submission, as the form would send it."""
+    service_code: str
+    service_name: str | None = None
+    address: str | None = None
+    lat: float | None = None
+    long: float | None = None
+    description: str = ""
+    answers: dict = {}
+    #: Identity is not built yet. Until it is, per-submitter limits simply do
+    #: not apply, and the layer relies on the address rules alone — which is
+    #: exactly what the historical backtest measures. See §5 of the research doc.
+    submitter_id: str | None = None
+    #: a field no real user can see; anything in it is a bot
+    website: str = ""
+
+
 def register_submit_routes(app, pool_getter) -> None:
     """Attach the gated /submit routes. pool_getter() returns the live pool."""
     router = APIRouter(prefix="/submit", dependencies=[Depends(_auth)])
@@ -82,6 +102,73 @@ def register_submit_routes(app, pool_getter) -> None:
         if not s:
             raise HTTPException(404, "unknown service code")
         return R.validate(s, body.answers)
+
+    @router.post("/api/precheck")
+    def precheck(body: PrecheckBody):
+        """Run the anti-abuse policy over a proposed submission.
+
+        Records every evaluation, whatever the outcome: the rate limits count
+        real attempts, and an audit trail holding only the refusals explains
+        nothing. Nothing here reaches the City — the relay stays gated.
+        """
+        key = abuse.normalize_address(body.address)
+        proposed = abuse.Event(
+            at=datetime.now(timezone.utc), address=body.address or "",
+            category=body.service_name or body.service_code,
+            submitter_id=body.submitter_id, description=body.description,
+            source="ours")
+
+        history: list[abuse.Event] = []
+        if key:
+            with pool_getter().connection() as conn:
+                rows = adb.abuse_history(conn, address_key=key,
+                                         sql_prefix=abuse.sql_prefix(body.address),
+                                         submitter_id=body.submitter_id)
+            for r in rows:
+                # SQL narrowed by prefix; this is the exact match
+                if r["source"] == "city" and abuse.normalize_address(r["address"]) != key:
+                    continue
+                history.append(abuse.Event(
+                    at=r["at"], address=r["address"] or "", category=r["category"] or "",
+                    submitter_id=r["submitter_id"], description=r["description"] or "",
+                    closed_at=r["closed_at"], source=r["source"]))
+
+        decision = abuse.evaluate(proposed, history,
+                                  honeypot_filled=bool(body.website.strip()))
+
+        findings = [{"rule": f.rule, "outcome": f.outcome, "message": f.message,
+                     "detail": f.detail} for f in decision.findings]
+        with pool_getter().connection() as conn:
+            attempt_id = adb.record_attempt(
+                conn, submitter_id=body.submitter_id, service_code=body.service_code,
+                service_name=body.service_name, address=body.address, address_key=key,
+                lat=body.lat, long=body.long, description=body.description,
+                answers=body.answers, outcome=decision.outcome, findings=findings,
+                cooldown_until=decision.cooldown_until)
+
+        return {"attempt_id": attempt_id, "outcome": decision.outcome,
+                "may_proceed": decision.allowed, "findings": findings,
+                "summary": abuse.summarize(decision),
+                "cooldown_until": decision.cooldown_until,
+                "history_considered": len(history),
+                "identity_enforced": body.submitter_id is not None}
+
+    @router.get("/api/review-queue")
+    def queue(limit: int = 50):
+        """Attempts a human still needs to look at."""
+        with pool_getter().connection() as conn:
+            return {"queue": adb.review_queue(conn, limit)}
+
+    @router.post("/api/review/{attempt_id}")
+    def moderate(attempt_id: int, action: str, reason: str | None = None,
+                 actor: str = Depends(_auth)):
+        """Record a human decision. Append-only: a reversal is a new row."""
+        if action not in ("approve", "reject", "block_submitter", "note"):
+            raise HTTPException(400, "unknown action")
+        with pool_getter().connection() as conn:
+            action_id = adb.record_moderation(conn, attempt_id=attempt_id,
+                                              actor=actor, action=action, reason=reason)
+        return {"action_id": action_id, "attempt_id": attempt_id, "action": action}
 
     @router.get("/api/nearby")
     def nearby(lat: float, long: float, category: str, days: int = 45):

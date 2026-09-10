@@ -81,6 +81,57 @@ Optional on top: the CopilotKit helper assessed earlier (conversational intake �
 6. **Content + bot hygiene.** Near-duplicate text detection per submitter, CAPTCHA/Turnstile on the form, honeypot fields, and a full audit log (who, when, what, decision). Everything is auditable because *we* are the sender of record for every request we relay.
 7. **Never more anonymous than the city.** We attach nothing to the portal request the resident didn't provide, but we keep the submitter identity on our side for accountability.
 
+### 5a. Built and backtested (2026-09-10)
+
+The policy is now code — `src/alex311/abuse.py`, a pure function of a proposed
+submission plus the history around it — and it has been replayed over **8,187
+real requests from the last 90 days** with `spike/backtest_abuse.py`. The
+backtest calls the same `evaluate()` the endpoint calls, so the numbers below
+describe the shipped rules, not a model of them.
+
+| Outcome | Share of 8,187 | Addresses |
+|---|---|---|
+| Held for review | 66 (0.8%) | 12 of 5,327 |
+| Duplicate notice (shown, not held) | 127 (1.6%) | — |
+
+Against the four cases §3 names:
+
+| Address | What it is | Result |
+|---|---|---|
+| 80 S Earley St | burst campaign | **50 of 53 held, first at request #4** |
+| 493 N Armistead St | persistent single target | 1 held (at #14), 1 notice |
+| 400 King St | legitimately busy block | **0 held**, 3 notices |
+| 1437 Janney's Ln | recurring defect, many reporters | **0 held**, 1 notice |
+
+Three things the backtest changed or proved:
+
+1. **A duplicate is a notice, not a hold.** The first run held 193 requests, and
+   the largest rule by volume was "this is already reported" — which fired on
+   400 King Street, exactly the block §3 says is *legitimately* busy. Sending
+   that resident to a moderator is the wrong answer; showing them the open
+   request and offering to add to it is the right one. Adding a non-blocking
+   `notice` outcome cut holds from 193 to 66 and left the burst case untouched.
+2. **Address normalisation is load-bearing.** The portal writes the same street
+   two ways: *1437 JANNEY'S LN* (51 records) and *1437 JANNEY'S LA* (48) are one
+   address, as are *MOUNT VERNON AVE* (276) and *MOUNT VERNON AV* (234). Without
+   collapsing those, a per-address cap counts two half-sized addresses and never
+   fires. The engine keys on a normalised form and SQL narrows on a
+   punctuation-stripped prefix before the exact match.
+3. **The identity rules are the untested half.** Every historical record is
+   anonymous, so per-submitter limits, targeting concentration and duplicate-text
+   detection cannot be exercised against history at all — the backtest asserts
+   they stay silent. That is also why *493 N Armistead* barely trips: a single
+   voice spread thinly across two weeks is invisible to address caps and is
+   precisely what identity is for. **Identity is the open decision**, and until
+   it is made the layer is running on address rules alone.
+
+Storage is in place (`submitters`, `submission_attempts`, `moderation_actions`)
+and every evaluation is recorded whatever its outcome, because rate limits need
+real attempts to count and an audit trail holding only refusals explains
+nothing. The gated endpoints are `POST /submit/api/precheck`,
+`GET /submit/api/review-queue` and `POST /submit/api/review/{id}`. Nothing here
+relays anything: the City-facing step remains double-gated and unused.
+
 ## 6. Open questions and risks
 
 - **Authorization.** Unchanged from the Option C assessment: "no Option B" is not the City authorizing scripted use of the guest channel. Relaying residents' requests at scale should be agreed with the City, and this design's abuse controls are a strong part of that conversation — we would be *reducing* their spam, not adding to it.
@@ -93,7 +144,7 @@ Optional on top: the CopilotKit helper assessed earlier (conversational intake �
 
 1. ~~**Rule discovery spike**~~ — **done for all 111 services** (§8).
 2. ~~**Schema registry + renderer**~~ — **done** (§8): registry + single-page form on the gated `/submit`, with drift detection to keep it current (§9).
-3. **Abuse layer**: accounts, limits, per-address caps, review queue, audit log — all testable against our historical data before any live traffic.
+3. ~~**Abuse layer**~~ — **policy, storage and review queue done** (§5a), backtested over 8,187 real requests. Remaining: **identity** (a verified submitter, the one open decision), plus CAPTCHA/Turnstile and a reviewer UI.
 4. **Harness**: land PR #14, add the iframe map click and schema-driven fills, run it as a Cloud Run Job, dry-run only.
 5. **One supervised live submission** per category family, with the City informed, before opening the gate any wider.
 
@@ -178,5 +229,7 @@ the City changed its mind, and the form should stop telling residents no.
 | `docs/wizard-rules.md` · `docs/data/wizard-rules.json` | per-option rules for all 111 catalog services |
 | `spike/build_registry.py` · `docs/data/form-registry.json` | merged form registry (catalog + mined data + wizard rules) that drives `/submit` |
 | `src/alex311/registry_drift.py` | browser-free drift check (live catalog + submitted answers); weekly Cloud Run job |
+| `src/alex311/abuse.py` | anti-abuse policy engine (pure; thresholds in one `Policy`) |
+| `spike/backtest_abuse.py` | replays 90 days of real requests through the live policy |
 | `spike/rules_diff.py` · `scripts/weekly_drift.sh` | crawl-vs-committed rule diff and the weekly runner |
 | `dashboard/registry.py` · `dashboard/submit.py` · `dashboard/submit.html` | registry loader/validator and the gated single-page form |
