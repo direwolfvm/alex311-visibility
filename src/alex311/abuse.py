@@ -150,6 +150,10 @@ class Policy:
     burst_diversity: float = 0.50
     #: two of a submitter's own descriptions this alike are the same report
     duplicate_text_ratio: float = 0.90
+    #: ...but only once there is enough text to judge. 13% of real descriptions
+    #: are under 40 characters, and at that length "pothole on my street" and
+    #: "potholes on my street" score 0.98 while describing different things.
+    duplicate_text_min_chars: int = 40
     #: cooldown grows each time a submitter is sent to review in this window
     cooldown_lookback_days: int = 30
 
@@ -276,7 +280,10 @@ def evaluate(proposed: Event, history: Sequence[Event], *,
                     {"share": round(share, 3), "at_address": here, "total": len(mine) + 1}))
 
         # --- same words, again ---------------------------------------------
-        for e in _within(mine, now, policy.same_category_repeat_days):
+        # Short text is not evidence: two brief reports of different problems
+        # look alike simply because there are few ways to write them.
+        long_enough = len(normalize_text(proposed.description)) >= policy.duplicate_text_min_chars
+        for e in _within(mine, now, policy.same_category_repeat_days) if long_enough else []:
             if similarity(e.description, proposed.description) >= policy.duplicate_text_ratio:
                 findings.append(Finding("duplicate_text", REVIEW,
                     "This reads almost exactly like a request you already submitted.",

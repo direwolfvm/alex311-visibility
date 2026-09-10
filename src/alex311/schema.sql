@@ -143,3 +143,30 @@ CREATE TABLE IF NOT EXISTS moderation_actions (
 );
 
 CREATE INDEX IF NOT EXISTS ma_attempt_idx ON moderation_actions (attempt_id, acted_at);
+
+-- One-time codes proving control of a mailbox. Only the salted hash is stored:
+-- a six-digit code is guessable from a leaked table without one.
+CREATE TABLE IF NOT EXISTS submitter_verifications (
+    verification_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email           TEXT NOT NULL,                 -- canonical form (+tags folded)
+    code_hash       TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at      TIMESTAMPTZ NOT NULL,
+    attempts        INTEGER NOT NULL DEFAULT 0,
+    consumed_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS sv_email_idx ON submitter_verifications (email, created_at DESC);
+
+-- Sessions. The token itself only ever exists in the client; we keep its hash,
+-- so the table cannot be used to impersonate anyone.
+CREATE TABLE IF NOT EXISTS submitter_sessions (
+    token_hash      TEXT PRIMARY KEY,
+    submitter_id    TEXT NOT NULL REFERENCES submitters (submitter_id) ON DELETE CASCADE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at      TIMESTAMPTZ NOT NULL,
+    revoked_at      TIMESTAMPTZ,
+    user_agent      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS ss_submitter_idx ON submitter_sessions (submitter_id, expires_at DESC);

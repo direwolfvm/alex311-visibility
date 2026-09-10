@@ -144,10 +144,13 @@ def test_a_submitter_spread_across_the_city_is_not_targeting():
     assert "targeting_concentration" not in [f.rule for f in d.findings]
 
 
+REPOST = ("The garbage truck idles outside my window from four in the morning "
+          "and the noise is unbearable every single weekday")
+
+
 def test_a_submitter_reposting_their_own_words_is_held():
-    mine = [ev(days=-1, submitter="u1", address="1 A ST", text="the same exact complaint text")]
-    d = evaluate(ev(submitter="u1", address="2 B ST", category="Other",
-                    text="the same exact complaint text"), mine)
+    mine = [ev(days=-1, submitter="u1", address="1 A ST", text=REPOST)]
+    d = evaluate(ev(submitter="u1", address="2 B ST", category="Other", text=REPOST), mine)
     assert "duplicate_text" in [f.rule for f in d.findings]
 
 
@@ -181,3 +184,13 @@ def test_thresholds_are_data_so_an_operator_can_retune_without_a_deploy():
 def test_similarity_is_insensitive_to_case_and_punctuation():
     assert similarity("Loud trucks!", "loud trucks") > 0.95
     assert similarity("loud trucks", "broken streetlight") < 0.5
+
+
+def test_short_descriptions_do_not_trigger_the_duplicate_text_rule():
+    """13% of real descriptions are under 40 characters, and at that length two
+    different problems score above the similarity threshold by coincidence."""
+    mine = [ev(days=-1, submitter="u1", address="1 A ST", text="pothole on my street")]
+    d = evaluate(ev(submitter="u1", address="2 B ST", category="Other",
+                    text="potholes on my street"), mine)
+    assert "duplicate_text" not in [f.rule for f in d.findings]
+
