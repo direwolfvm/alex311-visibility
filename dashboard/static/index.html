@@ -15,8 +15,13 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2733; --muted: #64748b;
-    --accent: #1d4ed8; --open: #d97706; --closed: #059669; --border: #e2e8f0;
+    /* Contrast-checked against WCAG AA (4.5:1 for text). The previous
+       --muted missed on the page background (4.44), and white badge text on
+       the old amber and green missed badly (3.19 and 3.77). */
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2733; --muted: #5c6675;
+    --accent: #1d4ed8; --open: #b45309; --closed: #047857; --border: #e2e8f0;
+    /* map markers are graphics, not text, so they keep the brighter hues */
+    --open-dot: #d97706; --closed-dot: #059669;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 14px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -49,9 +54,9 @@
   .wrap { display: grid; grid-template-columns: 250px 1fr; gap: 14px; padding: 14px 20px; }
   .filters { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
              padding: 14px; align-self: start; position: sticky; top: 14px; }
-  .filters label { display: block; font-size: 11px; text-transform: uppercase;
+  .filters label, .filters .cat-label { display: block; font-size: 11px; text-transform: uppercase;
                    letter-spacing: .04em; color: var(--muted); margin: 12px 0 4px; }
-  .filters label:first-child { margin-top: 0; }
+  .filters > label:first-of-type { margin-top: 0; }
   .filters input:not([type=checkbox]), .filters select { width: 100%; padding: 6px 8px; border: 1px solid var(--border);
                                     border-radius: 6px; font: inherit; background: #fff; }
   #categories { max-height: 260px; overflow-y: auto; border: 1px solid var(--border);
@@ -61,7 +66,9 @@
   .main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
   .card h2 { font-size: 13px; margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--border);
-             color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+             color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+             display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+  .card h2 #area-state { margin-left: auto; }
   #map { height: 420px; }
   #map-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 14px;
                 font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
@@ -78,11 +85,16 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 14px; border-top: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 600; font-size: 12px; border-top: none; }
-  th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
-  th[data-sort]:hover { color: var(--ink); }
-  th[data-sort]::after { content: ' ↕'; opacity: .35; }
-  th[data-sort].asc::after { content: ' ▲'; opacity: 1; }
-  th[data-sort].desc::after { content: ' ▼'; opacity: 1; }
+  /* the sort control is a real <button> so it is focusable and announced as
+     one; the <th> keeps aria-sort, which is what screen readers read out */
+  th[data-sort] { padding: 0; white-space: nowrap; }
+  th[data-sort] > button { font: inherit; color: inherit; background: none; border: none;
+                           padding: 8px 14px; width: 100%; text-align: left;
+                           cursor: pointer; user-select: none; }
+  th[data-sort] > button:hover { color: var(--ink); }
+  th[data-sort] > button::after { content: ' ↕'; opacity: .35; }
+  th[data-sort].asc > button::after { content: ' ▲'; opacity: 1; }
+  th[data-sort].desc > button::after { content: ' ▼'; opacity: 1; }
   .expand { border: none; background: none; cursor: pointer; font-size: 12px;
             color: var(--muted); padding: 2px 4px; transition: transform .15s; }
   .expand.open { transform: rotate(90deg); color: var(--accent); }
@@ -95,7 +107,7 @@
   .detail-text b { color: var(--muted); font-size: 11px; text-transform: uppercase;
                    letter-spacing: .04em; display: block; }
   .detail-photos { margin-top: 10px; }
-  .detail-photos img { height: 72px; border-radius: 5px; margin: 2px 4px 2px 0; }
+  .detail-photos img { height: 72px; border-radius: 5px; }
   .detail-foot { margin-top: 10px; font-size: 12px; }
   .btn-map { border: 1px solid var(--border); background: #fff; border-radius: 6px;
              font: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer;
@@ -108,9 +120,11 @@
   .badge.open { background: var(--open); } .badge.closed { background: var(--closed); }
   .badge.other { background: var(--muted); }
   .thumb { height: 34px; width: 34px; object-fit: cover; border-radius: 4px; margin-right: 3px; }
+  .thumb-btn { padding: 0; border: none; background: none; cursor: zoom-in; line-height: 0; }
+  .detail-photos .thumb-btn, .popup-thumbs .thumb-btn { margin: 2px 4px 2px 0; }
   .popup-desc { max-height: 90px; overflow-y: auto; margin: 6px 0; }
-  .popup-thumbs img { height: 56px; border-radius: 4px; margin: 2px; }
-  [data-lb-ids] { cursor: zoom-in; }
+  .popup-thumbs img { height: 56px; border-radius: 4px; }
+
   #lightbox { position: fixed; inset: 0; z-index: 2000; background: rgba(12, 17, 27, .9);
               display: flex; align-items: center; justify-content: center; }
   #lightbox[hidden] { display: none; }
@@ -130,17 +144,93 @@
   #loadmore { margin: 10px 14px; padding: 6px 14px; border: 1px solid var(--border);
               border-radius: 6px; background: #fff; cursor: pointer; font: inherit; }
   .foot { color: var(--muted); font-size: 12px; padding: 0 20px 16px; }
-  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } .filters { position: static; } }
+
+  /* ---------- focus, motion, touch ---------------------------------------- */
+  /* Several controls are styled with `border:none;background:none`, which left
+     keyboard users with no visible focus at all. One rule covers every one. */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .skip-link { position: absolute; left: 8px; top: -48px; z-index: 3000; background: var(--panel);
+               color: var(--accent); padding: 8px 14px; border: 1px solid var(--accent);
+               border-radius: 0 0 8px 8px; transition: top .12s; }
+  .skip-link:focus { top: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+             overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  }
+  /* Finger-sized hit areas on touch screens; mobile is ~63% of self-service use. */
+  @media (pointer: coarse) {
+    .expand, .preset-row button, nav.tabs button, .btn-map, #loadmore { min-height: 44px; }
+    .expand { min-width: 44px; }
+    #categories div { padding: 6px 0; }
+    #categories input[type=checkbox] { width: 20px; height: 20px; }
+  }
+
+  /* ---------- responsive -------------------------------------------------- */
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: 1fr; }
+    .filters { position: static; }
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    /* the map is the hero on a phone, so the header earns its height carefully */
+    header { gap: 2px 10px; padding: 8px 14px 0; }
+    header h1 { font-size: 16px; }
+    header .sub { flex-basis: 100%; font-size: 11px; }
+    nav.tabs { margin-left: 0; width: 100%; order: 3; margin-top: 2px; }
+    nav.tabs button { flex: 1; padding: 8px 4px; }
+    .stats { margin-left: 0; order: 2; width: 100%; gap: 4px 12px; flex-wrap: wrap; font-size: 12px; }
+    .stats b { font-size: 14px; }
+    #stat-ingest { flex-basis: 100%; }
+    .wrap { padding: 10px 12px; gap: 10px; }
+    .foot { padding: 0 14px 14px; }
+    /* the map is the point of the page on a phone: keep it a screenful, not a slab */
+    #map { height: clamp(240px, 52vh, 420px); }
+    #categories { max-height: 180px; }
+    /* the draw-a-shape hint points at tools that are impractical on touch */
+    #area-state { display: none; }
+    .card h2 { gap: 4px 8px; }
+    .chart-box, #trendbox { height: 230px; }
+    /* the "tall" charts carry a category legend or one bar per request type;
+       squeezing them drops entries off the bottom */
+    .chart-box.tall { height: 340px; }
+    /* Updated repeats Requested for most rows, and thumbnails have the
+       lightbox on the detail row — both go, so the table fits without scrolling. */
+    .c-updated, .c-photos { display: none; }
+    th, td { padding: 8px 8px; }
+    .detail-grid { grid-template-columns: 1fr 1fr; }
+    .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { padding: 10px 12px; }
+    .stat-card .v { font-size: 19px; }
+    #lb-prev { left: 6px; } #lb-next { right: 6px; }
+    .lb-btn { padding: 12px 16px; }
+  }
+  /* The filter panel is a disclosure on small screens: it is 400px of controls
+     that would otherwise push the map and the table below the fold. */
+  .filters > summary { display: none; }
+  .filter-summary { color: var(--muted); font-weight: 400; font-size: 12px; }
+  @media (max-width: 900px) {
+    .filters > summary { display: list-item; cursor: pointer; font-weight: 600;
+                         padding: 4px 2px; min-height: 32px; }
+    .filters:not([open]) > *:not(summary) { display: none; }
+  }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 <header>
   <img src="/favicon.svg" alt="" style="height:26px;width:26px;align-self:center">
   <h1>Alex311 Visibility</h1>
   <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
-  <nav class="tabs">
-    <button class="active" data-tab="explore">Explore</button>
-    <button data-tab="analytics">Analytics</button>
+  <nav class="tabs" aria-label="Views">
+    <div role="tablist" style="display:contents">
+      <button class="active" role="tab" id="tab-btn-explore" data-tab="explore"
+              aria-selected="true" aria-controls="tab-explore">Explore</button>
+      <button role="tab" id="tab-btn-analytics" data-tab="analytics"
+              aria-selected="false" aria-controls="tab-analytics" tabindex="-1">Analytics</button>
+    </div>
   </nav>
   <div class="stats">
     <span>Total <b id="stat-total">–</b></span>
@@ -151,26 +241,31 @@
 </header>
 
 <div class="wrap">
-  <aside class="filters">
-    <label>From</label><input type="date" id="f-start">
-    <label>To</label><input type="date" id="f-end">
+  <!-- A disclosure element, so the phone layout can collapse 400px of controls.
+       CSS hides the summary above 900px, where the sidebar has room of its own. -->
+  <details class="filters" id="filters" open>
+    <summary>Filters <span id="filter-summary" class="filter-summary"></span></summary>
+    <h2 class="sr-only">Filters</h2>
+    <label for="f-start">From</label><input type="date" id="f-start">
+    <label for="f-end">To</label><input type="date" id="f-end">
     <div class="preset-row">
       <button data-preset="3m">Last 3 months</button>
       <button data-preset="all">All time</button>
     </div>
-    <label>Status</label>
+    <label for="f-status">Status</label>
     <select id="f-status">
       <option value="all">All</option><option value="open">Open</option>
       <option value="closed">Closed</option>
     </select>
-    <label>Search (address / description / case #)</label>
+    <label for="f-q">Search (address / description / case #)</label>
     <input type="search" id="f-q" placeholder="e.g. King St">
-    <label>Categories</label>
-    <div id="categories"></div>
-  </aside>
+    <div id="cat-label" class="cat-label">Categories</div>
+    <div id="categories" role="group" aria-labelledby="cat-label"></div>
+  </details>
 
-  <div class="main">
-  <div id="tab-explore">
+  <main class="main" id="main">
+    <p class="sr-only" id="live-status" role="status" aria-live="polite"></p>
+  <div id="tab-explore" role="tabpanel" aria-labelledby="tab-btn-explore" tabindex="0">
     <div class="card"><h2>Map
       <span id="map-count" style="text-transform:none;letter-spacing:0;margin-left:8px"></span>
       <label style="text-transform:none;letter-spacing:0;margin-left:14px">color by
@@ -179,63 +274,71 @@
           <option value="category">request type</option>
           <option value="age">age</option>
         </select></label>
-      <span id="area-state" style="float:right;text-transform:none;letter-spacing:0">
+      <span id="area-state" style="text-transform:none;letter-spacing:0">
         draw a shape (⬠ / ▭ tools, top-left) to filter by area</span></h2>
-      <div id="map"></div>
+      <div id="map" role="application"
+           aria-label="Map of service request locations. The table below lists the same requests."></div>
       <div id="map-legend"></div></div>
     <div class="card"><h2>Requests per week by category</h2>
-      <div id="trendbox"><canvas id="trend"></canvas></div></div>
+      <div id="trendbox"><canvas id="trend" role="img" aria-label="Line chart: requests per week, one line per request type, for the current filters."></canvas></div></div>
     <div class="card"><h2>Requests</h2>
       <div style="overflow-x:auto"><table>
+        <caption class="sr-only">Service requests matching the current filters.
+          Column headers sort the table.</caption>
         <thead><tr>
-          <th></th>
-          <th data-sort="case">Case</th>
-          <th data-sort="requested">Requested</th>
-          <th data-sort="updated">Updated</th>
-          <th data-sort="category">Category</th>
-          <th data-sort="status">Status</th>
-          <th data-sort="address">Address</th>
-          <th data-sort="photos">Photos</th>
+          <th><span class="sr-only">Show details</span></th>
+          <th data-sort="case" aria-sort="none"><button type="button">Case</button></th>
+          <th data-sort="requested" aria-sort="descending"><button type="button">Requested</button></th>
+          <th data-sort="updated" aria-sort="none" class="c-updated"><button type="button">Updated</button></th>
+          <th data-sort="category" aria-sort="none"><button type="button">Category</button></th>
+          <th data-sort="status" aria-sort="none"><button type="button">Status</button></th>
+          <th data-sort="address" aria-sort="none"><button type="button">Address</button></th>
+          <th data-sort="photos" aria-sort="none" class="c-photos"><button type="button">Photos</button></th>
         </tr></thead>
         <tbody id="rows"></tbody>
       </table></div>
-      <button id="loadmore" hidden>Load more</button>
+      <button id="loadmore" type="button" hidden>Load more requests</button>
     </div>
   </div>
 
-  <div id="tab-analytics" hidden>
+  <div id="tab-analytics" role="tabpanel" aria-labelledby="tab-btn-analytics" tabindex="0" hidden>
     <div class="stat-grid" id="stat-cards"></div>
     <div class="chart-grid">
       <div class="card"><h2>Requests by type</h2>
-        <div class="chart-box tall"><canvas id="ch-types"></canvas></div></div>
+        <div class="chart-box tall"><canvas id="ch-types" role="img" aria-label="Doughnut chart: share of requests by type, top eight plus other."></canvas></div></div>
       <div class="card"><h2>Time to close</h2>
-        <div class="chart-box tall"><canvas id="ch-ttc"></canvas></div></div>
+        <div class="chart-box tall"><canvas id="ch-ttc" role="img" aria-label="Bar chart: how long closed requests took, grouped into day ranges."></canvas></div></div>
       <div class="card wide"><h2>Opened vs closed per week</h2>
-        <div class="chart-box"><canvas id="ch-weekly"></canvas></div></div>
+        <div class="chart-box"><canvas id="ch-weekly" role="img" aria-label="Bar chart: requests opened versus closed each week."></canvas></div></div>
       <div class="card"><h2>Median days to close by type</h2>
-        <div class="chart-box tall"><canvas id="ch-ttc-cat"></canvas></div></div>
+        <div class="chart-box tall"><canvas id="ch-ttc-cat" role="img" aria-label="Bar chart: median days to close, by request type."></canvas></div></div>
       <div class="card"><h2>Average age of open requests by type</h2>
-        <div class="chart-box tall"><canvas id="ch-age-cat"></canvas></div></div>
+        <div class="chart-box tall"><canvas id="ch-age-cat" role="img" aria-label="Bar chart: average age of open requests, by request type."></canvas></div></div>
       <div class="card wide"><h2>Requests by day of week</h2>
-        <div class="chart-box"><canvas id="ch-dow"></canvas></div></div>
+        <div class="chart-box"><canvas id="ch-dow" role="img" aria-label="Bar chart: number of requests by day of the week."></canvas></div></div>
     </div>
   </div>
-  </div>
+  </main>
 </div>
 <p class="foot">Data ingested from the public Alex311 portal. Case links open the official
 city record. This is not an official City of Alexandria service.</p>
 
-<div id="lightbox" hidden>
-  <button id="lb-close" class="lb-btn" title="Close (Esc)">×</button>
-  <button id="lb-prev" class="lb-btn" title="Previous (←)">‹</button>
-  <img id="lb-img" alt="service request photo">
-  <button id="lb-next" class="lb-btn" title="Next (→)">›</button>
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Service request photo" hidden>
+  <button id="lb-close" class="lb-btn" title="Close (Esc)" aria-label="Close photo viewer">×</button>
+  <button id="lb-prev" class="lb-btn" title="Previous (←)" aria-label="Previous photo">‹</button>
+  <img id="lb-img" alt="">
+  <button id="lb-next" class="lb-btn" title="Next (→)" aria-label="Next photo">›</button>
   <div id="lb-caption"><a id="lb-case" target="_blank" rel="noopener"></a>
     <span id="lb-count"></span> · <a id="lb-full" target="_blank" rel="noopener">full size</a></div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
+let announceTimer;
+function announce(msg) {          // polite live region, debounced
+  clearTimeout(announceTimer);
+  announceTimer = setTimeout(() => { $('live-status').textContent = msg; }, 400);
+}
 const state = { offset: 0, limit: 300, rows: [], points: [], pointCats: [],
                 polygon: null, sort: 'requested', dir: 'desc',
                 minDate: null, maxDate: null };
@@ -275,7 +378,8 @@ function lbAttrs(r, i) {
 
 function popupHtml(r) {
   const thumbs = (r.media_ids || []).slice(0, 4)
-    .map((id, i) => `<img src="/api/media/${id}" ${lbAttrs(r, i)}>`)
+    .map((id, i) => `<button type="button" class="thumb-btn" ${lbAttrs(r, i)}><img
+        src="/api/media/${id}" alt="Photo ${i + 1} of ${esc(r.service_name)} at ${esc(r.address)}"></button>`)
     .join('');
   return `<b><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></b>
     ${badge(r.status)}<br>${esc(r.service_name)}<br>
@@ -365,15 +469,20 @@ async function loadCategoryCounts() {
 
 function renderRows(append) {
   const html = state.rows.slice(append ? -state.lastCount : 0).map(r => `
-    <tr><td><button class="expand" data-srid="${r.service_request_id}"
-        title="show details">▶</button></td>
-    <td><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></td>
+    <tr><td><button class="expand" type="button" data-srid="${r.service_request_id}"
+        aria-expanded="false"
+        aria-label="Show details for ${esc(r.service_request_id)}, ${esc(r.service_name)}"
+        ><span aria-hidden="true">▶</span></button></td>
+    <td><a href="${r.report_url}" target="_blank" rel="noopener"
+        aria-label="Case ${esc(r.service_request_id)} on the official city portal"
+        >${r.service_request_id}</a></td>
     <td>${(r.requested_datetime || '').slice(0, 10)}</td>
-    <td>${(r.last_updated_datetime || '').slice(0, 10)}</td>
+    <td class="c-updated">${(r.last_updated_datetime || '').slice(0, 10)}</td>
     <td>${esc(r.service_name)}</td><td>${badge(r.status)}</td>
     <td>${esc(r.address)}</td>
-    <td>${(r.media_ids || []).slice(0, 3).map((id, i) =>
-        `<img class="thumb" loading="lazy" src="/api/media/${id}" ${lbAttrs(r, i)}>`)
+    <td class="c-photos">${(r.media_ids || []).slice(0, 3).map((id, i) =>
+        `<button type="button" class="thumb-btn" ${lbAttrs(r, i)}><img class="thumb" loading="lazy"
+              src="/api/media/${id}" alt="Photo ${i + 1} of ${esc(r.service_name)} at ${esc(r.address)}"></button>`)
       .join('')}${r.media_count > 3 ? ' +' + (r.media_count - 3) : (r.media_ids || []).length ? '' : (r.media_count || '')}</td></tr>`).join('');
   if (append) $('rows').insertAdjacentHTML('beforeend', html);
   else $('rows').innerHTML = html;
@@ -390,6 +499,9 @@ async function loadRows(append = false) {
   $('stat-shown').textContent = state.rows.length + ' / ' + data.total;
   $('loadmore').hidden = state.rows.length >= data.total;
   renderRows(append);
+  // changing a filter silently swaps the table out; say what happened
+  announce(`${data.total.toLocaleString()} requests match. `
+           + `Showing ${state.rows.length.toLocaleString()}.`);
 }
 
 async function loadTrend() {
@@ -426,17 +538,21 @@ async function loadMeta() {
   state.minDate = m.min_date ? m.min_date.slice(0, 10) : null;
   state.maxDate = m.max_date ? m.max_date.slice(0, 10) : null;
   applyPreset('3m');
-  $('categories').innerHTML = m.categories.map(c => `
-    <div data-cat="${c.service_name}">
-    <input type="checkbox" value="${c.service_name}" id="c-${c.service_name}">
-    <label for="c-${c.service_name}" style="all:unset;cursor:pointer;flex:1">${c.service_name}</label>
-    <span class="count">${c.n}</span></div>`).join('');
+  // ids are positional: service names contain spaces and slashes, so a
+  // name-derived id never matched its label's `for` and the labels did nothing.
+  $('categories').innerHTML = m.categories.map((c, i) => `
+    <div data-cat="${esc(c.service_name)}">
+    <input type="checkbox" value="${esc(c.service_name)}" id="cat-${i}">
+    <label for="cat-${i}" style="cursor:pointer;flex:1">${esc(c.service_name)}
+      <span class="count">${c.n}<span class="sr-only"> requests</span></span></label>
+    </div>`).join('');
   document.querySelectorAll('#categories input')
     .forEach(cb => cb.addEventListener('change', refresh));
 }
 
 function refresh() {
   loadRows(); loadPoints(); loadTrend(); loadCategoryCounts();
+  renderFilterSummary();
   analyticsStale = true;
   if (!$('tab-analytics').hidden) loadAnalytics();
 }
@@ -444,6 +560,8 @@ function refresh() {
 // --- analytics tab ---
 const charts = {};
 let analyticsStale = true;
+
+const narrow = () => window.innerWidth <= 640;
 
 function drawChart(id, cfg) {
   charts[id]?.destroy();
@@ -482,8 +600,11 @@ async function loadAnalytics() {
       datasets: [{ data: [...top.map(c => +c.n), ...(other ? [other] : [])],
                    backgroundColor: [...PALETTE.slice(0, 8), '#cbd5e1'] }],
     },
-    options: { plugins: { legend: { position: 'right',
-               labels: { boxWidth: 10, font: { size: 11 } } } } },
+    options: { plugins: { legend: {
+      // a side legend eats the width a phone does not have, and Chart.js
+      // truncates the type names rather than wrapping them
+      position: narrow() ? 'bottom' : 'right',
+      labels: { boxWidth: 10, font: { size: 11 } } } } },
   });
 
   // time-to-close histogram (server buckets via width_bucket over 1/3/7/14/30/90)
@@ -546,14 +667,32 @@ async function loadAnalytics() {
   });
 }
 
-document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('nav.tabs button').forEach(x =>
-    x.classList.toggle('active', x === b));
+const tabButtons = [...document.querySelectorAll('nav.tabs button')];
+
+function selectTab(b, focus = false) {
+  tabButtons.forEach(x => {
+    const on = x === b;
+    x.classList.toggle('active', on);
+    x.setAttribute('aria-selected', String(on));
+    x.tabIndex = on ? 0 : -1;          // roving tabindex: one stop for the tablist
+  });
   $('tab-explore').hidden = b.dataset.tab !== 'explore';
   $('tab-analytics').hidden = b.dataset.tab !== 'analytics';
+  if (focus) b.focus();
   if (b.dataset.tab === 'explore') map.invalidateSize();
   else if (analyticsStale) loadAnalytics();
-}));
+}
+
+tabButtons.forEach(b => b.addEventListener('click', () => selectTab(b)));
+document.querySelector('nav.tabs [role=tablist]').addEventListener('keydown', e => {
+  const i = tabButtons.indexOf(document.activeElement);
+  if (i < 0) return;
+  const to = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1
+           : e.key === 'Home' ? 0 : e.key === 'End' ? tabButtons.length - 1 : null;
+  if (to === null) return;
+  e.preventDefault();
+  selectTab(tabButtons[(to + tabButtons.length) % tabButtons.length], true);
+});
 
 // default window: trailing 3 months (clamped to the data's actual start)
 function applyPreset(which) {
@@ -578,8 +717,11 @@ $('color-by').addEventListener('change', renderMap);
 
 function renderSortIndicators() {
   document.querySelectorAll('th[data-sort]').forEach(th => {
-    th.classList.toggle('asc', th.dataset.sort === state.sort && state.dir === 'asc');
-    th.classList.toggle('desc', th.dataset.sort === state.sort && state.dir === 'desc');
+    const on = th.dataset.sort === state.sort;
+    th.classList.toggle('asc', on && state.dir === 'asc');
+    th.classList.toggle('desc', on && state.dir === 'desc');
+    th.setAttribute('aria-sort', !on ? 'none'
+      : state.dir === 'asc' ? 'ascending' : 'descending');
   });
 }
 
@@ -618,8 +760,10 @@ function detailHtml(d) {
   const stored = (d.media || []).filter(m => m.stored);
   const ids = stored.map(m => m.media_id).join(',');
   const photos = stored.map((m, i) =>
-    `<img src="/api/media/${m.media_id}" loading="lazy" data-lb-ids="${ids}"
-      data-lb-idx="${i}" data-lb-srid="${d.service_request_id}">`).join('');
+    `<button type="button" class="thumb-btn" data-lb-ids="${ids}"
+      data-lb-idx="${i}" data-lb-srid="${d.service_request_id}"><img
+      src="/api/media/${m.media_id}" loading="lazy"
+      alt="Photo ${i + 1} of ${esc(d.service_name || 'this request')} at ${esc(d.address || 'the reported location')}"></button>`).join('');
   const unstored = (d.media_count || 0) - stored.length;
   return `<div class="detail-grid">${grid}</div>
     ${text('Description', d.description)}
@@ -638,12 +782,17 @@ function detailHtml(d) {
 async function toggleDetail(btn) {
   const tr = btn.closest('tr');
   const next = tr.nextElementSibling;
+  const label = btn.getAttribute('aria-label') || '';
   if (next?.classList.contains('detail-row')) {
     next.remove();
     btn.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', label.replace(/^Hide/, 'Show'));
     return;
   }
   btn.classList.add('open');
+  btn.setAttribute('aria-expanded', 'true');
+  btn.setAttribute('aria-label', label.replace(/^Show/, 'Hide'));
   const dr = document.createElement('tr');
   dr.className = 'detail-row';
   dr.innerHTML = `<td colspan="8">Loading…</td>`;
@@ -740,6 +889,7 @@ const lb = { ids: [], idx: 0, srid: '' };
 function lbRender() {
   const id = lb.ids[lb.idx];
   $('lb-img').src = '/api/media/' + id;
+  $('lb-img').alt = lb.alt || `Photo ${lb.idx + 1} of service request ${lb.srid}`;
   $('lb-full').href = '/api/media/' + id;
   $('lb-case').textContent = lb.srid;
   $('lb-case').href = state.rows.find(r => r.service_request_id === lb.srid)?.report_url
@@ -750,13 +900,20 @@ function lbRender() {
   $('lb-prev').hidden = $('lb-next').hidden = lb.ids.length < 2;
 }
 
-function lbOpen(ids, idx, srid) {
-  Object.assign(lb, { ids, idx, srid });
+function lbOpen(ids, idx, srid, alt = '') {
+  Object.assign(lb, { ids, idx, srid, alt });
+  lb.opener = document.activeElement;      // so focus can go back where it was
   $('lightbox').hidden = false;
   lbRender();
+  $('lb-close').focus();
 }
 
-function lbClose() { $('lightbox').hidden = true; $('lb-img').src = ''; }
+function lbClose() {
+  $('lightbox').hidden = true;
+  $('lb-img').src = '';
+  lb.opener?.focus?.();
+  lb.opener = null;
+}
 function lbStep(d) {
   const i = lb.idx + d;
   if (i >= 0 && i < lb.ids.length) { lb.idx = i; lbRender(); }
@@ -764,10 +921,11 @@ function lbStep(d) {
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-lb-ids]');
-  if (t) {
-    e.preventDefault();
-    lbOpen(t.dataset.lbIds.split(','), +t.dataset.lbIdx, t.dataset.lbSrid);
-  }
+  if (!t) return;
+  e.preventDefault();
+  // a thumbnail is a button wrapping the image; the image carries the description
+  const alt = t.querySelector('img')?.alt || '';
+  lbOpen(t.dataset.lbIds.split(','), +t.dataset.lbIdx, t.dataset.lbSrid, alt);
 });
 $('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') lbClose(); });
 $('lb-close').addEventListener('click', lbClose);
@@ -775,10 +933,62 @@ $('lb-prev').addEventListener('click', () => lbStep(-1));
 $('lb-next').addEventListener('click', () => lbStep(1));
 document.addEventListener('keydown', e => {
   if ($('lightbox').hidden) return;
-  if (e.key === 'Escape') lbClose();
-  else if (e.key === 'ArrowLeft') lbStep(-1);
-  else if (e.key === 'ArrowRight') lbStep(1);
+  if (e.key === 'Escape') return lbClose();
+  if (e.key === 'ArrowLeft') return lbStep(-1);
+  if (e.key === 'ArrowRight') return lbStep(1);
+  if (e.key !== 'Tab') return;
+  // trap focus: a modal that lets you tab into the page behind it strands
+  // screen-reader and keyboard users in content they cannot see
+  const stops = [...$('lightbox').querySelectorAll('button, a[href]')]
+    .filter(el => !el.hidden && !el.disabled && el.offsetParent !== null);
+  if (!stops.length) return;
+  const first = stops[0], last = stops[stops.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 });
+
+// On a phone the filter panel would push the map and the table off-screen, so
+// it starts collapsed there. Above 900px the CSS shows the controls regardless.
+if (window.innerWidth <= 900) $('filters').open = false;
+
+// Leaflet measures its container once. Anything that changes the layout after
+// that — collapsing the filters, rotating the phone — leaves it half-painted
+// until it is told to re-measure.
+const remeasureMap = () => { if (!$('tab-explore').hidden) map.invalidateSize(); };
+// Leaflet's marker surface is an unlabelled <canvas>; the map container carries
+// the description, so hide the drawing surface from assistive tech.
+map.on('load layeradd zoomend', () =>
+  $('map').querySelectorAll('canvas').forEach(c => c.setAttribute('aria-hidden', 'true')));
+$('map').querySelectorAll('canvas').forEach(c => c.setAttribute('aria-hidden', 'true'));
+$('filters').addEventListener('toggle', remeasureMap);
+let resizeTimer;
+let wasNarrow = narrow();
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    remeasureMap();
+    if (narrow() !== wasNarrow) {      // legend placement depends on the breakpoint
+      wasNarrow = narrow();
+      if (!$('tab-analytics').hidden) loadAnalytics();
+    }
+  }, 150);
+});
+requestAnimationFrame(remeasureMap);
+
+// Summarise the active filters on the collapsed control, so a phone user can
+// see what is being applied without opening it.
+function renderFilterSummary() {
+  const cats = document.querySelectorAll('#categories input:checked').length;
+  const bits = [];
+  if ($('f-start').value || $('f-end').value)
+    bits.push(`${$('f-start').value || 'start'} to ${$('f-end').value || 'now'}`);
+  if ($('f-status').value !== 'all') bits.push($('f-status').value);
+  if ($('f-q').value.trim()) bits.push(`“${$('f-q').value.trim()}”`);
+  if (cats) bits.push(`${cats} categor${cats === 1 ? 'y' : 'ies'}`);
+  if (state.polygon) bits.push('drawn area');
+  $('filter-summary').textContent = bits.length ? '· ' + bits.join(' · ') : '';
+}
+$('filters').addEventListener('toggle', renderFilterSummary);
 
 loadMeta().then(refresh);
 </script>
