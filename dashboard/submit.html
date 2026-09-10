@@ -139,6 +139,10 @@ async function pick(code) {
   $('svc-desc').innerHTML = `${esc(state.svc.description||'')}${state.svc.departments?.length ? ` <br><b>Handled by:</b> ${esc(state.svc.departments.map(d=>d.name).join(', '))}` : ''}`;
   $('banners').innerHTML = (state.svc.banners||[]).map(b => `<div class="box info">${esc(b)}</div>`).join('');
   ['details','where','check'].forEach(id => $(id).hidden = false);
+  // The map is built at page load, while this step is still hidden and its
+  // container has no size, so Leaflet measures zero and paints one column of
+  // tiles. It has to re-measure the moment the step becomes visible.
+  remeasureMap();
   renderQuestions(); checkDupes(); renderResult();
   $('details').scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -205,6 +209,23 @@ function renderProgress() {
 const map = L.map('map').setView([38.815, -77.09], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:19 }).addTo(map);
 let pin = null;
+
+// Leaflet measures its container once. Anything that changes the layout
+// afterwards — revealing the step, resizing the window, rotating a phone —
+// leaves the map half-painted until it is told to look again.
+function remeasureMap() {
+  if ($('where').hidden) return;
+  // Synchronously, not via requestAnimationFrame: rAF is suspended while the
+  // page is not being painted (background tab, collapsed window), so the map
+  // would stay 0x0 until something else woke it. invalidateSize reads
+  // offsetWidth, which forces the layout it needs, so it is correct here.
+  map.invalidateSize();
+}
+let mapResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(mapResizeTimer);
+  mapResizeTimer = setTimeout(remeasureMap, 150);
+});
 map.on('click', e => { state.lat = +e.latlng.lat.toFixed(6); state.long = +e.latlng.lng.toFixed(6);
   pin ? pin.setLatLng(e.latlng) : (pin = L.marker(e.latlng).addTo(map));
   $('loc-label').textContent = `location set: ${state.lat}, ${state.long}`; checkDupes(); renderResult(); });
