@@ -223,8 +223,22 @@ own Cloud Run job.
 
 It cannot be told what to file on the command line either — per-execution
 `--args` overrides fail in this project (see the note at the top). It takes its
-work from the database instead: the gated form queues a prepared request, a
-person approves it, and the worker drains approved rows one at a time.
+work from the database instead: the form releases a prepared request when the
+tester presses send, and the worker drains released rows.
+
+> **Two images, and deploying one does not deploy the other.** Changing
+> `submit_worker.py`, `submit_browser.py` or anything else the worker imports
+> needs this build *and* a `gcloud run jobs update`; the dashboard build leaves
+> the job running whatever it ran before. This is easy to miss because both
+> images are built from the same repository and the job keeps working — with
+> the old code. The way to tell is the log: run the job and check that what it
+> prints matches the source you think is deployed.
+>
+> ```bash
+> gcloud builds submit --config cloudbuild.submit.yaml .
+> gcloud run jobs update alex311-submit --region=$REGION \
+>     --image=$REGION-docker.pkg.dev/$PROJECT/cloud-run-source-deploy/alex311-submit:latest
+> ```
 
 ```bash
 gcloud builds submit --config cloudbuild.submit.yaml .
