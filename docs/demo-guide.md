@@ -65,7 +65,9 @@ Two ways in, on purpose:
 
 ## 1. The public dashboard — the part that already works
 
-Live: **https://alex311-dashboard-650621702399.us-east4.run.app**
+Live: **https://alex311visibility.me**
+
+(The Cloud Run URL still answers, but the mapped domain is the one to put in front of anyone.)
 
 This is a read-only mirror of the City's own public data. It never calls the
 city portal in response to a visitor, so public traffic cannot generate load on
