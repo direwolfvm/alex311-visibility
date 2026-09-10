@@ -463,7 +463,9 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
             adb.record_moderation(conn, attempt_id=attempt_id, actor=actor,
                                   action="approve", reason="approved for filing")
         return {"attempt_id": attempt_id, "submit_state": "approved",
-                "message": "Approved. The submission job will file it on its next run."}
+                "message": "Approved. This is the live action: the submission job will "
+                           "file it with the City on its next run, and it cannot be "
+                           "recalled afterwards."}
 
     @router.get("/api/review-queue")
     def queue(limit: int = 50):

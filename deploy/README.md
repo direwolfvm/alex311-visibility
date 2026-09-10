@@ -251,11 +251,16 @@ gcloud run jobs update alex311-submit --region=$REGION \
 The other key is per request: the worker only claims rows a person has moved to
 `approved`, and it records who did. Disarm by reversing that command.
 
+Once the job is armed, **approving is the moment a real request is created** —
+not a formality on the way to one. Whoever reviews the queue should understand
+that the City dispatches staff on what they release, and that nothing recalls it
+afterwards.
+
 | State | Means |
 |---|---|
 | `prepared` | evaluated by the anti-abuse policy, nothing more |
 | `queued` | a resident asked for it to be filed |
-| `approved` | a person said yes — the per-request half of the live gate |
+| `approved` | **the live action.** A person released it; the next armed run files it with the City and it cannot be recalled |
 | `filing` | a worker has claimed it; `SKIP LOCKED` stops a second worker taking it |
 | `filed` | the City accepted it; `city_case_number` holds their number |
 | `failed` | three tries did not get it filed; `submit_error` says why |
@@ -267,6 +272,20 @@ real traffic justifies it; until then run it by hand:
 ```bash
 gcloud run jobs execute alex311-submit --region=$REGION --wait
 ```
+
+> **Once armed, executing this job is a live-fire action.** It is not like the
+> other jobs: running `alex311-drift` or `alex311-health` to check that a new
+> image works is free, and doing the same to `alex311-submit` files whatever is
+> sitting in `approved`. Check before you run it, and leave it out of any
+> "do the jobs still work" sweep after a deploy:
+>
+> ```bash
+> gcloud run jobs describe alex311-submit --region=$REGION --format=json \
+>   | grep -c ALEX311_ALLOW_LIVE_SUBMIT      # 0 = rehearsal, 1 = it will file
+> ```
+>
+> The empty queue is the only thing that makes an armed run harmless, and an
+> empty queue is not something to rely on.
 
 ## 8. Alerting
 
