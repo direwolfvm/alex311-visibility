@@ -36,6 +36,12 @@
          background:var(--badbg); border:1px solid #fecaca; color:var(--bad); }
   .foot { margin-top:20px; padding-top:16px; border-top:1px solid var(--border);
           color:var(--muted); font-size:12px; }
+  .explain { border:1px solid var(--border); background:#f8fafc; border-radius:8px;
+             padding:12px 14px; margin:0 0 18px; }
+  .explain p { margin:0 0 8px; font-size:13px; line-height:1.5; color:var(--muted); }
+  .explain p:last-child { margin-bottom:0; }
+  .explain b { color:var(--ink); }
+  .card { max-width:440px; }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 </style>
 </head>
@@ -46,8 +52,20 @@
     <h1>Alex311 prototype</h1>
     <span class="beta">BETA</span>
   </div>
-  <p class="sub">Sign in to reach the submission prototype. Not an official City of
-    Alexandria service.</p>
+  <p class="sub">A test feature, open to a small group while it is being evaluated.</p>
+
+  <div class="explain">
+    <p><b>What this is.</b> An experiment in making the City's own request form easier to
+      use: every question on one page, the City's rules explained next to the answer that
+      triggers them, and a warning when the issue you are reporting has already been
+      reported nearby.</p>
+    <p><b>Why it needs a sign-in.</b> It can send real requests to the City, which
+      dispatches real staff. Access is limited while that is being evaluated with them.</p>
+    <p><b>What it is not.</b> Not an official City of Alexandria service, and not
+      affiliated with or endorsed by the City. The official portal is always available at
+      <a href="https://alex311.alexandriava.gov/customer/s/" target="_blank"
+         rel="noopener">alex311.alexandriava.gov</a>, and nothing here is required to use it.</p>
+  </div>
 
   <form id="form" method="post" action="/submit/login">
     <label for="email">Email</label>
@@ -59,8 +77,8 @@
 
   <div class="box" id="error" hidden role="alert"></div>
 
-  <p class="foot">Access is limited while the authorization question with the City is
-    open. Ask an administrator for an account.</p>
+  <p class="foot">No account? Ask whoever invited you to the test. There is no public
+    sign-up. <a href="/">Back to the public dashboard</a></p>
 </main>
 
 <script>

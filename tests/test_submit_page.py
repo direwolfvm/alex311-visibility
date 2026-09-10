@@ -202,3 +202,27 @@ def test_the_page_says_what_approval_actually_causes():
     assert "cannot be taken back" in PAGE
     assert "point of no return" in PAGE
     assert "reviewer approves each one first" not in PAGE
+
+
+LOGIN = (Path(__file__).resolve().parents[1] / "dashboard/login.html").read_text()
+
+
+def test_the_login_page_says_this_is_a_test():
+    """Anyone can reach it from the public dashboard now, so it has to explain
+    itself to someone who arrived by curiosity."""
+    assert "test feature" in LOGIN
+    assert "What this is" in LOGIN and "Why it needs a sign-in" in LOGIN
+
+
+def test_the_login_page_disclaims_the_City_and_points_at_the_real_portal():
+    assert "Not an official City of Alexandria service" in LOGIN
+    assert "alex311.alexandriava.gov" in LOGIN
+    assert "nothing here is required to use it" in LOGIN
+
+
+def test_the_login_page_does_not_promise_public_sign_up():
+    assert "no public" in LOGIN.lower()
+
+
+def test_you_can_get_back_to_the_dashboard_from_both_pages():
+    assert 'href="/"' in LOGIN and 'href="/"' in PAGE

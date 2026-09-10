@@ -37,6 +37,12 @@
   nav.tabs button:hover { color: var(--ink); }
   nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent);
                            font-weight: 600; }
+  nav.tabs .tab-link { display: flex; align-items: center; gap: 6px; text-decoration: none;
+                       font-size: 14px; padding: 6px 16px 8px; color: var(--muted);
+                       border-bottom: 2px solid transparent; }
+  nav.tabs .tab-link:hover { color: var(--accent); border-bottom-color: var(--border); }
+  .tab-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+             background: #dbeafe; color: var(--accent); padding: 1px 6px; border-radius: 99px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
                gap: 14px; }
   .stat-card { background: var(--panel); border: 1px solid var(--border);
@@ -180,7 +186,11 @@
     header h1 { font-size: 16px; }
     header .sub { flex-basis: 100%; font-size: 11px; }
     nav.tabs { margin-left: 0; width: 100%; order: 3; margin-top: 2px; }
-    nav.tabs button { flex: 1; padding: 8px 4px; }
+    nav.tabs button, nav.tabs .tab-link { flex: 1; padding: 8px 4px; justify-content: center;
+                                          text-align: center; }
+    /* the badge beside a two-line label reads as clutter at this width; the
+       login page it leads to says BETA plainly enough */
+    .tab-tag { display: none; }
     .stats { margin-left: 0; order: 2; width: 100%; gap: 4px 12px; flex-wrap: wrap; font-size: 12px; }
     .stats b { font-size: 14px; }
     #stat-ingest { flex-basis: 100%; }
@@ -231,6 +241,11 @@
       <button role="tab" id="tab-btn-analytics" data-tab="analytics"
               aria-selected="false" aria-controls="tab-analytics" tabindex="-1">Analytics</button>
     </div>
+    <!-- A link, not a tab: it goes to another page rather than swapping a panel
+         here, and calling it a tab would promise keyboard behaviour it cannot
+         honour. It sits outside the tablist for the same reason. -->
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
   </nav>
   <div class="stats">
     <span>Total <b id="stat-total">–</b></span>
