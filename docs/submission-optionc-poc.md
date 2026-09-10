@@ -29,7 +29,7 @@ is a clean guest Aura call, but submission is a multi-step UI flow:
    - **Step 1 – File Upload** (optional attachments)
    - **Step 2 – Location** — an **Esri GIS map**; Continue stays *disabled*
      (`title="Please select location"`) until a point/parcel is selected
-   - **Steps 3–5** – details/description, contact (optional for guests), review → **Submit**
+   - **Steps 3–5** – details/description, contact (**required on some services**, optional on others — see the research doc §10), review → **Submit**
 3. **No login is required** for this flow (the `create-service-request` deep-link
    *does* force login, but the tile-driven guest flow does not).
 

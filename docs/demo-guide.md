@@ -243,9 +243,11 @@ gets the same submitter. Plus-tags and (for providers that ignore them) dots are
 folded, because otherwise every per-submitter limit is one keystroke from being
 defeated.
 
-**The point to make:** the City's own channel has no identity lever at all — the
-contact step is optional. Ours requires a verified mailbox, which is *more*
-friction than the official flow, deliberately. It is the only thing that makes
+**The point to make:** the City's own channel had no identity lever at all when
+the data behind this was collected — the contact step was optional. As of
+2026-09-10 that has changed for some services: *Missed Collection* now requires
+name, email and phone, while *Fire Department Comments* does not. Ours requires a
+verified mailbox, which is *more* friction than the official flow, deliberately. It is the only thing that makes
 per-submitter limits and accountability real, and residents who will not
 identify can still be sent to the official portal.
 
@@ -309,6 +311,49 @@ The technical questions are answered. These are not:
 - **The demo emails nothing.** Verification codes are written to the log by the
   console sender; a real deployment needs an SMTP provider.
 - **No reviewer interface.** The review queue is an API, not a screen.
+- **Contact requirements are not in the registry.** They are per service and
+  the probe never reaches that step, so the harness discovers them at run time.
 - **Address lookup only covers addresses with 311 history** — 16,103 of them.
   Anywhere else needs a map tap or the device's location.
 - **Contact and review steps of the City's wizard were not re-walked.**
+
+---
+
+## 9. Filing a real request (when you decide to)
+
+Live submission is enabled but stays shut behind two gates that must both be
+open in the same run:
+
+```bash
+# 1. rehearse. Same code path, stops with Submit in view, sends nothing.
+uv run python -m alex311.submit_browser \
+  --service TESMISCO --address "2307 Russell Rd" \
+  --description "what is actually wrong" \
+  --answers '{"01PL-MISSEDTYP": "Recycling", "01DT-MISSEDTIM": {"date": "2026-09-08", "time": "18:45"}}' \
+  --first-name "..." --last-name "..." --email "..." --phone "..." \
+  --screenshot /tmp/review.png
+```
+
+Read `/tmp/review.png`. It is the City's own review step, and what it shows is
+exactly what will be filed. Then, and only then:
+
+```bash
+# 2. file it. Both gates, one command, one request.
+ALEX311_ALLOW_LIVE_SUBMIT=1 uv run python -m alex311.submit_browser ... --live
+```
+
+Things worth knowing before you do:
+
+- **Some services require contact details.** *Missed Collection* demands name,
+  email and phone; the run stops with `needs_contact` rather than inventing any.
+  Those details go to the City with the request.
+- **The address must be one the City services.** It is matched against the
+  City's own gazetteer on the location step; an unrecognised one stops the run
+  with `address_not_serviceable` rather than filing at the wrong place.
+- **A live run will not invent an answer.** Anything the wizard asks that you
+  did not supply stops the run. A dry run is allowed to make something up so the
+  walk can continue, which is why the rehearsal is not proof that your answers
+  are complete — check the review screenshot.
+- **It is recorded.** With `DATABASE_URL` set, the attempt is written to
+  `submission_attempts` before the click and the case number written back after.
+- **One request per run.** There is no batch mode and there should not be.
