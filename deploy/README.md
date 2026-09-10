@@ -16,6 +16,7 @@ Live in project **permitting-ai-helper** (us-east4):
 | Media bucket | `gs://permitting-ai-helper-alex311-media` (prefix `alex311-media/`) |
 | Ingest schedule | 03:20 / 09:20 / 15:20 / 21:20 America/New_York (`alex311-ingest-schedule`) |
 | Health schedule | hourly at :45 (`alex311-health-schedule`) |
+| Drift schedule | Mondays 06:30 America/New_York (`alex311-drift-schedule`, §6 — not yet created) |
 | Alerting | policy "Alex311 job failures" → email channel (jke314@outlook.com) |
 
 Redeploy after a code change:
@@ -158,10 +159,52 @@ gcloud run deploy alex311-dashboard --image=$IMAGE --region=$REGION \
 (The dashboard only reads Postgres/GCS — it never calls the city portal, so
 public traffic can't generate load on the municipal site.)
 
-## 6. Alerting
+## 6. Registry drift check (weekly)
 
-Alert on failed executions of either job (this catches ingest breakage AND the
-health check's deliberate non-zero exits):
+`docs/data/form-registry.json` describes a form the City controls. This job asks
+whether that description is still true, using the two sources that need no
+browser — the live catalog and the answers residents actually submitted:
+
+```bash
+gcloud run jobs create alex311-drift --image=$IMAGE --region=$REGION \
+    --set-cloudsql-instances=$SQL_INSTANCE \
+    --set-env-vars="DATABASE_URL=$DB_URL" \
+    --task-timeout=600 --max-retries=0 \
+    --command=python --args="-m,alex311.registry_drift,--days,30,--record"
+
+gcloud scheduler jobs create http alex311-drift-schedule \
+    --location=$REGION --schedule="30 6 * * 1" --time-zone="America/New_York" \
+    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-drift:run" \
+    --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
+```
+
+It exits non-zero — so the same "job failed" alert below covers it — when a
+service is added, removed or renamed, when a question code, wording or datatype
+changes, when an answer value appears that the registry does not list, or when
+an answer the registry marks a **hard stop** shows up in a real web submission
+(meaning the City relaxed that rule). Agent- and phone-entered records are
+excluded throughout: they bypass the wizard's validation and prove nothing about
+the web form. `--min-rows` (default 5) keeps a thinly used service from tripping
+the alarm on one odd record. `--record` writes the outcome to `ingest_runs`
+(`kind='drift'`) alongside ingest and health.
+
+The third source, the wizard walk itself, needs Playwright and deliberately
+does **not** ship in this image. Run it from a workstation instead:
+
+```bash
+scripts/weekly_drift.sh          # both halves; --no-crawl for the browser-free one
+```
+
+That re-walks all 111 services read-only (about an hour, sequential and polite,
+it never presses Submit) and diffs the result against the committed rules with
+`spike/rules_diff.py`, which reports new or reworded questions, changed widgets,
+added or removed options, and any rule that flipped. When drift is real, adopt
+it by rebuilding the registry and committing the regenerated data.
+
+## 7. Alerting
+
+Alert on failed executions of any job (this catches ingest breakage, the health
+check's deliberate non-zero exits, and the weekly registry drift check):
 
 ```bash
 gcloud alpha monitoring policies create --display-name="alex311 job failures" \

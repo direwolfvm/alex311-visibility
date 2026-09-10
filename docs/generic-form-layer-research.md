@@ -91,8 +91,8 @@ Optional on top: the CopilotKit helper assessed earlier (conversational intake �
 
 ## 7. Recommended next steps
 
-1. ~~**Rule discovery spike**~~ — **done for the top 15** (§8); extend to the remaining 96 services with the same probe.
-2. **Schema registry + renderer**: merge catalog + mined schema + rules; build the single-page form on the existing gated `/submit` for those 15 categories; keep it behind the login.
+1. ~~**Rule discovery spike**~~ — **done for all 111 services** (§8).
+2. ~~**Schema registry + renderer**~~ — **done** (§8): registry + single-page form on the gated `/submit`, with drift detection to keep it current (§9).
 3. **Abuse layer**: accounts, limits, per-address caps, review queue, audit log — all testable against our historical data before any live traffic.
 4. **Harness**: land PR #14, add the iframe map click and schema-driven fills, run it as a Cloud Run Job, dry-run only.
 5. **One supervised live submission** per category family, with the City informed, before opening the gate any wider.
@@ -101,9 +101,9 @@ Optional on top: the CopilotKit helper assessed earlier (conversational intake �
 
 Step 1 of the plan is done for **all 111 catalog services** (`spike/wizard_rules.py`, read-only — it never presses Submit). For every list question along each service's path it selected each option *in place* and recorded the effect. Full per-option detail: **`docs/wizard-rules.md`**; machine-readable: `docs/data/wizard-rules.json`; merged with the catalog and the mined data into the form registry `docs/data/form-registry.json` (`spike/build_registry.py`), which drives the gated single-page form at `/submit`.
 
-**Coverage:** 111/111 services walked to an enabled Continue, 0 errors, 4 fresh-page restarts. 198 rendered questions, 666 options probed. Widget mix: radio ×119, text ×34, select ×28, checkbox ×8, composite (date/time) ×6, custom picklist ×3. 21 services ask no questions at all (location + description only).
+**Coverage:** 111/111 services walked to an enabled Continue, 0 errors. 198 rendered questions, 666 options probed. Widget mix: radio ×119, text ×34, select ×28, checkbox ×8, composite (date/time) ×6, custom picklist ×3. 21 services ask no questions at all (location + description only).
 
-**Rules found:** **38 hard stops** (answer rejected after a Validation Alert), **42 advisories** (alert shown, answer stands), **2 service-type suggestions** (a "New Service Type Suggestion" modal proposing another category — e.g. *Median Maintenance* "Hardscape" → *Alley or Street*), **85 inline info messages**, and **skip-logic on 47 questions across 32 services** — none of which is visible in the submitted data.
+**Rules found:** **39 hard stops** (answer rejected after a Validation Alert), **42 advisories** (alert shown, answer stands), **2 service-type suggestions** (a "New Service Type Suggestion" modal proposing another category — e.g. *Median Maintenance* "Hardscape" → *Alley or Street*), **85 inline info messages**, and **skip-logic on 49 questions across 32 services** — none of which is visible in the submitted data.
 
 Three patterns matter for the form:
 
@@ -113,9 +113,45 @@ Three patterns matter for the form:
 
 **Cross-check with the data:** every rendered option the mined vocabularies had never seen turned out to be a hard stop (e.g. *Tree Inspection* "Private"), confirming that the data reflects only what the web wizard lets through. Conversely, values that appear in the data but are never rendered on the web (phone/agent-channel values) are kept in the registry as *not accepted online*.
 
+**A truncation bug worth recording.** The probe's message scraper capped alert
+text at 240 characters to keep whole wizard panels out of the results. Thirteen
+rules across eight services came back with no explanation as a result — the leaf
+collection message alone is 244 characters — so the form told residents an answer
+was "not accepted online" and could not say why. Alert bodies are now read from
+their own node (`.pop-up-message`) with a 900-character cap, which recovered ten
+of the thirteen, including the *Sidewalk* Q1 hard stop this section previously
+flagged for a manual look. A re-probe with a four-second wait confirmed the
+remaining three (all on *Trees*) are blank on the City's side.
+
 **Method notes:** Incap311 renders questions with six widget kinds — native radios, native `<select>`, `div[role=checkbox]`, date+time+AM/PM composites, free text, and a custom picklist (`c-web-que-picklist-inline-multi`, "Select all applicable" / "Select an option") whose options are `role=checkbox` rows inside its shadow root, visible only while open — all inside nested shadow roots, so the probe deep-walks every shadow root, finds "QUESTION *n*" **text nodes**, and attributes controls to the nearest header above by screen position. Hazards found on the way: pressing **Escape closes the whole wizard**, not just an open list; the "New Service Type Suggestion" modal's *Keep Current* control is an `<a>`, not a button; some hard stops alter the wizard flow so no further question reveals — the probe recovers by reopening the category on a **fresh page** and replaying the safe path; 31 services belong to no catalog group and are listed under the home page's *other* panel; group panels render lazily. Cost: ~111 wizard walks plus restarts, sequential with pauses — polite enough to repeat weekly for drift detection.
 
-**Limits:** first-order branching only (each option's *immediate* reveal); one hard stop (*Sidewalk* Q1 "Yes") returned no alert text and needs a manual look; free-text format validation is only exercised with one plausible value per field type; contact/review steps were not re-walked; **no submission has been made** — the form ends in a review + copy + link to the official portal, and "no Option B" from the City is still not authorization for scripted submission.
+**Limits:** first-order branching only (each option's *immediate* reveal); three *Trees* hard stops are genuinely blank on the City's side (verified by re-probing with a 4-second wait — the modal shows the heading and nothing else), so the form says the answer is rejected without a stated reason; free-text format validation is only exercised with one plausible value per field type; contact/review steps were not re-walked; **no submission has been made** — the form ends in a review + copy + link to the official portal, and "no Option B" from the City is still not authorization for scripted submission.
+
+## 9. Keeping the registry honest (drift detection)
+
+The registry describes a form the City controls, so it starts going stale the
+day it is built. Three checks now cover that, split by what they need:
+
+| Check | Source | Runs |
+|---|---|---|
+| services added, removed, renamed | live `getServiceTypes` | weekly Cloud Run job |
+| question codes, wording, datatypes; unknown answer values; a hard stop that real web submissions now carry | ingested `raw_detail->'attributes'` | same job |
+| rendered questions, widgets, per-option rules | a fresh read-only wizard walk | `scripts/weekly_drift.sh` on a workstation |
+
+The first two are browser-free (`alex311.registry_drift`), so they ship in the
+deployed image and exit non-zero on drift, reusing the existing "job failed"
+alert. The walk needs Playwright, which deliberately stays out of the web image,
+so it runs from a workstation and is compared with `spike/rules_diff.py`.
+
+Two design points worth keeping. **Channel matters:** phone agents bypass the
+wizard's validation, so agent- and phone-entered records are excluded from every
+data check — otherwise an agent-entered answer would look like the City relaxing
+a rule. **Thin data is not drift:** a service needs at least `--min-rows`
+(default 5) recent web records before its answers are judged.
+
+The rule the data check is most useful for is the one we cannot see any other
+way: an option the wizard rejects today appearing in tomorrow's submissions means
+the City changed its mind, and the form should stop telling residents no.
 
 ## Artifacts
 
@@ -129,4 +165,6 @@ Three patterns matter for the form:
 | `spike/wizard_rules.py` · `spike/wizard_rules_report.py` | rule-discovery probe and its report renderer |
 | `docs/wizard-rules.md` · `docs/data/wizard-rules.json` | per-option rules for all 111 catalog services |
 | `spike/build_registry.py` · `docs/data/form-registry.json` | merged form registry (catalog + mined data + wizard rules) that drives `/submit` |
+| `src/alex311/registry_drift.py` | browser-free drift check (live catalog + submitted answers); weekly Cloud Run job |
+| `spike/rules_diff.py` · `scripts/weekly_drift.sh` | crawl-vs-committed rule diff and the weekly runner |
 | `dashboard/registry.py` · `dashboard/submit.py` · `dashboard/submit.html` | registry loader/validator and the gated single-page form |

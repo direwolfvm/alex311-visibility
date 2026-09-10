@@ -1,6 +1,6 @@
 # Wizard rules — discovered per category
 
-*Generated 2026-09-10 00:58 UTC by `spike/wizard_rules.py`, read-only (it never presses Submit). Each option of each list question was selected in place and its effect recorded. Skipped because not in the current catalog: Snow and Ice Removal Sidewalk, Snow Report.*
+*Generated 2026-09-10 13:24 UTC by `spike/wizard_rules.py`, read-only (it never presses Submit). Each option of each list question was selected in place and its effect recorded. Skipped because not in the current catalog: Snow and Ice Removal Sidewalk, Snow Report.*
 
 **Hard stop** — a Validation Alert appeared and the answer was rejected after OK. **Advisory** — an alert appeared but the answer stood. **Info** — an inline message without a modal. **Reveals** — which question numbers became visible on choosing that option; options that reveal different sets are skip-logic the form must replicate.
 
@@ -10,7 +10,6 @@
 | Trash and Recycling Containers | `TESCONTN` | 3 | 0 | 4 | 1 | yes | True |
 | Metal or Appliance Collection | `TESMETAL` | 1 | 0 | 0 | 0 | no | True |
 | Traffic Light/Signal (Existing) | `TESTSGNLM` | 3 | 0 | 2 | 1 | yes | True |
-| Tree Inspection Request | `RPCATREINSP` | 5 | 3 | 1 | 0 | yes | True |
 | Bulk Yard Waste Pickup | `TESYRDWS` | 4 | 4 | 0 | 0 | yes | True |
 | Parking Comments, Complaints or Inquiries | `ALXPARK` | 2 | 3 | 3 | 0 | yes | True |
 | Potholes | `TESPOTHO` | 2 | 0 | 0 | 0 | no | True |
@@ -20,17 +19,15 @@
 | Sewer Infrastructure Issues | `TESSEWER` | 2 | 1 | 3 | 3 | yes | True |
 | Cleaning and Sweeping (Alley and Street) | `TESCLNSW` | 3 | 0 | 0 | 0 | no | True |
 | Streetlights (Existing) | `TESSTLGHT` | 3 | 0 | 0 | 0 | no | True |
-| Sidewalk | `TESSIDEWALK` | 3 | 2 | 0 | 0 | no | True |
 | Trash and Recycling Public Space Containers | `ALXSTCAN` | 3 | 0 | 0 | 0 | no | True |
 | Tall Grass and Weeds Complaint | `CODGRASS` | 1 | 0 | 0 | 0 | no | True |
 | Litter and Illegal Dumping | `ALXLITHW` | 3 | 1 | 0 | 0 | no | True |
 | Alley or Street | `TESREPAR` | 2 | 0 | 0 | 0 | no | True |
-| Tree Storm Damage | `RPCATRESDMG` | 3 | 3 | 0 | 0 | yes | True |
 | Rodent | `CODRODEN` | 2 | 0 | 0 | 0 | no | True |
 | Median Maintenance | `RPCROW` | 2 | 0 | 0 | 0 | no | True |
 | Scooters and Dockless Mobility | `ALXSCOO` | 4 | 0 | 2 | 0 | yes | True |
 | Graffiti Removal | `ALXGRAFT` | 4 | 0 | 0 | 0 | no | True |
-| Missed Leaf Collection | `TESLEAF` | 4 | 1 | 0 | 0 | no | True |
+| Street Pavement Markings | `TESPVMRK` | 1 | 0 | 0 | 0 | no | True |
 | Hydrant Maintenance | `TESHYDRA` | 1 | 0 | 0 | 0 | no | True |
 | Bus Stop or Bus Shelter Concerns | `TESBUSST` | 2 | 0 | 0 | 0 | no | True |
 | Report Illegal Construction | `CODCONST` | 2 | 0 | 0 | 0 | no | True |
@@ -39,6 +36,7 @@
 | Bike Rack or Abandoned Bike Concerns | `TESBIKE` | 4 | 0 | 2 | 0 | yes | True |
 | Parking Meters | `TESPKMTR` | 2 | 0 | 1 | 0 | no | True |
 | Abandoned or Inoperable Vehicle | `CODABAND` | 5 | 1 | 0 | 0 | no | True |
+| Capital Bikeshare | `ALXCABI` | 3 | 0 | 2 | 0 | yes | True |
 | Traffic Light/Signal (New) | `TESTSGNLN` | 1 | 0 | 3 | 0 | yes | True |
 | Report Water Quality Issues | `TESWATER` | 6 | 5 | 0 | 0 | yes | True |
 | Food Truck Concerns | `PZFDTRUK` | 1 | 0 | 0 | 0 | no | True |
@@ -46,7 +44,6 @@
 | Traffic Signals and Street Lights | `TESTSGNL` | 3 | 0 | 0 | 1 | yes | True |
 | Recycling Drop-Off Centers | `TESRECYCTRS` | 2 | 0 | 0 | 0 | no | True |
 | Farmers' Market Vendor Inquiries and Complaints | `DGSVENDO` | 2 | 1 | 0 | 0 | no | True |
-| Trees | `RPCATREE` | 4 | 4 | 0 | 0 | yes | True |
 | Alexandria Fire Department Comments or Inquiries | `AFDGENER` | 0 | 0 | 0 | 0 | no | True |
 | Alexandria Fire Department Community Outreach | `AFDCOMOU` | 1 | 0 | 0 | 0 | no | True |
 | Ambulance Payments and Billing | `AFDAPABI` | 1 | 0 | 0 | 0 | no | True |
@@ -62,13 +59,14 @@
 | Taxi Cab Comments, Complaints or Inquiries | `APDTAXI` | 0 | 0 | 0 | 0 | no | True |
 | City Attorney's Office Inquiries | `ALXCTYAT` | 1 | 2 | 0 | 0 | no | True |
 | DASH Bus Service | `ATCDASH` | 0 | 0 | 0 | 0 | no | True |
+| Mold/Moisture | `CODMOLD` | 3 | 1 | 0 | 0 | no | True |
 | No Air, No Heat Violation | `CODNHNA` | 1 | 0 | 0 | 0 | yes | True |
 | Plan Review, Permit Processing and Other Code Enforcement Inquiries | `CODGENER` | 4 | 0 | 0 | 0 | no | True |
+| Report Overcrowding | `CODOVERC` | 1 | 0 | 0 | 0 | no | True |
 | Alexandria Circuit Court Inquires | `ALXCRCRT` | 0 | 0 | 0 | 0 | no | True |
 | Clerk of Council | `ALXCLERK` | 0 | 0 | 0 | 0 | no | True |
 | Inquiries for the Legislative Director | `ALXLEGIS` | 1 | 0 | 0 | 0 | no | True |
 | Inquiries for the City Manager | `ALXCMO` | 1 | 0 | 0 | 0 | no | True |
-| Contact Mayor, Vice Mayor and/or City Council | `CTYCNCL` | 3 | 0 | 1 | 0 | no | True |
 | Community and Human Services Inquiries | `DCHGENER` | 1 | 0 | 0 | 0 | no | True |
 | 911/311 Service - Complaints, Compliments, Inquiries | `DECCGENER` | 1 | 0 | 1 | 0 | no | True |
 | Alex311 (Other) Comments, Complaints and Inquiries | `ALEX311` | 0 | 0 | 0 | 0 | no | True |
@@ -101,7 +99,6 @@
 | Human Rights Complaints and Inquiries | `OHRGENER` | 3 | 0 | 0 | 0 | no | True |
 | Management and Budget Inquiries | `OMBGENER` | 0 | 0 | 0 | 0 | no | True |
 | Planning and Zoning General Comments, Complaints, and Inquiries | `PZGENER` | 1 | 0 | 0 | 0 | no | True |
-| Short Term Rental Complaint or Permitting | `PZRENTL` | 1 | 0 | 1 | 0 | no | True |
 | Playground Maintenance | `RPCPLYGRNDM` | 3 | 0 | 0 | 0 | no | True |
 | Recreation Centers, Programs and Services | `RPCPROG` | 2 | 0 | 0 | 0 | no | True |
 | Recreation, Parks and Cultural Activities Comments, Complaints, or Inquiries | `RPCGENER` | 1 | 0 | 0 | 1 | no | True |
@@ -112,10 +109,13 @@
 | ROW Access & Construction Issues | `TESROW` | 0 | 0 | 0 | 0 | no | True |
 | Yard Waste Label | `TESYRDWSL` | 2 | 0 | 0 | 1 | yes | True |
 | Department of Health Inquiries | `VDHGENER` | 0 | 0 | 0 | 0 | no | True |
-| Street Pavement Markings | `TESPVMRK` | 1 | 0 | 0 | 0 | no | True |
-| Capital Bikeshare | `ALXCABI` | 3 | 0 | 2 | 0 | yes | True |
-| Mold/Moisture | `CODMOLD` | 3 | 1 | 0 | 0 | no | True |
-| Report Overcrowding | `CODOVERC` | 1 | 0 | 0 | 0 | no | True |
+| Tree Inspection Request | `RPCATREINSP` | 5 | 3 | 1 | 0 | yes | True |
+| Sidewalk | `TESSIDEWALK` | 3 | 2 | 0 | 0 | no | True |
+| Tree Storm Damage | `RPCATRESDMG` | 3 | 3 | 0 | 0 | yes | True |
+| Missed Leaf Collection | `TESLEAF` | 4 | 1 | 0 | 0 | no | True |
+| Trees | `RPCATREE` | 4 | 5 | 0 | 0 | yes | True |
+| Contact Mayor, Vice Mayor and/or City Council | `CTYCNCL` | 3 | 0 | 1 | 0 | no | True |
+| Short Term Rental Complaint or Permitting | `PZRENTL` | 1 | 0 | 1 | 0 | no | True |
 | Mobility, Access, and Traffic Safety | `ALXTRFCO` | 2 | 1 | 6 | 0 | no | True |
 
 ## Missed Collection (`TESMISCO`)
@@ -159,24 +159,6 @@ Banners: “Collection only occurs curbside, no alley collection. Please make su
    - Intersection Dark (Emergency): advisory; “Please contact (703) 746-4444 after hours.”
    - Flashing (Emergency): advisory; “Please contact (703) 746-4444 after hours.”
 3. **Approximately when was the problem observed?** *(required)* — checkbox; options: Morning, Afternoon, Evening, Overnight
-
-## Tree Inspection Request (`RPCATREINSP`)
-
-Banners: “If this is an immediate danger please call 911.” · “Please provide the details of your request in the Additional Information box below.”
-
-1. **Is the tree blocking the road?** *(required)* — `01PL-RPCTREERD` — radio; options: Yes, No
-   - Yes: **HARD STOP**; “Please call the Police non-emergency line at 703.746.4444 to report.”
-   - No: reveals → Q2
-2. **Are the tree roots damaging the sidewalk?** *(required)* — `01PL-RPCTREESIDE` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: Yes
-   - Yes: **HARD STOP**; “Please use suggested service type.”
-3. **Is the tree on public or private property?** *(required)* — `01PL-TREEPROPERTY` — radio; options: Private, Public
-   - ⚠ rendered but never present in the mined data: Private
-   - Private: **HARD STOP**
-   - Public: reveals → Q4
-4. **What is the nature of your request?** *(required)* — `01PL-RPCTREINSP` — radio; options: Tree Pruning, Tree Removal
-   - Tree Removal: advisory; “A City Arborist will have to inspect the site and determine the appropriate next steps”; reveals → Q5
-5. **Please describe why the service is needed.** *(required)* — text: Provide information here
 
 ## Bulk Yard Waste Pickup (`TESYRDWS`)
 
@@ -283,17 +265,6 @@ Banners: “Please provide the details of your request in the Additional Informa
 2. **What is the problem?** *(required)* — select; options: Light out, Stays on, Flickering, Wire Down, Pole Down, Shining too Bright, Other - Please add details in Additional Information box
 3. **Please provide any other identification found on the pole (if applicable).** — text: Provide information here
 
-## Sidewalk (`TESSIDEWALK`)
-
-Banners: “If this is a major hazard please call 703.746.4444 to report” · “Pictures are helpful for staff to properly locate your issue.” · “Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.”
-
-1. **Is this request for a sidewalk that does not currently exist?** *(required)* — `01PL-IFWANTNEW` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: Yes
-   - Yes: **HARD STOP**
-2. **What is the surface type?** — select; options: Asphalt, Brick, Concrete, Cobblestone, Gravel, Unknown
-3. **Is the damaged portion of the sidewalk part of a driveway apron?** *(required)* — `01PL-DRWAYAPRN` — radio; options: Yes, No, Unsure
-   - Yes: **HARD STOP**; “This is the responsibility of the homeowner or HOA. Please contact 311, 703.746.4311 or TES Permitting for more information TESPermits@alexandriava.gov”
-
 ## Trash and Recycling Public Space Containers (`ALXSTCAN`)
 
 Banners: “Please provide the details of your request in the Additional Information box below.”
@@ -324,22 +295,6 @@ Banners: “If this is a major hazard please call 703.746.4444 to report.” · 
 
 1. **Where is the issue located?** *(required)* — `01PL-WHRREPRLOC` — radio; options: Street, Alley
 2. **What is the surface type?** — select; options: Asphalt, Brick, Concrete, Cobblestone, Gravel, Unknown
-
-## Tree Storm Damage (`RPCATRESDMG`)
-
-Banners: “If this is an immediate danger please call 911.” · “Please provide the details of your request in the Additional Information box below.”
-
-1. **Is the tree blocking the road?** *(required)* — `01PL-RPCTREERD` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: Yes
-   - Yes: **HARD STOP**; “Please call the Police non-emergency line at 703.746.4444 to report.”
-   - No: reveals → Q2
-2. **Is the tree on public or private property?** *(required)* — `01PL-TREEPROPERTY` — radio; options: Private, Public
-   - ⚠ rendered but never present in the mined data: Private
-   - Private: **HARD STOP**
-   - Public: reveals → Q3
-3. **What is the nature of your request?** *(required)* — `01PL-RPCTRESDMG` — radio; options: Tree branches broken or hanging from tree, Tree has fallen over, Tree and/or branches are leaning on power lines
-   - ⚠ rendered but never present in the mined data: Tree and/or branches are leaning on power lines
-   - Tree and/or branches are leaning on power lines: **HARD STOP**; “Please call 911 to report this issue.”
 
 ## Rodent (`CODRODEN`)
 
@@ -376,19 +331,11 @@ Banners: “Please provide additional location information in the box below. Lan
 3. **Please provide additional location detail:** — `10SWP-GRAFADDLOC` — radio; options: Front, Rear, Side
 4. **Is structure public or private?** — `10SWP-GRAFPUBPVT` — radio; options: Private, Public, Do Not Know
 
-## Missed Leaf Collection (`TESLEAF`)
+## Street Pavement Markings (`TESPVMRK`)
 
-Banners: “For updates and more information about Leaf Collection please go to: www.alexandriava.gov/LeafCollection” · “Please provide the details of your request in the Additional Information box below.”
+Banners: “Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.”
 
-1. **Does the City of Alexandria pickup your trash?** *(required)* — `01PL-LEAFMISSER` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: No
-   - No: **HARD STOP**
-2. **When were your leaves set out?** *(required)* — composite: MM/DD/YYYY, 12:00, select
-3. **Are your leaves loose or bagged?** *(required)* — `01PL-LEAFMISTYP` — radio; options: Loose, Bagged
-4. **Where are your leaves placed?** *(required)* — `01PL-LEAFMISLOC` — radio; options: Curb, Alley
-   - Alley: probe error — TimeoutError: Locator.click: Timeout 30000ms exceeded.
-Call log:
-  - waiting for locator("input[type=radio][name=\"01PL-LEAFMISLOC\"][value=\"Alley\"]").f
+1. **What type of pavement marking pertains to your request?** *(required)* — dropdown; options: Crosswalk, Stop Bar, Lane Lines, Bike Lanes or Sharrows, Directional Arrows, Other
 
 ## Hydrant Maintenance (`TESHYDRA`)
 
@@ -465,6 +412,18 @@ Banners: “Please provide the details of your request in the Additional Informa
 4. **What is the vehicle model?** *(required)* — text: Provide information here
 5. **What is the vehicle color?** *(required)* — text: Provide information here
 
+## Capital Bikeshare (`ALXCABI`)
+
+Banners: “Please provide the details of your request in the Additional Information box below.”
+
+1. **What is the nature of your request?** *(required)* — `01PL-SCOOTERTYP` — radio; options: Suggest a Bikeshare Station Location, Report Improper Bike Parking or Lost Bike, General Inquiries
+   - Suggest a Bikeshare Station Location: advisory; “To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.”; reveals → Q2
+   - Report Improper Bike Parking or Lost Bike: reveals → Q2, Q3, Q4
+   - General Inquiries: advisory; “To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.”
+2. **How would you use this station?  Please select all options that apply.** *(required)* — dropdown; options: Get home, Get to work, Get to school/college, Recreation, Access transit, Run errands, Other: (Fill text box provided below)
+   - Other: (Fill text box provided below): reveals → Q3
+3. **Other: How would you use this station?** *(required)* — text: Provide information here
+
 ## Traffic Light/Signal (New) (`TESTSGNLN`)
 
 Banners: “Please describe in detail the new traffic signal needed in the Additional Information box below. Pictures are helpful for staff to properly address your concern.”
@@ -540,25 +499,6 @@ Banners: “Please provide the details of your request in the Additional Informa
 2. **Please select the Farmers' Market you are inquiring about:** *(required)* — `01PL-FARMERSMRK` — radio; options: Old Town Farmers Market, Old Town North Farmers' Market, Del Ray Farmers' Market, Four Mile Run Farmers' and Artisan Market, West End Farmers' Market
    - ⚠ rendered but never present in the mined data: Old Town North Farmers' Market, Del Ray Farmers' Market, Four Mile Run Farmers' and Artisan Market, West End Farmers' Market
    - Old Town North Farmers' Market: **HARD STOP**; “The City does not administer this Farmers' Market.”
-
-## Trees (`RPCATREE`)
-
-Banners: “If this is an immediate danger please call 911.” · “Please provide the details of your request in the Additional Information box below.”
-
-1. **Is the tree blocking the road?** *(required)* — `01PL-RPCTREERD` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: Yes
-   - Yes: **HARD STOP**; “Please call the Police non-emergency line at 703.746.4444 to report.”
-   - No: reveals → Q2
-2. **Are the tree roots damaging the sidewalk?** *(required)* — `01PL-RPCTREESIDE` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: Yes
-   - Yes: **HARD STOP**
-3. **Is the tree on public or private property?** *(required)* — `01PL-TREEPROPERTY` — radio; options: Private, Public
-   - ⚠ rendered but never present in the mined data: Private
-   - Private: **HARD STOP**
-   - Public: reveals → Q4
-4. **What is the nature of your request?** *(required)* — `01PL-RPCTREETYP` — radio; options: Tree Pruning, Tree Removal, Request New Planting, Brush Removal, Overgrown Sidewalk Vegetation
-   - ⚠ rendered but never present in the mined data: Request New Planting, Brush Removal, Overgrown Sidewalk Vegetation
-   - Brush Removal: **HARD STOP**
 
 ## Alexandria Fire Department Comments or Inquiries (`AFDGENER`)
 
@@ -651,6 +591,13 @@ Banners: “Please provide the details of your request in the Additional Informa
 Banners: “Please provide the details of your request in the Additional Information box below.”
 
 
+## Mold/Moisture (`CODMOLD`)
+
+1. **Have you already reported mold to your property manager?** *(required)* — `01PL-MOLDREPORTED` — radio; options: Yes, No
+   - No: **HARD STOP**; “If you have not reported mold yet, visit alexandriava.gov/Mold for information on how to file a complaint with your property manager/landlord.”
+2. **Is there a unit number associated with the address?** — text: Provide information here
+3. **Please describe the issue including where the mold is located, where you think it's coming from, and when you reported it to your property manager.** *(required)* — text: Please answer here
+
 ## No Air, No Heat Violation (`CODNHNA`)
 
 Banners: “Please provide the details of your request in the Additional Information box below.”
@@ -666,6 +613,12 @@ Banners: “Please provide the details of your request in the Additional Informa
 2. **Is this for an existing permit or active plan review?** *(required)* — `01PL-PLANREVIEWC` — radio; options: Yes, No
 3. **Please provide your permit number if available:** — text: Provide information here
 4. **Please provide the address associated with your permit below:** — text: Provide information here
+
+## Report Overcrowding (`CODOVERC`)
+
+Banners: “Please provide the details of your request in the Additional Information box below.”
+
+1. **What is the nature of this request?** *(required)* — dropdown; options: Single Family Home, Multi-Family Home, Apartment, Rooming House, Boarding House, Group Home, Airbnb, Not Sure
 
 ## Alexandria Circuit Court Inquires (`ALXCRCRT`)
 
@@ -688,15 +641,6 @@ Banners: “Please do not provide sensitive personal identifiable information th
 Banners: “Please do not provide sensitive personal identifiable information through this portal. A representative will follow up with you once your ticket is submitted.” · “Please provide the details of your request in the Additional Information box below.”
 
 1. **What is the nature of your request?** *(required)* — select; options: Question, Request for Action, Meeting or Event Invitation, Compliment, Complaint, Other
-
-## Contact Mayor, Vice Mayor and/or City Council (`CTYCNCL`)
-
-Banners: “Please provide the details of your request in the Additional Information box below.”
-
-1. **Which Council Member would you like to contact?** *(required)* — select; options: Mayor - Alyia Gaskins, Vice Mayor - Sarah Bagley, Councilman - Canek Aguirre, Councilman - John T. Chapman, Councilman - Abdel-Rahman Elnoubi, Councilwoman - Jacinta E. Greene, Councilwoman - Sandy Marks, All Members
-2. **What is the nature of your request?** *(required)* — `01PL-CNCLISSUE` — radio; options: Legislative or Policy Issues, Budget Request, Boards and Commissions Endorsement, Meeting or Event Invites, Other
-3. **Is your request related to the upcoming public hearing or Council meeting?** *(required)* — `01PL-CNCLHEAR` — radio; options: Yes, No
-   - Yes: advisory
 
 ## Community and Human Services Inquiries (`DCHGENER`)
 
@@ -939,13 +883,6 @@ Banners: “Please provide the details of your request in the Additional Informa
 
 1. **What is the nature of your request?** *(required)* — select; options: Development project, Historic preservation, Long range planning, Planning commission, Fences on private property, Outdoor Dining, Setbacks, Sheds and accessory structures, Signs - permit, Special Use Permits, Other
 
-## Short Term Rental Complaint or Permitting (`PZRENTL`)
-
-Banners: “For more information on short-term rental properties go to: Short-Term Residential Rentals” · “Please provide the details of your request in the Additional Information box below.”
-
-1. **Please select the nature of your request:** *(required)* — `01PL-PZRENTL` — radio; options: Submit complaint or inquiry for a short-term rental property, Obtain a permit for a short-term residential rental
-   - Obtain a permit for a short-term residential rental: advisory
-
 ## Playground Maintenance (`RPCPLYGRNDM`)
 
 Banners: “Please provide the details of your request in the Additional Information box below.”
@@ -1022,45 +959,111 @@ Banners: “Please provide the details of your request in the Additional Informa
 Banners: “ERT (ESTIMATED RESPONSE TIME) IS 2 BUSINESS DAYS.” · “SLA (SERVICE LEVEL AGREEMENT) IS 5 BUSINESS DAYS.” · “Please provide the details of your request in the Additional Information box below.”
 
 
-## Street Pavement Markings (`TESPVMRK`)
+## Tree Inspection Request (`RPCATREINSP`)
 
-Banners: “Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.”
+Banners: “If this is an immediate danger please call 911.” · “Please provide the details of your request in the Additional Information box below.”
 
-1. **What type of pavement marking pertains to your request?** *(required)* — dropdown; options: Crosswalk, Stop Bar, Lane Lines, Bike Lanes or Sharrows, Directional Arrows, Other
+1. **Is the tree blocking the road?** *(required)* — `01PL-RPCTREERD` — radio; options: Yes, No
+   - Yes: **HARD STOP**; “Please call the Police non-emergency line at 703.746.4444 to report.”
+   - No: reveals → Q2
+2. **Are the tree roots damaging the sidewalk?** *(required)* — `01PL-RPCTREESIDE` — radio; options: Yes, No
+   - ⚠ rendered but never present in the mined data: Yes
+   - Yes: **HARD STOP**; “Please use suggested service type.”
+   - No: reveals → Q3
+3. **Is the tree on public or private property?** *(required)* — `01PL-TREEPROPERTY` — radio; options: Private, Public
+   - ⚠ rendered but never present in the mined data: Private
+   - Private: **HARD STOP**; “The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'.”
+   - Public: reveals → Q4
+4. **What is the nature of your request?** *(required)* — `01PL-RPCTREINSP` — radio; options: Tree Pruning, Tree Removal
+   - Tree Removal: advisory; “A City Arborist will have to inspect the site and determine the appropriate next steps”; reveals → Q5
+5. **Please describe why the service is needed.** *(required)* — text: Provide information here
 
-## Capital Bikeshare (`ALXCABI`)
+## Sidewalk (`TESSIDEWALK`)
+
+Banners: “If this is a major hazard please call 703.746.4444 to report” · “Pictures are helpful for staff to properly locate your issue.” · “Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.”
+
+1. **Is this request for a sidewalk that does not currently exist?** *(required)* — `01PL-IFWANTNEW` — radio; options: Yes, No
+   - ⚠ rendered but never present in the mined data: Yes
+   - Yes: **HARD STOP**; “The City has an application process for requesting residential sidewalks that were not identified in the Transportation Master Plan as a priority. To learn more about this process and submit an application, visit our Neighborhood Sidewalk Program.”
+2. **What is the surface type?** — select; options: Asphalt, Brick, Concrete, Cobblestone, Gravel, Unknown
+3. **Is the damaged portion of the sidewalk part of a driveway apron?** *(required)* — `01PL-DRWAYAPRN` — radio; options: Yes, No, Unsure
+   - Yes: **HARD STOP**; “This is the responsibility of the homeowner or HOA. Please contact 311, 703.746.4311 or TES Permitting for more information TESPermits@alexandriava.gov”
+
+## Tree Storm Damage (`RPCATRESDMG`)
+
+Banners: “If this is an immediate danger please call 911.” · “Please provide the details of your request in the Additional Information box below.”
+
+1. **Is the tree blocking the road?** *(required)* — `01PL-RPCTREERD` — radio; options: Yes, No
+   - ⚠ rendered but never present in the mined data: Yes
+   - Yes: **HARD STOP**; “Please call the Police non-emergency line at 703.746.4444 to report.”
+   - No: reveals → Q2
+2. **Is the tree on public or private property?** *(required)* — `01PL-TREEPROPERTY` — radio; options: Private, Public
+   - ⚠ rendered but never present in the mined data: Private
+   - Private: **HARD STOP**; “The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'.”
+   - Public: reveals → Q3
+3. **What is the nature of your request?** *(required)* — `01PL-RPCTRESDMG` — radio; options: Tree branches broken or hanging from tree, Tree has fallen over, Tree and/or branches are leaning on power lines
+   - ⚠ rendered but never present in the mined data: Tree and/or branches are leaning on power lines
+   - Tree and/or branches are leaning on power lines: **HARD STOP**; “Please call 911 to report this issue.”
+
+## Missed Leaf Collection (`TESLEAF`)
+
+Banners: “For updates and more information about Leaf Collection please go to: www.alexandriava.gov/LeafCollection” · “Please provide the details of your request in the Additional Information box below.”
+
+1. **Does the City of Alexandria pickup your trash?** *(required)* — `01PL-LEAFMISSER` — radio; options: Yes, No
+   - ⚠ rendered but never present in the mined data: No
+   - No: **HARD STOP**; “Leaf collection services are only available to residents who currently receive City trash services. If you are a resident who receives trash services from the City, but are unable to submit a request based on your address, please contact 311 or 703.746.4311.”
+2. **When were your leaves set out?** *(required)* — composite: MM/DD/YYYY, 12:00, select
+3. **Are your leaves loose or bagged?** *(required)* — `01PL-LEAFMISTYP` — radio; options: Loose, Bagged
+4. **Where are your leaves placed?** *(required)* — `01PL-LEAFMISLOC` — radio; options: Curb, Alley
+   - Alley: probe error — TimeoutError: Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[type=radio][name=\"01PL-LEAFMISLOC\"][value=\"Alley\"]").f
+
+## Trees (`RPCATREE`)
+
+Banners: “If this is an immediate danger please call 911.” · “Please provide the details of your request in the Additional Information box below.”
+
+1. **Is the tree blocking the road?** *(required)* — `01PL-RPCTREERD` — radio; options: Yes, No
+   - ⚠ rendered but never present in the mined data: Yes
+   - Yes: **HARD STOP**; “Please call the Police non-emergency line at 703.746.4444 to report.”
+   - No: reveals → Q2
+2. **Are the tree roots damaging the sidewalk?** *(required)* — `01PL-RPCTREESIDE` — radio; options: Yes, No
+   - ⚠ rendered but never present in the mined data: Yes
+   - Yes: **HARD STOP**
+   - No: reveals → Q3
+3. **Is the tree on public or private property?** *(required)* — `01PL-TREEPROPERTY` — radio; options: Private, Public
+   - ⚠ rendered but never present in the mined data: Private
+   - Private: **HARD STOP**; “The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'.”
+   - Public: reveals → Q4
+4. **What is the nature of your request?** *(required)* — `01PL-RPCTREETYP` — radio; options: Tree Pruning, Tree Removal, Request New Planting, Brush Removal, Overgrown Sidewalk Vegetation
+   - ⚠ rendered but never present in the mined data: Request New Planting, Brush Removal, Overgrown Sidewalk Vegetation
+   - Brush Removal: **HARD STOP**
+   - Overgrown Sidewalk Vegetation: **HARD STOP**
+
+## Contact Mayor, Vice Mayor and/or City Council (`CTYCNCL`)
 
 Banners: “Please provide the details of your request in the Additional Information box below.”
 
-1. **What is the nature of your request?** *(required)* — `01PL-SCOOTERTYP` — radio; options: Suggest a Bikeshare Station Location, Report Improper Bike Parking or Lost Bike, General Inquiries
-   - Suggest a Bikeshare Station Location: advisory; “To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.”; reveals → Q2
-   - Report Improper Bike Parking or Lost Bike: reveals → Q2, Q3, Q4
-   - General Inquiries: advisory; “To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.”
-2. **How would you use this station?  Please select all options that apply.** *(required)* — dropdown; options: Get home, Get to work, Get to school/college, Recreation, Access transit, Run errands, Other: (Fill text box provided below)
-   - Other: (Fill text box provided below): reveals → Q3
-3. **Other: How would you use this station?** *(required)* — text: Provide information here
+1. **Which Council Member would you like to contact?** *(required)* — select; options: Mayor - Alyia Gaskins, Vice Mayor - Sarah Bagley, Councilman - Canek Aguirre, Councilman - John T. Chapman, Councilman - Abdel-Rahman Elnoubi, Councilwoman - Jacinta E. Greene, Councilwoman - Sandy Marks, All Members
+2. **What is the nature of your request?** *(required)* — `01PL-CNCLISSUE` — radio; options: Legislative or Policy Issues, Budget Request, Boards and Commissions Endorsement, Meeting or Event Invites, Other
+3. **Is your request related to the upcoming public hearing or Council meeting?** *(required)* — `01PL-CNCLHEAR` — radio; options: Yes, No
+   - Yes: advisory; “Please note that if your message is related to an item to be considered by City Council, the information you submit will be published on the City's website as an attachment to the agenda for the meeting at which the item will be considered. Please see the City's privacy policy for further information.”
 
-## Mold/Moisture (`CODMOLD`)
+## Short Term Rental Complaint or Permitting (`PZRENTL`)
 
-1. **Have you already reported mold to your property manager?** *(required)* — `01PL-MOLDREPORTED` — radio; options: Yes, No
-   - No: **HARD STOP**; “If you have not reported mold yet, visit alexandriava.gov/Mold for information on how to file a complaint with your property manager/landlord.”
-2. **Is there a unit number associated with the address?** — text: Provide information here
-3. **Please describe the issue including where the mold is located, where you think it's coming from, and when you reported it to your property manager.** *(required)* — text: Please answer here
+Banners: “For more information on short-term rental properties go to: Short-Term Residential Rentals” · “Please provide the details of your request in the Additional Information box below.”
 
-## Report Overcrowding (`CODOVERC`)
-
-Banners: “Please provide the details of your request in the Additional Information box below.”
-
-1. **What is the nature of this request?** *(required)* — dropdown; options: Single Family Home, Multi-Family Home, Apartment, Rooming House, Boarding House, Group Home, Airbnb, Not Sure
+1. **Please select the nature of your request:** *(required)* — `01PL-PZRENTL` — radio; options: Submit complaint or inquiry for a short-term rental property, Obtain a permit for a short-term residential rental
+   - Obtain a permit for a short-term residential rental: advisory; “To begin the permit process please visit www.alexandriava.gov/zoning/short-term-residential-rentals to review the regulations and gather the necessary documents and photos. When you're ready, apply for an annual permit by visiting www.alexandriava.gov/Permits.”
 
 ## Mobility, Access, and Traffic Safety (`ALXTRFCO`)
 
 1. **What is the nature of your request?** *(required)* — select; options: Request for Police Enforcement or Review, Traffic Calming, Pedestrian Safety & Access, Bicycle Safety & Access, Multi-Use Trails, Traffic, Other Transportation Concerns
    - Request for Police Enforcement or Review: advisory; “If this is an immediate traffic safety concern please call 703.746.4444.”
-   - Traffic Calming: advisory
-   - Pedestrian Safety & Access: advisory
-   - Bicycle Safety & Access: advisory
+   - Traffic Calming: advisory; “The Neighborhood Transportation Improvements Program (NTIP) is a resident driven program that addresses neighborhood transportation issues like limited crossing opportunities, unsafe vehicle speeds, challenging intersections, and more. To learn more about the program and to apply visit the NTIP webpage.”
+   - Pedestrian Safety & Access: advisory; “The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about current and upcoming projects at Transportation Planning.”
+   - Bicycle Safety & Access: advisory; “The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about current and upcoming projects at Transportation Planning.”
    - Multi-Use Trails: **HARD STOP**; “For information about future plans for trail projects, please see the Multi-use trail website.”
    - Traffic: advisory; “The City is working to better manage traffic through the Smart Mobility Program. Learn more about how the City is using data to improve our transportation network: Smart Mobility.”
-   - Other Transportation Concerns: advisory
+   - Other Transportation Concerns: advisory; “The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about the what staff is working on and upcoming projects at Transportation Planning.”
 2. **Please provide specific information about the problem or issue you are experiencing.** *(required)* — text: Please answer here

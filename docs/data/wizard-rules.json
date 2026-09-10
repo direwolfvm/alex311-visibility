@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-10 00:58 UTC",
+ "generated": "2026-09-10 13:24 UTC",
  "read_only": true,
  "skipped_not_in_catalog": [
   "Snow and Ice Removal Sidewalk",
@@ -500,167 +500,6 @@
     "There is 1 mandatory question unanswered"
    ],
    "continue_enabled_at_end": true
-  },
-  {
-   "service_name": "Tree Inspection Request",
-   "service_code": "RPCATREINSP",
-   "questions": [
-    {
-     "order": 1,
-     "question": "Is the tree blocking the road?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTREERD",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert Please call the Police non-emergency line at 703.746.4444 to report.",
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [
-        2
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "No"
-    },
-    {
-     "order": 2,
-     "question": "Are the tree roots damaging the sidewalk?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTREESIDE",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert Please use suggested service type.",
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "No"
-    },
-    {
-     "order": 3,
-     "question": "Is the tree on public or private property?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-TREEPROPERTY",
-     "options": [
-      "Private",
-      "Public"
-     ],
-     "probes": {
-      "Private": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Public": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [
-        4
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Public"
-    },
-    {
-     "order": 4,
-     "question": "What is the nature of your request?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTREINSP",
-     "options": [
-      "Tree Pruning",
-      "Tree Removal"
-     ],
-     "probes": {
-      "Tree Pruning": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Tree Removal": {
-       "alert": [
-        "Validation Alert A City Arborist will have to inspect the site and determine the appropriate next steps",
-        "Validation Alert"
-       ],
-       "hard_stop": false,
-       "advisory": true,
-       "reveals": [
-        5
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Tree Pruning"
-    },
-    {
-     "order": 5,
-     "question": "Please describe why the service is needed.",
-     "required": true,
-     "input": "text",
-     "code": "",
-     "options": [],
-     "probes": {},
-     "chosen": "filled",
-     "parts": [
-      {
-       "tag": "input",
-       "type": "text",
-       "placeholder": "Provide information here",
-       "aria": "Required Question 5 Please describe why the service is needed."
-      }
-     ]
-    }
-   ],
-   "error": null,
-   "banners": [
-    "If this is an immediate danger please call 911.",
-    "Please provide the details of your request in the Additional Information box below.",
-    "There is 1 mandatory question unanswered"
-   ],
-   "continue_enabled_at_end": true,
-   "restarts": 1
   },
   {
    "service_name": "Bulk Yard Waste Pickup",
@@ -1778,152 +1617,6 @@
    "continue_enabled_at_end": true
   },
   {
-   "service_name": "Sidewalk",
-   "service_code": "TESSIDEWALK",
-   "questions": [
-    {
-     "order": 1,
-     "question": "Is this request for a sidewalk that does not currently exist?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-IFWANTNEW",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert",
-        "There is 1 mandatory question unanswered"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [
-        "There is 1 mandatory question unanswered"
-       ],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "No"
-    },
-    {
-     "order": 2,
-     "question": "What is the surface type?",
-     "required": false,
-     "input": "select",
-     "code": "",
-     "options": [
-      "Asphalt",
-      "Brick",
-      "Concrete",
-      "Cobblestone",
-      "Gravel",
-      "Unknown"
-     ],
-     "probes": {
-      "Asphalt": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Brick": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Concrete": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Cobblestone": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Gravel": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Unknown": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Asphalt"
-    },
-    {
-     "order": 3,
-     "question": "Is the damaged portion of the sidewalk part of a driveway apron?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-DRWAYAPRN",
-     "options": [
-      "Yes",
-      "No",
-      "Unsure"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert This is the responsibility of the homeowner or HOA. Please contact 311, 703.746.4311 or TES Permitting for more information TESPermits@alexandriava.gov",
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Unsure": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "No"
-    }
-   ],
-   "error": null,
-   "banners": [
-    "If this is a major hazard please call 703.746.4444 to report",
-    "Pictures are helpful for staff to properly locate your issue.",
-    "Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.",
-    "There are 2 mandatory questions unanswered"
-   ],
-   "continue_enabled_at_end": true
-  },
-  {
    "service_name": "Trash and Recycling Public Space Containers",
    "service_code": "ALXSTCAN",
    "questions": [
@@ -2296,125 +1989,6 @@
     "Do you know if your street is on the paving schedule? Please check Paving Schedule to find out.",
     "Pictures are helpful for staff to properly locate your issue.",
     "Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.",
-    "There is 1 mandatory question unanswered"
-   ],
-   "continue_enabled_at_end": true,
-   "restarts": 0
-  },
-  {
-   "service_name": "Tree Storm Damage",
-   "service_code": "RPCATRESDMG",
-   "questions": [
-    {
-     "order": 1,
-     "question": "Is the tree blocking the road?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTREERD",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert Please call the Police non-emergency line at 703.746.4444 to report.",
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [
-        2
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "No"
-    },
-    {
-     "order": 2,
-     "question": "Is the tree on public or private property?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-TREEPROPERTY",
-     "options": [
-      "Private",
-      "Public"
-     ],
-     "probes": {
-      "Private": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Public": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [
-        3
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Public"
-    },
-    {
-     "order": 3,
-     "question": "What is the nature of your request?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTRESDMG",
-     "options": [
-      "Tree branches broken or hanging from tree",
-      "Tree has fallen over",
-      "Tree and/or branches are leaning on power lines"
-     ],
-     "probes": {
-      "Tree branches broken or hanging from tree": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Tree has fallen over": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Tree and/or branches are leaning on power lines": {
-       "alert": [
-        "Validation Alert Please call 911 to report this issue.",
-        "Validation Alert",
-        "Please call 911 to report this issue."
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Tree branches broken or hanging from tree"
-    }
-   ],
-   "error": null,
-   "banners": [
-    "If this is an immediate danger please call 911.",
-    "Please provide the details of your request in the Additional Information box below.",
     "There is 1 mandatory question unanswered"
    ],
    "continue_enabled_at_end": true,
@@ -3051,131 +2625,81 @@
    "restarts": 0
   },
   {
-   "service_name": "Missed Leaf Collection",
-   "service_code": "TESLEAF",
+   "service_name": "Street Pavement Markings",
+   "service_code": "TESPVMRK",
    "questions": [
     {
      "order": 1,
-     "question": "Does the City of Alexandria pickup your trash?",
+     "question": "What type of pavement marking pertains to your request?",
      "required": true,
-     "input": "radio",
-     "code": "01PL-LEAFMISSER",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "There are 3 mandatory questions unanswered"
-       ],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Yes"
-    },
-    {
-     "order": 2,
-     "question": "When were your leaves set out?",
-     "required": true,
-     "input": "composite",
+     "input": "dropdown",
      "code": "",
-     "options": [],
-     "probes": {},
-     "chosen": "filled",
-     "parts": [
-      {
-       "tag": "input",
-       "type": "",
-       "placeholder": "MM/DD/YYYY",
-       "aria": "Required Question 2 When were your leaves set out?"
-      },
-      {
-       "tag": "input",
-       "type": "text",
-       "placeholder": "12:00",
-       "aria": "12:00"
-      },
-      {
-       "tag": "select",
-       "type": "",
-       "placeholder": "",
-       "aria": ""
-      }
-     ]
-    },
-    {
-     "order": 3,
-     "question": "Are your leaves loose or bagged?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-LEAFMISTYP",
      "options": [
-      "Loose",
-      "Bagged"
+      "Crosswalk",
+      "Stop Bar",
+      "Lane Lines",
+      "Bike Lanes or Sharrows",
+      "Directional Arrows",
+      "Other"
      ],
      "probes": {
-      "Loose": {
-       "alert": [
-        "There is 1 mandatory question unanswered"
-       ],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Bagged": {
+      "Crosswalk": {
        "alert": [],
        "hard_stop": false,
        "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Stop Bar": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Lane Lines": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Bike Lanes or Sharrows": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Directional Arrows": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
        "reveals": [],
        "extra_controls": 0
       }
      },
-     "chosen": "Loose"
-    },
-    {
-     "order": 4,
-     "question": "Where are your leaves placed?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-LEAFMISLOC",
-     "options": [
-      "Curb",
-      "Alley"
-     ],
-     "probes": {
-      "Curb": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Alley": {
-       "error": "TimeoutError: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"input[type=radio][name=\\\"01PL-LEAFMISLOC\\\"][value=\\\"Alley\\\"]\").f"
-      }
-     },
-     "chosen": "Curb"
+     "chosen": "Crosswalk",
+     "multi": true
     }
    ],
    "error": null,
    "banners": [
-    "For updates and more information about Leaf Collection please go to: www.alexandriava.gov/LeafCollection",
-    "Please provide the details of your request in the Additional Information box below.",
-    "There are 4 mandatory questions unanswered"
+    "Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.",
+    "There is 1 mandatory question unanswered"
    ],
    "continue_enabled_at_end": true,
    "restarts": 0
@@ -3913,6 +3437,170 @@
    "banners": [
     "Please provide the details of your request in the Additional Information box below.",
     "There are 5 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
+   "service_name": "Capital Bikeshare",
+   "service_code": "ALXCABI",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-SCOOTERTYP",
+     "options": [
+      "Suggest a Bikeshare Station Location",
+      "Report Improper Bike Parking or Lost Bike",
+      "General Inquiries"
+     ],
+     "probes": {
+      "Suggest a Bikeshare Station Location": {
+       "alert": [
+        "Validation Alert To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.",
+        "Validation Alert"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "suggests": "",
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      },
+      "Report Improper Bike Parking or Lost Bike": {
+       "alert": [
+        "There are 3 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        2,
+        3,
+        4
+       ],
+       "extra_controls": 0
+      },
+      "General Inquiries": {
+       "alert": [
+        "Validation Alert To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.",
+        "Validation Alert"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Suggest a Bikeshare Station Location"
+    },
+    {
+     "order": 2,
+     "question": "How would you use this station?\u00a0 Please select all options that apply.",
+     "required": true,
+     "input": "dropdown",
+     "code": "",
+     "options": [
+      "Get home",
+      "Get to work",
+      "Get to school/college",
+      "Recreation",
+      "Access transit",
+      "Run errands",
+      "Other: (Fill text box provided below)"
+     ],
+     "probes": {
+      "Get home": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Get to work": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Get to school/college": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Recreation": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Access transit": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Run errands": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Other: (Fill text box provided below)": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Get home",
+     "multi": true
+    },
+    {
+     "order": 3,
+     "question": "Other: How would you use this station?",
+     "required": true,
+     "input": "text",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "Provide information here",
+       "aria": "Required Question 3 Other: How would you use this station?"
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
    ],
    "continue_enabled_at_end": true,
    "restarts": 0
@@ -4726,169 +4414,6 @@
    "restarts": 0
   },
   {
-   "service_name": "Trees",
-   "service_code": "RPCATREE",
-   "questions": [
-    {
-     "order": 1,
-     "question": "Is the tree blocking the road?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTREERD",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert Please call the Police non-emergency line at 703.746.4444 to report.",
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [
-        2
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "No"
-    },
-    {
-     "order": 2,
-     "question": "Are the tree roots damaging the sidewalk?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTREESIDE",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "No"
-    },
-    {
-     "order": 3,
-     "question": "Is the tree on public or private property?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-TREEPROPERTY",
-     "options": [
-      "Private",
-      "Public"
-     ],
-     "probes": {
-      "Private": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Public": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [
-        4
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Public"
-    },
-    {
-     "order": 4,
-     "question": "What is the nature of your request?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-RPCTREETYP",
-     "options": [
-      "Tree Pruning",
-      "Tree Removal",
-      "Request New Planting",
-      "Brush Removal",
-      "Overgrown Sidewalk Vegetation"
-     ],
-     "probes": {
-      "Tree Pruning": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Tree Removal": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Request New Planting": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Brush Removal": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": true,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Overgrown Sidewalk Vegetation": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Tree Pruning"
-    }
-   ],
-   "error": null,
-   "banners": [
-    "If this is an immediate danger please call 911.",
-    "Please provide the details of your request in the Additional Information box below.",
-    "There is 1 mandatory question unanswered"
-   ],
-   "continue_enabled_at_end": true,
-   "restarts": 2
-  },
-  {
    "service_name": "Alexandria Fire Department Comments or Inquiries",
    "service_code": "AFDGENER",
    "questions": [],
@@ -5480,6 +5005,89 @@
    "restarts": 0
   },
   {
+   "service_name": "Mold/Moisture",
+   "service_code": "CODMOLD",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Have you already reported mold to your property manager?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-MOLDREPORTED",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [
+        "Validation Alert If you have not reported mold yet, visit alexandriava.gov/Mold for information on how to file a complaint with your property manager/landlord.",
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Yes"
+    },
+    {
+     "order": 2,
+     "question": "Is there a unit number associated with the address?",
+     "required": false,
+     "input": "text",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "Provide information here",
+       "aria": "Question 2 Is there a unit number associated with the address?"
+      }
+     ]
+    },
+    {
+     "order": 3,
+     "question": "Please describe the issue including where the mold is located, where you think it's coming from, and when you reported it to your property manager.",
+     "required": true,
+     "input": "text",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "textarea",
+       "type": "",
+       "placeholder": "Please answer here",
+       "aria": "Required Question 3 Please describe the issue including where the mold is located, where you think it's coming from, and when you reported it to your property m"
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "There are 2 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
    "service_name": "No Air, No Heat Violation",
    "service_code": "CODNHNA",
    "questions": [
@@ -5644,6 +5252,104 @@
    "banners": [
     "Please provide the details of your request in the Additional Information box below.",
     "There are 2 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
+   "service_name": "Report Overcrowding",
+   "service_code": "CODOVERC",
+   "questions": [
+    {
+     "order": 1,
+     "question": "What is the nature of this request?",
+     "required": true,
+     "input": "dropdown",
+     "code": "",
+     "options": [
+      "Single Family Home",
+      "Multi-Family Home",
+      "Apartment",
+      "Rooming House",
+      "Boarding House",
+      "Group Home",
+      "Airbnb",
+      "Not Sure"
+     ],
+     "probes": {
+      "Single Family Home": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Multi-Family Home": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Apartment": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Rooming House": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Boarding House": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Group Home": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Airbnb": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Not Sure": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Single Family Home",
+     "multi": true
+    }
+   ],
+   "error": null,
+   "banners": [
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
    ],
    "continue_enabled_at_end": true,
    "restarts": 0
@@ -5815,181 +5521,6 @@
     "Please do not provide sensitive personal identifiable information through this portal. A representative will follow up with you once your ticket is submitted.",
     "Please provide the details of your request in the Additional Information box below.",
     "There is 1 mandatory question unanswered"
-   ],
-   "continue_enabled_at_end": true,
-   "restarts": 0
-  },
-  {
-   "service_name": "Contact Mayor, Vice Mayor and/or City Council",
-   "service_code": "CTYCNCL",
-   "questions": [
-    {
-     "order": 1,
-     "question": "Which Council Member would you like to contact?",
-     "required": true,
-     "input": "select",
-     "code": "",
-     "options": [
-      "Mayor - Alyia Gaskins",
-      "Vice Mayor - Sarah Bagley",
-      "Councilman - Canek Aguirre",
-      "Councilman - John T. Chapman",
-      "Councilman - Abdel-Rahman Elnoubi",
-      "Councilwoman - Jacinta E. Greene",
-      "Councilwoman - Sandy Marks",
-      "All Members"
-     ],
-     "probes": {
-      "Mayor - Alyia Gaskins": {
-       "alert": [
-        "There are 2 mandatory questions unanswered"
-       ],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Vice Mayor - Sarah Bagley": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Councilman - Canek Aguirre": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Councilman - John T. Chapman": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Councilman - Abdel-Rahman Elnoubi": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Councilwoman - Jacinta E. Greene": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Councilwoman - Sandy Marks": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "All Members": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Mayor - Alyia Gaskins"
-    },
-    {
-     "order": 2,
-     "question": "What is the nature of your request?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-CNCLISSUE",
-     "options": [
-      "Legislative or Policy Issues",
-      "Budget Request",
-      "Boards and Commissions Endorsement",
-      "Meeting or Event Invites",
-      "Other"
-     ],
-     "probes": {
-      "Legislative or Policy Issues": {
-       "alert": [
-        "There is 1 mandatory question unanswered"
-       ],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Budget Request": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Boards and Commissions Endorsement": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Meeting or Event Invites": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Other": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Legislative or Policy Issues"
-    },
-    {
-     "order": 3,
-     "question": "Is your request related to the upcoming public hearing or Council meeting?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-CNCLHEAR",
-     "options": [
-      "Yes",
-      "No"
-     ],
-     "probes": {
-      "Yes": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": false,
-       "advisory": true,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "No": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Yes"
-    }
-   ],
-   "error": null,
-   "banners": [
-    "Please provide the details of your request in the Additional Information box below.",
-    "There are 3 mandatory questions unanswered"
    ],
    "continue_enabled_at_end": true,
    "restarts": 0
@@ -8752,50 +8283,6 @@
    "restarts": 0
   },
   {
-   "service_name": "Short Term Rental Complaint or Permitting",
-   "service_code": "PZRENTL",
-   "questions": [
-    {
-     "order": 1,
-     "question": "Please select the nature of your request:",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-PZRENTL",
-     "options": [
-      "Submit complaint or inquiry for a short-term rental property",
-      "Obtain a permit for a short-term residential rental"
-     ],
-     "probes": {
-      "Submit complaint or inquiry for a short-term rental property": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Obtain a permit for a short-term residential rental": {
-       "alert": [
-        "Validation Alert"
-       ],
-       "hard_stop": false,
-       "advisory": true,
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Submit complaint or inquiry for a short-term rental property"
-    }
-   ],
-   "error": null,
-   "banners": [
-    "For more information on short-term rental properties go to: Short-Term Residential Rentals",
-    "Please provide the details of your request in the Additional Information box below.",
-    "There is 1 mandatory question unanswered"
-   ],
-   "continue_enabled_at_end": true,
-   "restarts": 0
-  },
-  {
    "service_name": "Playground Maintenance",
    "service_code": "RPCPLYGRNDM",
    "questions": [
@@ -9594,25 +9081,880 @@
    "restarts": 0
   },
   {
-   "service_name": "Street Pavement Markings",
-   "service_code": "TESPVMRK",
+   "service_name": "Tree Inspection Request",
+   "service_code": "RPCATREINSP",
    "questions": [
     {
      "order": 1,
-     "question": "What type of pavement marking pertains to your request?",
+     "question": "Is the tree blocking the road?",
      "required": true,
-     "input": "dropdown",
+     "input": "radio",
+     "code": "01PL-RPCTREERD",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please call the Police non-emergency line at 703.746.4444 to report."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 2,
+     "question": "Are the tree roots damaging the sidewalk?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREESIDE",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please use suggested service type."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 3,
+     "question": "Is the tree on public or private property?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-TREEPROPERTY",
+     "options": [
+      "Private",
+      "Public"
+     ],
+     "probes": {
+      "Private": {
+       "alert": [
+        "Validation Alert The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Public": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        4
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Public"
+    },
+    {
+     "order": 4,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREINSP",
+     "options": [
+      "Tree Pruning",
+      "Tree Removal"
+     ],
+     "probes": {
+      "Tree Pruning": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Tree Removal": {
+       "alert": [
+        "Validation Alert A City Arborist will have to inspect the site and determine the appropriate next steps"
+       ],
+       "hard_stop": false,
+       "advisory": true,
+       "suggests": "",
+       "reveals": [
+        5
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Tree Pruning"
+    },
+    {
+     "order": 5,
+     "question": "Please describe why the service is needed.",
+     "required": true,
+     "input": "text",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "Provide information here",
+       "aria": "Required Question 5 Please describe why the service is needed."
+      }
+     ]
+    }
+   ],
+   "error": null,
+   "banners": [
+    "If this is an immediate danger please call 911.",
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
+   "service_name": "Sidewalk",
+   "service_code": "TESSIDEWALK",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Is this request for a sidewalk that does not currently exist?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-IFWANTNEW",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert The City has an application process for requesting residential sidewalks that were not identified in the Transportation Master Plan as a priority. To learn more about this process and submit an application, visit our Neighborhood Sidewalk Program.",
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 2,
+     "question": "What is the surface type?",
+     "required": false,
+     "input": "select",
      "code": "",
      "options": [
-      "Crosswalk",
-      "Stop Bar",
-      "Lane Lines",
-      "Bike Lanes or Sharrows",
-      "Directional Arrows",
+      "Asphalt",
+      "Brick",
+      "Concrete",
+      "Cobblestone",
+      "Gravel",
+      "Unknown"
+     ],
+     "probes": {
+      "Asphalt": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Brick": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Concrete": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Cobblestone": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Gravel": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Unknown": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Asphalt"
+    },
+    {
+     "order": 3,
+     "question": "Is the damaged portion of the sidewalk part of a driveway apron?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-DRWAYAPRN",
+     "options": [
+      "Yes",
+      "No",
+      "Unsure"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert This is the responsibility of the homeowner or HOA. Please contact 311, 703.746.4311 or TES Permitting for more information TESPermits@alexandriava.gov"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Unsure": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "If this is a major hazard please call 703.746.4444 to report",
+    "Pictures are helpful for staff to properly locate your issue.",
+    "Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.",
+    "There are 2 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
+   "service_name": "Tree Storm Damage",
+   "service_code": "RPCATRESDMG",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Is the tree blocking the road?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREERD",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please call the Police non-emergency line at 703.746.4444 to report."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 2,
+     "question": "Is the tree on public or private property?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-TREEPROPERTY",
+     "options": [
+      "Private",
+      "Public"
+     ],
+     "probes": {
+      "Private": {
+       "alert": [
+        "Validation Alert The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Public": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Public"
+    },
+    {
+     "order": 3,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTRESDMG",
+     "options": [
+      "Tree branches broken or hanging from tree",
+      "Tree has fallen over",
+      "Tree and/or branches are leaning on power lines"
+     ],
+     "probes": {
+      "Tree branches broken or hanging from tree": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Tree has fallen over": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Tree and/or branches are leaning on power lines": {
+       "alert": [
+        "Validation Alert Please call 911 to report this issue."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Tree branches broken or hanging from tree"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "If this is an immediate danger please call 911.",
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
+   "service_name": "Missed Leaf Collection",
+   "service_code": "TESLEAF",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Does the City of Alexandria pickup your trash?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-LEAFMISSER",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "There are 3 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [
+        "Validation Alert Leaf collection services are only available to residents who currently receive City trash services. If you are a resident who receives trash services from the City, but are unable to submit a request based on your address, please contact 311 or 703.746.4311."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Yes"
+    },
+    {
+     "order": 2,
+     "question": "When were your leaves set out?",
+     "required": true,
+     "input": "composite",
+     "code": "",
+     "options": [],
+     "probes": {},
+     "chosen": "filled",
+     "parts": [
+      {
+       "tag": "input",
+       "type": "",
+       "placeholder": "MM/DD/YYYY",
+       "aria": "Required Question 2 When were your leaves set out?"
+      },
+      {
+       "tag": "input",
+       "type": "text",
+       "placeholder": "12:00",
+       "aria": "12:00"
+      },
+      {
+       "tag": "select",
+       "type": "",
+       "placeholder": "",
+       "aria": ""
+      }
+     ]
+    },
+    {
+     "order": 3,
+     "question": "Are your leaves loose or bagged?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-LEAFMISTYP",
+     "options": [
+      "Loose",
+      "Bagged"
+     ],
+     "probes": {
+      "Loose": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Bagged": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Loose"
+    },
+    {
+     "order": 4,
+     "question": "Where are your leaves placed?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-LEAFMISLOC",
+     "options": [
+      "Curb",
+      "Alley"
+     ],
+     "probes": {
+      "Curb": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Alley": {
+       "error": "TimeoutError: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\"input[type=radio][name=\\\"01PL-LEAFMISLOC\\\"][value=\\\"Alley\\\"]\").f"
+      }
+     },
+     "chosen": "Curb"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "For updates and more information about Leaf Collection please go to: www.alexandriava.gov/LeafCollection",
+    "Please provide the details of your request in the Additional Information box below.",
+    "There are 4 mandatory questions unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
+   "service_name": "Trees",
+   "service_code": "RPCATREE",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Is the tree blocking the road?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREERD",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert Please call the Police non-emergency line at 703.746.4444 to report."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        2
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 2,
+     "question": "Are the tree roots damaging the sidewalk?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREESIDE",
+     "options": [
+      "Yes",
+      "No"
+     ],
+     "probes": {
+      "Yes": {
+       "alert": [
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "No": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        3
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "No"
+    },
+    {
+     "order": 3,
+     "question": "Is the tree on public or private property?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-TREEPROPERTY",
+     "options": [
+      "Private",
+      "Public"
+     ],
+     "probes": {
+      "Private": {
+       "alert": [
+        "Validation Alert The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'."
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Public": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [
+        4
+       ],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Public"
+    },
+    {
+     "order": 4,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-RPCTREETYP",
+     "options": [
+      "Tree Pruning",
+      "Tree Removal",
+      "Request New Planting",
+      "Brush Removal",
+      "Overgrown Sidewalk Vegetation"
+     ],
+     "probes": {
+      "Tree Pruning": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Tree Removal": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Request New Planting": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Brush Removal": {
+       "alert": [
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Overgrown Sidewalk Vegetation": {
+       "alert": [
+        "Validation Alert"
+       ],
+       "hard_stop": true,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Tree Pruning"
+    }
+   ],
+   "error": null,
+   "banners": [
+    "If this is an immediate danger please call 911.",
+    "Please provide the details of your request in the Additional Information box below.",
+    "There is 1 mandatory question unanswered"
+   ],
+   "continue_enabled_at_end": true,
+   "restarts": 0
+  },
+  {
+   "service_name": "Contact Mayor, Vice Mayor and/or City Council",
+   "service_code": "CTYCNCL",
+   "questions": [
+    {
+     "order": 1,
+     "question": "Which Council Member would you like to contact?",
+     "required": true,
+     "input": "select",
+     "code": "",
+     "options": [
+      "Mayor - Alyia Gaskins",
+      "Vice Mayor - Sarah Bagley",
+      "Councilman - Canek Aguirre",
+      "Councilman - John T. Chapman",
+      "Councilman - Abdel-Rahman Elnoubi",
+      "Councilwoman - Jacinta E. Greene",
+      "Councilwoman - Sandy Marks",
+      "All Members"
+     ],
+     "probes": {
+      "Mayor - Alyia Gaskins": {
+       "alert": [
+        "There are 2 mandatory questions unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Vice Mayor - Sarah Bagley": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Councilman - Canek Aguirre": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Councilman - John T. Chapman": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Councilman - Abdel-Rahman Elnoubi": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Councilwoman - Jacinta E. Greene": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Councilwoman - Sandy Marks": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "All Members": {
+       "alert": [],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      }
+     },
+     "chosen": "Mayor - Alyia Gaskins"
+    },
+    {
+     "order": 2,
+     "question": "What is the nature of your request?",
+     "required": true,
+     "input": "radio",
+     "code": "01PL-CNCLISSUE",
+     "options": [
+      "Legislative or Policy Issues",
+      "Budget Request",
+      "Boards and Commissions Endorsement",
+      "Meeting or Event Invites",
       "Other"
      ],
      "probes": {
-      "Crosswalk": {
+      "Legislative or Policy Issues": {
+       "alert": [
+        "There is 1 mandatory question unanswered"
+       ],
+       "hard_stop": false,
+       "advisory": false,
+       "suggests": "",
+       "reveals": [],
+       "extra_controls": 0
+      },
+      "Budget Request": {
        "alert": [],
        "hard_stop": false,
        "advisory": false,
@@ -9620,7 +9962,7 @@
        "reveals": [],
        "extra_controls": 0
       },
-      "Stop Bar": {
+      "Boards and Commissions Endorsement": {
        "alert": [],
        "hard_stop": false,
        "advisory": false,
@@ -9628,23 +9970,7 @@
        "reveals": [],
        "extra_controls": 0
       },
-      "Lane Lines": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Bike Lanes or Sharrows": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Directional Arrows": {
+      "Meeting or Event Invites": {
        "alert": [],
        "hard_stop": false,
        "advisory": false,
@@ -9661,192 +9987,14 @@
        "extra_controls": 0
       }
      },
-     "chosen": "Crosswalk",
-     "multi": true
-    }
-   ],
-   "error": null,
-   "banners": [
-    "Please provide additional location information in the box below. Landmarks, travel lanes, and intersections are always helpful.",
-    "There is 1 mandatory question unanswered"
-   ],
-   "continue_enabled_at_end": true,
-   "restarts": 0
-  },
-  {
-   "service_name": "Capital Bikeshare",
-   "service_code": "ALXCABI",
-   "questions": [
-    {
-     "order": 1,
-     "question": "What is the nature of your request?",
-     "required": true,
-     "input": "radio",
-     "code": "01PL-SCOOTERTYP",
-     "options": [
-      "Suggest a Bikeshare Station Location",
-      "Report Improper Bike Parking or Lost Bike",
-      "General Inquiries"
-     ],
-     "probes": {
-      "Suggest a Bikeshare Station Location": {
-       "alert": [
-        "Validation Alert To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.",
-        "Validation Alert"
-       ],
-       "hard_stop": false,
-       "advisory": true,
-       "suggests": "",
-       "reveals": [
-        2
-       ],
-       "extra_controls": 0
-      },
-      "Report Improper Bike Parking or Lost Bike": {
-       "alert": [
-        "There are 3 mandatory questions unanswered"
-       ],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [
-        2,
-        3,
-        4
-       ],
-       "extra_controls": 0
-      },
-      "General Inquiries": {
-       "alert": [
-        "Validation Alert To learn more about the program, including rules and regulations, please visit: Capital Bikeshare.",
-        "Validation Alert"
-       ],
-       "hard_stop": false,
-       "advisory": true,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Suggest a Bikeshare Station Location"
-    },
-    {
-     "order": 2,
-     "question": "How would you use this station?\u00a0 Please select all options that apply.",
-     "required": true,
-     "input": "dropdown",
-     "code": "",
-     "options": [
-      "Get home",
-      "Get to work",
-      "Get to school/college",
-      "Recreation",
-      "Access transit",
-      "Run errands",
-      "Other: (Fill text box provided below)"
-     ],
-     "probes": {
-      "Get home": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Get to work": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Get to school/college": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Recreation": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Access transit": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Run errands": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Other: (Fill text box provided below)": {
-       "alert": [
-        "There is 1 mandatory question unanswered"
-       ],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [
-        3
-       ],
-       "extra_controls": 0
-      }
-     },
-     "chosen": "Get home",
-     "multi": true
+     "chosen": "Legislative or Policy Issues"
     },
     {
      "order": 3,
-     "question": "Other: How would you use this station?",
-     "required": true,
-     "input": "text",
-     "code": "",
-     "options": [],
-     "probes": {},
-     "chosen": "filled",
-     "parts": [
-      {
-       "tag": "input",
-       "type": "text",
-       "placeholder": "Provide information here",
-       "aria": "Required Question 3 Other: How would you use this station?"
-      }
-     ]
-    }
-   ],
-   "error": null,
-   "banners": [
-    "Please provide the details of your request in the Additional Information box below.",
-    "There is 1 mandatory question unanswered"
-   ],
-   "continue_enabled_at_end": true,
-   "restarts": 0
-  },
-  {
-   "service_name": "Mold/Moisture",
-   "service_code": "CODMOLD",
-   "questions": [
-    {
-     "order": 1,
-     "question": "Have you already reported mold to your property manager?",
+     "question": "Is your request related to the upcoming public hearing or Council meeting?",
      "required": true,
      "input": "radio",
-     "code": "01PL-MOLDREPORTED",
+     "code": "01PL-CNCLHEAR",
      "options": [
       "Yes",
       "No"
@@ -9854,20 +10002,17 @@
      "probes": {
       "Yes": {
        "alert": [
-        "There is 1 mandatory question unanswered"
+        "Validation Alert Please note that if your message is related to an item to be considered by City Council, the information you submit will be published on the City's website as an attachment to the agenda for the meeting at which the item will be considered. Please see the City's privacy policy for further information."
        ],
        "hard_stop": false,
-       "advisory": false,
+       "advisory": true,
        "suggests": "",
        "reveals": [],
        "extra_controls": 0
       },
       "No": {
-       "alert": [
-        "Validation Alert If you have not reported mold yet, visit alexandriava.gov/Mold for information on how to file a complaint with your property manager/landlord.",
-        "Validation Alert"
-       ],
-       "hard_stop": true,
+       "alert": [],
+       "hard_stop": false,
        "advisory": false,
        "suggests": "",
        "reveals": [],
@@ -9875,73 +10020,32 @@
       }
      },
      "chosen": "Yes"
-    },
-    {
-     "order": 2,
-     "question": "Is there a unit number associated with the address?",
-     "required": false,
-     "input": "text",
-     "code": "",
-     "options": [],
-     "probes": {},
-     "chosen": "filled",
-     "parts": [
-      {
-       "tag": "input",
-       "type": "text",
-       "placeholder": "Provide information here",
-       "aria": "Question 2 Is there a unit number associated with the address?"
-      }
-     ]
-    },
-    {
-     "order": 3,
-     "question": "Please describe the issue including where the mold is located, where you think it's coming from, and when you reported it to your property manager.",
-     "required": true,
-     "input": "text",
-     "code": "",
-     "options": [],
-     "probes": {},
-     "chosen": "filled",
-     "parts": [
-      {
-       "tag": "textarea",
-       "type": "",
-       "placeholder": "Please answer here",
-       "aria": "Required Question 3 Please describe the issue including where the mold is located, where you think it's coming from, and when you reported it to your property m"
-      }
-     ]
     }
    ],
    "error": null,
    "banners": [
-    "There are 2 mandatory questions unanswered"
+    "Please provide the details of your request in the Additional Information box below.",
+    "There are 3 mandatory questions unanswered"
    ],
    "continue_enabled_at_end": true,
    "restarts": 0
   },
   {
-   "service_name": "Report Overcrowding",
-   "service_code": "CODOVERC",
+   "service_name": "Short Term Rental Complaint or Permitting",
+   "service_code": "PZRENTL",
    "questions": [
     {
      "order": 1,
-     "question": "What is the nature of this request?",
+     "question": "Please select the nature of your request:",
      "required": true,
-     "input": "dropdown",
-     "code": "",
+     "input": "radio",
+     "code": "01PL-PZRENTL",
      "options": [
-      "Single Family Home",
-      "Multi-Family Home",
-      "Apartment",
-      "Rooming House",
-      "Boarding House",
-      "Group Home",
-      "Airbnb",
-      "Not Sure"
+      "Submit complaint or inquiry for a short-term rental property",
+      "Obtain a permit for a short-term residential rental"
      ],
      "probes": {
-      "Single Family Home": {
+      "Submit complaint or inquiry for a short-term rental property": {
        "alert": [],
        "hard_stop": false,
        "advisory": false,
@@ -9949,69 +10053,23 @@
        "reveals": [],
        "extra_controls": 0
       },
-      "Multi-Family Home": {
-       "alert": [],
+      "Obtain a permit for a short-term residential rental": {
+       "alert": [
+        "Validation Alert To begin the permit process please visit www.alexandriava.gov/zoning/short-term-residential-rentals to review the regulations and gather the necessary documents and photos. When you're ready, apply for an annual permit by visiting www.alexandriava.gov/Permits."
+       ],
        "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Apartment": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Rooming House": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Boarding House": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Group Home": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Airbnb": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
-       "suggests": "",
-       "reveals": [],
-       "extra_controls": 0
-      },
-      "Not Sure": {
-       "alert": [],
-       "hard_stop": false,
-       "advisory": false,
+       "advisory": true,
        "suggests": "",
        "reveals": [],
        "extra_controls": 0
       }
      },
-     "chosen": "Single Family Home",
-     "multi": true
+     "chosen": "Submit complaint or inquiry for a short-term rental property"
     }
    ],
    "error": null,
    "banners": [
+    "For more information on short-term rental properties go to: Short-Term Residential Rentals",
     "Please provide the details of your request in the Additional Information box below.",
     "There is 1 mandatory question unanswered"
    ],
@@ -10041,7 +10099,6 @@
       "Request for Police Enforcement or Review": {
        "alert": [
         "Validation Alert If this is an immediate traffic safety concern please call 703.746.4444.",
-        "Validation Alert",
         "There is 1 mandatory question unanswered"
        ],
        "hard_stop": false,
@@ -10052,7 +10109,7 @@
       },
       "Traffic Calming": {
        "alert": [
-        "Validation Alert"
+        "Validation Alert The Neighborhood Transportation Improvements Program (NTIP) is a resident driven program that addresses neighborhood transportation issues like limited crossing opportunities, unsafe vehicle speeds, challenging intersections, and more. To learn more about the program and to apply visit the NTIP webpage."
        ],
        "hard_stop": false,
        "advisory": true,
@@ -10062,7 +10119,7 @@
       },
       "Pedestrian Safety & Access": {
        "alert": [
-        "Validation Alert"
+        "Validation Alert The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about current and upcoming projects at Transportation Planning."
        ],
        "hard_stop": false,
        "advisory": true,
@@ -10072,7 +10129,7 @@
       },
       "Bicycle Safety & Access": {
        "alert": [
-        "Validation Alert"
+        "Validation Alert The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about current and upcoming projects at Transportation Planning."
        ],
        "hard_stop": false,
        "advisory": true,
@@ -10082,8 +10139,7 @@
       },
       "Multi-Use Trails": {
        "alert": [
-        "Validation Alert For information about future plans for trail projects, please see the Multi-use trail website.",
-        "Validation Alert"
+        "Validation Alert For information about future plans for trail projects, please see the Multi-use trail website."
        ],
        "hard_stop": true,
        "advisory": false,
@@ -10094,7 +10150,6 @@
       "Traffic": {
        "alert": [
         "Validation Alert The City is working to better manage traffic through the Smart Mobility Program. Learn more about how the City is using data to improve our transportation network: Smart Mobility.",
-        "Validation Alert",
         "There is 1 mandatory question unanswered"
        ],
        "hard_stop": false,
@@ -10105,7 +10160,7 @@
       },
       "Other Transportation Concerns": {
        "alert": [
-        "Validation Alert"
+        "Validation Alert The City has several plans in place that are currently being implemented to improve mobility, access, and safety for all roadway users. These include the Transportation Master Plan, Vision Zero, Safe Routes to Schools, and more. Read more about the what staff is working on and upcoming projects at Transportation Planning."
        ],
        "hard_stop": false,
        "advisory": true,
