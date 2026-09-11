@@ -128,3 +128,66 @@ def test_nothing_is_recorded_without_a_database(monkeypatch):
     r = sb.SubmitResult(True, True, "at_submit", "TESMISCO", "Missed Collection")
     sb._record(r, address="100 King St", description="x", live=True)
     assert r.attempt_id is None and r.policy == {}
+
+
+def test_the_consent_box_is_ticked_before_the_contact_fields_are_filled():
+    """On services where contact is optional the City disables the four inputs
+    until the consent box is ticked. Filling first waits on a disabled field
+    and times out — which is how the first real request failed, three times.
+    The order is the fix, so the order is what this pins."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "src/alex311/submit_browser.py").read_text()
+    body = src.split("async def fill_contact(")[1].split("\nasync def ")[0]
+    tick = body.index('box.click(force=True)')
+    fill = body.index('loc.fill(str(value)')
+    assert tick < fill, "the consent tick has to come before the fields are filled"
+
+
+def test_the_search_box_placeholder_is_never_taken_for_a_case_number():
+    """Every page on the City's site carries "examples: pothole, trash, noise,
+    23-00000100" in a search box. The first real filing was recorded under
+    that number because the matcher read the whole page."""
+    from alex311.submit_browser import case_number_in
+    page = "Search Service Requests examples: pothole, trash, noise, 23-00000100..."
+    assert case_number_in(page) is None
+    assert case_number_in("", page) is None
+
+
+def test_the_wizards_own_text_wins_over_the_page_behind_it():
+    from alex311.submit_browser import case_number_in
+    modal = "Thank you. Your request number is 26-00036550."
+    page = "examples: 23-00000100 ... OPEN (26-00036544) Tall Grass ..."
+    assert case_number_in(modal, page) == "26-00036550"
+
+
+def test_a_number_that_was_on_the_page_before_submit_cannot_be_ours():
+    """The page behind the wizard lists other residents' recent requests. The
+    second real filing was recorded under one of theirs — a Tall Grass
+    complaint on Wolfe Street — because a fallback read the whole page."""
+    from alex311.submit_browser import case_number_in
+    before = frozenset({"26-00036544", "23-00000100"})
+    page_after = "examples: 23-00000100 ... OPEN (26-00036544) Tall Grass 714 WOLFE ST"
+    assert case_number_in("", page_after, seen_before=before) is None
+    assert case_number_in("Your request 26-00036551", page_after, seen_before=before) == "26-00036551"
+
+
+def test_what_the_wizard_showed_after_submit_is_logged_every_time():
+    """Twice now the only record of what the City said after Submit was lost,
+    because it was kept only when the filing was judged to have failed."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "src/alex311/submit_browser.py").read_text()
+    assert 'log.warning("after Submit the wizard showed' in src
+
+
+def test_a_name_goes_to_the_city_in_the_form_its_contact_step_allows():
+    """"The only special character allowed in the contact name is a period."
+    A hyphenated surname reached review as typed and then Submit created
+    nothing, twice. What the person typed stays on our record; what is sent
+    is what the form says it takes, and the difference is written down."""
+    from alex311.submit_browser import city_safe_name
+    assert city_safe_name("Orrin-Brown") == "Orrin Brown"
+    assert city_safe_name("O'Neil") == "O Neil"
+    assert city_safe_name("St. John") == "St. John"
+    assert city_safe_name("  Asa ") == "Asa"
+    assert city_safe_name("Zoë") == "Zoë"
+    assert city_safe_name("") == ""

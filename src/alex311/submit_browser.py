@@ -51,6 +51,27 @@ from .wizard import BASE, answered, choose, classify, dismiss_alerts, enabled, f
 log = logging.getLogger("alex311.submit_browser")
 
 CASE_RE = re.compile(r"\b\d{2}-\d{8}\b")
+# The City's search box carries "examples: pothole, trash, noise, 23-00000100"
+# as its placeholder, and it is on every page. The first real filing was
+# recorded under that number because the matcher read the whole page.
+NOT_A_CASE = {"23-00000100"}
+
+
+def case_number_in(*texts: str, seen_before: set[str] | frozenset[str] = frozenset()) -> str | None:
+    """The first case number in the texts given that was not on the page before
+    Submit was pressed.
+
+    The page behind the wizard lists other residents' recent requests, and the
+    second real filing was recorded under one of theirs — a Tall Grass complaint
+    on Wolfe Street — because a fallback read the whole page. A number the page
+    already showed before the click cannot be ours, whatever text it is in.
+    """
+    for text in texts:
+        for m in CASE_RE.finditer(text or ""):
+            n = m.group(0)
+            if n not in NOT_A_CASE and n not in seen_before:
+                return n
+    return None
 ENV_GATE = "ALEX311_ALLOW_LIVE_SUBMIT"
 
 
@@ -70,6 +91,9 @@ class SubmitResult:
     review_text: str = ""
     screenshot: str | None = None
     contact_required: bool | None = None
+    # what the wizard showed after Submit, so a filing whose number we could not
+    # read can still be verified by a person
+    confirmation_text: str = ""
     note: str = ""
 
     @property
@@ -174,6 +198,19 @@ def _within_modal(sel: str) -> str:
 
 CONTACT_FIELDS = ("First Name", "Last Name", "Email", "Phone Number")
 
+# The contact step says: "The only special character allowed in the contact
+# name is a period (.)". A hyphenated surname reaches the review step as typed,
+# and then Submit creates nothing — twice, for the first real request. Sending
+# what the form says it accepts is the only way to find out, and the name as
+# the person typed it stays on our record.
+_NAME_OK = re.compile(r"[^A-Za-z0-9 .\u00C0-\u024F]")
+
+
+def city_safe_name(name: str) -> str:
+    """The name with anything the City's form says it will not take replaced
+    by a space: Orrin-Brown becomes Orrin Brown, O'Neil becomes O Neil."""
+    return " ".join(_NAME_OK.sub(" ", name or "").split())
+
 
 async def contact_state(pg) -> dict:
     """Is there a contact step in front of us, and does this service demand it?
@@ -205,29 +242,44 @@ async def fill_contact(pg, contact: dict) -> list[str]:
     run stops.
     """
     filled = []
-    for field, value in (("First Name", contact.get("first_name")),
-                         ("Last Name", contact.get("last_name")),
-                         ("Email", contact.get("email")),
-                         ("Phone Number", contact.get("phone"))):
-        if not value:
-            continue
-        loc = pg.locator(f'input[name="{field}"]').first
-        if await loc.count():
-            await loc.fill(str(value))
-            filled.append(field)
-            await pg.wait_for_timeout(250)
-    # the consent tick, when the step carries one
+    # The consent tick comes first. On services where contact is optional the
+    # four inputs arrive disabled and the box — "Providing your contact
+    # information is optional ... please check the box to confirm your consent"
+    # — is what enables them. Filling before ticking waits thirty seconds on a
+    # disabled field and fails, which is how the first real request failed
+    # three times over. On services where contact is required the fields are
+    # live from the start and the tick is plain consent; ticking first is right
+    # there too.
     box = pg.locator(_within_modal("[role=checkbox]")).locator("visible=true").first
     if await box.count() and (await box.get_attribute("aria-checked")) != "true":
         await box.click(force=True)
         await pg.wait_for_timeout(400)
         filled.append("consent")
+    for field, value in (("First Name", city_safe_name(contact.get("first_name"))),
+                         ("Last Name", city_safe_name(contact.get("last_name"))),
+                         ("Email", contact.get("email")),
+                         ("Phone Number", contact.get("phone"))):
+        if not value:
+            continue
+        given = contact.get(field.split()[0].lower() + "_name") if "Name" in field else value
+        if given and given != value:
+            log.warning("%s sent as %r rather than %r: the City's form allows only a period "
+                        "as a special character", field, value, given)
+            filled.append(f"{field} as {value!r}")
+        loc = pg.locator(f'input[name="{field}"]').first
+        if await loc.count():
+            # a short wait, so a field that is still disabled fails with a
+            # message that says so rather than a thirty-second stall
+            await loc.fill(str(value), timeout=8000)
+            filled.append(field)
+            await pg.wait_for_timeout(250)
     return filled
 
 
 async def _run(*, service_code: str, address: str, description: str, answers: dict,
                contact: dict, lat: float | None, long: float | None, live: bool,
-               headless: bool, screenshot: str | None) -> SubmitResult:
+               headless: bool, screenshot: str | None,
+               attempt_id: int | None = None) -> SubmitResult:
     from . import registry_drift as rd            # reuse the registry loader
 
     reg = rd.load_registry()
@@ -303,7 +355,8 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
 
             result.stage = "at_submit"
             if allowed:
-                _record(result, address=address, description=description, live=True)
+                _record(result, address=address, description=description, live=True,
+                        attempt_id=attempt_id)
             if screenshot:
                 await pg.screenshot(path=screenshot, full_page=True)
                 result.screenshot = screenshot
@@ -314,14 +367,24 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
                                "Nothing was sent to the City.")
                 return result
 
+            # Every case number already on the page — the search placeholder and
+            # other residents' recent requests behind the wizard — so that none
+            # of them can be mistaken for ours afterwards.
+            before = frozenset(CASE_RE.findall(await pg.inner_text("body")))
+
             # ---- the only click in this project that files a request ----
             log.warning("SUBMITTING a real request to the City: %s at %s",
                         service["service_name"], address)
             await submit.first.click(timeout=10000)
             await pg.wait_for_timeout(12000)
+            modal = pg.locator(IN_MODAL).locator("visible=true")
+            inside = " ".join([await m.inner_text() for m in await modal.all()])
             after = await pg.inner_text("body")
-            m = CASE_RE.search(after)
-            result.case_number = m.group(0) if m else None
+            result.case_number = case_number_in(inside, after, seen_before=before)
+            result.alerts = await wizard.msgs(pg)
+            result.confirmation_text = " ".join((inside or after).split())[:900]
+            log.warning("after Submit the wizard showed: %s | alerts: %s",
+                        result.confirmation_text[:400], result.alerts)
             result.stage = "submitted"
             result.note = ("REAL submission created" if result.case_number
                            else "submit pressed but no case number was shown — verify manually")
@@ -344,8 +407,16 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
             await browser.close()
 
 
-def _record(result: SubmitResult, *, address: str, description: str, live: bool) -> None:
+def _record(result: SubmitResult, *, address: str, description: str, live: bool,
+            attempt_id: int | None = None) -> None:
     """Write the attempt down, and note what the abuse policy makes of it.
+
+    When the request already has a row — the worker files what the form queued,
+    and that row is the one the tester is watching — the case number goes onto
+    it and nothing new is inserted. The first real filing took three Submit
+    clicks and left three extra "relayed" rows behind, two of them carrying
+    wrong case numbers, and the policy then counted the address as having made
+    three requests that day.
 
     Best-effort: a database that is unreachable must not stop an operator from
     filing a request they have decided to file, so this logs and moves on.
@@ -379,6 +450,9 @@ def _record(result: SubmitResult, *, address: str, description: str, live: bool)
             if decision.outcome != abuse.ALLOW:
                 log.warning("anti-abuse policy says %s: %s",
                             decision.outcome, "; ".join(decision.reasons))
+            if attempt_id is not None:
+                result.attempt_id = attempt_id
+                return
             result.attempt_id = adb.record_attempt(
                 conn, submitter_id=None, service_code=result.service_code,
                 service_name=result.service_name, address=address, address_key=key,
@@ -409,11 +483,13 @@ def prepare_submission(*, service_code: str, address: str = "", description: str
                        answers: dict | None = None, contact: dict | None = None,
                        lat: float | None = None, long: float | None = None,
                        live: bool = False, headless: bool = True,
-                       screenshot: str | None = None) -> SubmitResult:
+                       screenshot: str | None = None,
+                       attempt_id: int | None = None) -> SubmitResult:
     """Drive one request. Dry run unless both gates are open."""
     return asyncio.run(_run(service_code=service_code, address=address, description=description,
                             answers=answers or {}, contact=contact or {}, lat=lat, long=long,
-                            live=live, headless=headless, screenshot=screenshot))
+                            live=live, headless=headless, screenshot=screenshot,
+                            attempt_id=attempt_id))
 
 
 def main(argv: list[str] | None = None) -> int:
