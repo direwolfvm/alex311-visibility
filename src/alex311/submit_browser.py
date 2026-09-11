@@ -57,16 +57,20 @@ CASE_RE = re.compile(r"\b\d{2}-\d{8}\b")
 NOT_A_CASE = {"23-00000100"}
 
 
-def case_number_in(*texts: str) -> str | None:
-    """The first plausible case number in the texts given, in order.
+def case_number_in(*texts: str, seen_before: set[str] | frozenset[str] = frozenset()) -> str | None:
+    """The first case number in the texts given that was not on the page before
+    Submit was pressed.
 
-    Callers pass the wizard's own text first and the whole page second, so a
-    confirmation inside the modal wins over anything on the page behind it.
+    The page behind the wizard lists other residents' recent requests, and the
+    second real filing was recorded under one of theirs — a Tall Grass complaint
+    on Wolfe Street — because a fallback read the whole page. A number the page
+    already showed before the click cannot be ours, whatever text it is in.
     """
     for text in texts:
         for m in CASE_RE.finditer(text or ""):
-            if m.group(0) not in NOT_A_CASE:
-                return m.group(0)
+            n = m.group(0)
+            if n not in NOT_A_CASE and n not in seen_before:
+                return n
     return None
 ENV_GATE = "ALEX311_ALLOW_LIVE_SUBMIT"
 
@@ -194,6 +198,19 @@ def _within_modal(sel: str) -> str:
 
 CONTACT_FIELDS = ("First Name", "Last Name", "Email", "Phone Number")
 
+# The contact step says: "The only special character allowed in the contact
+# name is a period (.)". A hyphenated surname reaches the review step as typed,
+# and then Submit creates nothing — twice, for the first real request. Sending
+# what the form says it accepts is the only way to find out, and the name as
+# the person typed it stays on our record.
+_NAME_OK = re.compile(r"[^A-Za-z0-9 .\u00C0-\u024F]")
+
+
+def city_safe_name(name: str) -> str:
+    """The name with anything the City's form says it will not take replaced
+    by a space: Orrin-Brown becomes Orrin Brown, O'Neil becomes O Neil."""
+    return " ".join(_NAME_OK.sub(" ", name or "").split())
+
 
 async def contact_state(pg) -> dict:
     """Is there a contact step in front of us, and does this service demand it?
@@ -238,12 +255,17 @@ async def fill_contact(pg, contact: dict) -> list[str]:
         await box.click(force=True)
         await pg.wait_for_timeout(400)
         filled.append("consent")
-    for field, value in (("First Name", contact.get("first_name")),
-                         ("Last Name", contact.get("last_name")),
+    for field, value in (("First Name", city_safe_name(contact.get("first_name"))),
+                         ("Last Name", city_safe_name(contact.get("last_name"))),
                          ("Email", contact.get("email")),
                          ("Phone Number", contact.get("phone"))):
         if not value:
             continue
+        given = contact.get(field.split()[0].lower() + "_name") if "Name" in field else value
+        if given and given != value:
+            log.warning("%s sent as %r rather than %r: the City's form allows only a period "
+                        "as a special character", field, value, given)
+            filled.append(f"{field} as {value!r}")
         loc = pg.locator(f'input[name="{field}"]').first
         if await loc.count():
             # a short wait, so a field that is still disabled fails with a
@@ -343,18 +365,24 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
                                "Nothing was sent to the City.")
                 return result
 
+            # Every case number already on the page — the search placeholder and
+            # other residents' recent requests behind the wizard — so that none
+            # of them can be mistaken for ours afterwards.
+            before = frozenset(CASE_RE.findall(await pg.inner_text("body")))
+
             # ---- the only click in this project that files a request ----
             log.warning("SUBMITTING a real request to the City: %s at %s",
                         service["service_name"], address)
             await submit.first.click(timeout=10000)
             await pg.wait_for_timeout(12000)
-            # the confirmation, from inside the wizard first; the page behind it
-            # carries a placeholder that looks exactly like a case number
             modal = pg.locator(IN_MODAL).locator("visible=true")
             inside = " ".join([await m.inner_text() for m in await modal.all()])
             after = await pg.inner_text("body")
-            result.case_number = case_number_in(inside, after)
-            result.confirmation_text = " ".join((inside or after).split())[:600]
+            result.case_number = case_number_in(inside, after, seen_before=before)
+            result.alerts = await wizard.msgs(pg)
+            result.confirmation_text = " ".join((inside or after).split())[:900]
+            log.warning("after Submit the wizard showed: %s | alerts: %s",
+                        result.confirmation_text[:400], result.alerts)
             result.stage = "submitted"
             result.note = ("REAL submission created" if result.case_number
                            else "submit pressed but no case number was shown — verify manually")

@@ -158,5 +158,36 @@ def test_the_wizards_own_text_wins_over_the_page_behind_it():
     modal = "Thank you. Your request number is 26-00036550."
     page = "examples: 23-00000100 ... OPEN (26-00036544) Tall Grass ..."
     assert case_number_in(modal, page) == "26-00036550"
-    # and when the wizard said nothing usable, the page is still consulted
-    assert case_number_in("", page) == "26-00036544"
+
+
+def test_a_number_that_was_on_the_page_before_submit_cannot_be_ours():
+    """The page behind the wizard lists other residents' recent requests. The
+    second real filing was recorded under one of theirs — a Tall Grass
+    complaint on Wolfe Street — because a fallback read the whole page."""
+    from alex311.submit_browser import case_number_in
+    before = frozenset({"26-00036544", "23-00000100"})
+    page_after = "examples: 23-00000100 ... OPEN (26-00036544) Tall Grass 714 WOLFE ST"
+    assert case_number_in("", page_after, seen_before=before) is None
+    assert case_number_in("Your request 26-00036551", page_after, seen_before=before) == "26-00036551"
+
+
+def test_what_the_wizard_showed_after_submit_is_logged_every_time():
+    """Twice now the only record of what the City said after Submit was lost,
+    because it was kept only when the filing was judged to have failed."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "src/alex311/submit_browser.py").read_text()
+    assert 'log.warning("after Submit the wizard showed' in src
+
+
+def test_a_name_goes_to_the_city_in_the_form_its_contact_step_allows():
+    """"The only special character allowed in the contact name is a period."
+    A hyphenated surname reached review as typed and then Submit created
+    nothing, twice. What the person typed stays on our record; what is sent
+    is what the form says it takes, and the difference is written down."""
+    from alex311.submit_browser import city_safe_name
+    assert city_safe_name("Orrin-Brown") == "Orrin Brown"
+    assert city_safe_name("O'Neil") == "O Neil"
+    assert city_safe_name("St. John") == "St. John"
+    assert city_safe_name("  Asa ") == "Asa"
+    assert city_safe_name("Zoë") == "Zoë"
+    assert city_safe_name("") == ""
