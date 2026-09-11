@@ -141,3 +141,22 @@ def test_the_consent_box_is_ticked_before_the_contact_fields_are_filled():
     tick = body.index('box.click(force=True)')
     fill = body.index('loc.fill(str(value)')
     assert tick < fill, "the consent tick has to come before the fields are filled"
+
+
+def test_the_search_box_placeholder_is_never_taken_for_a_case_number():
+    """Every page on the City's site carries "examples: pothole, trash, noise,
+    23-00000100" in a search box. The first real filing was recorded under
+    that number because the matcher read the whole page."""
+    from alex311.submit_browser import case_number_in
+    page = "Search Service Requests examples: pothole, trash, noise, 23-00000100..."
+    assert case_number_in(page) is None
+    assert case_number_in("", page) is None
+
+
+def test_the_wizards_own_text_wins_over_the_page_behind_it():
+    from alex311.submit_browser import case_number_in
+    modal = "Thank you. Your request number is 26-00036550."
+    page = "examples: 23-00000100 ... OPEN (26-00036544) Tall Grass ..."
+    assert case_number_in(modal, page) == "26-00036550"
+    # and when the wizard said nothing usable, the page is still consulted
+    assert case_number_in("", page) == "26-00036544"

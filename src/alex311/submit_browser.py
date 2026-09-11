@@ -51,6 +51,23 @@ from .wizard import BASE, answered, choose, classify, dismiss_alerts, enabled, f
 log = logging.getLogger("alex311.submit_browser")
 
 CASE_RE = re.compile(r"\b\d{2}-\d{8}\b")
+# The City's search box carries "examples: pothole, trash, noise, 23-00000100"
+# as its placeholder, and it is on every page. The first real filing was
+# recorded under that number because the matcher read the whole page.
+NOT_A_CASE = {"23-00000100"}
+
+
+def case_number_in(*texts: str) -> str | None:
+    """The first plausible case number in the texts given, in order.
+
+    Callers pass the wizard's own text first and the whole page second, so a
+    confirmation inside the modal wins over anything on the page behind it.
+    """
+    for text in texts:
+        for m in CASE_RE.finditer(text or ""):
+            if m.group(0) not in NOT_A_CASE:
+                return m.group(0)
+    return None
 ENV_GATE = "ALEX311_ALLOW_LIVE_SUBMIT"
 
 
@@ -70,6 +87,9 @@ class SubmitResult:
     review_text: str = ""
     screenshot: str | None = None
     contact_required: bool | None = None
+    # what the wizard showed after Submit, so a filing whose number we could not
+    # read can still be verified by a person
+    confirmation_text: str = ""
     note: str = ""
 
     @property
@@ -328,9 +348,13 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
                         service["service_name"], address)
             await submit.first.click(timeout=10000)
             await pg.wait_for_timeout(12000)
+            # the confirmation, from inside the wizard first; the page behind it
+            # carries a placeholder that looks exactly like a case number
+            modal = pg.locator(IN_MODAL).locator("visible=true")
+            inside = " ".join([await m.inner_text() for m in await modal.all()])
             after = await pg.inner_text("body")
-            m = CASE_RE.search(after)
-            result.case_number = m.group(0) if m else None
+            result.case_number = case_number_in(inside, after)
+            result.confirmation_text = " ".join((inside or after).split())[:600]
             result.stage = "submitted"
             result.note = ("REAL submission created" if result.case_number
                            else "submit pressed but no case number was shown — verify manually")
