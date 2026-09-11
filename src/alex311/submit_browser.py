@@ -205,6 +205,19 @@ async def fill_contact(pg, contact: dict) -> list[str]:
     run stops.
     """
     filled = []
+    # The consent tick comes first. On services where contact is optional the
+    # four inputs arrive disabled and the box — "Providing your contact
+    # information is optional ... please check the box to confirm your consent"
+    # — is what enables them. Filling before ticking waits thirty seconds on a
+    # disabled field and fails, which is how the first real request failed
+    # three times over. On services where contact is required the fields are
+    # live from the start and the tick is plain consent; ticking first is right
+    # there too.
+    box = pg.locator(_within_modal("[role=checkbox]")).locator("visible=true").first
+    if await box.count() and (await box.get_attribute("aria-checked")) != "true":
+        await box.click(force=True)
+        await pg.wait_for_timeout(400)
+        filled.append("consent")
     for field, value in (("First Name", contact.get("first_name")),
                          ("Last Name", contact.get("last_name")),
                          ("Email", contact.get("email")),
@@ -213,15 +226,11 @@ async def fill_contact(pg, contact: dict) -> list[str]:
             continue
         loc = pg.locator(f'input[name="{field}"]').first
         if await loc.count():
-            await loc.fill(str(value))
+            # a short wait, so a field that is still disabled fails with a
+            # message that says so rather than a thirty-second stall
+            await loc.fill(str(value), timeout=8000)
             filled.append(field)
             await pg.wait_for_timeout(250)
-    # the consent tick, when the step carries one
-    box = pg.locator(_within_modal("[role=checkbox]")).locator("visible=true").first
-    if await box.count() and (await box.get_attribute("aria-checked")) != "true":
-        await box.click(force=True)
-        await pg.wait_for_timeout(400)
-        filled.append("consent")
     return filled
 
 

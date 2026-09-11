@@ -128,3 +128,16 @@ def test_nothing_is_recorded_without_a_database(monkeypatch):
     r = sb.SubmitResult(True, True, "at_submit", "TESMISCO", "Missed Collection")
     sb._record(r, address="100 King St", description="x", live=True)
     assert r.attempt_id is None and r.policy == {}
+
+
+def test_the_consent_box_is_ticked_before_the_contact_fields_are_filled():
+    """On services where contact is optional the City disables the four inputs
+    until the consent box is ticked. Filling first waits on a disabled field
+    and times out — which is how the first real request failed, three times.
+    The order is the fix, so the order is what this pins."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "src/alex311/submit_browser.py").read_text()
+    body = src.split("async def fill_contact(")[1].split("\nasync def ")[0]
+    tick = body.index('box.click(force=True)')
+    fill = body.index('loc.fill(str(value)')
+    assert tick < fill, "the consent tick has to come before the fields are filled"
