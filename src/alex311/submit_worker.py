@@ -124,7 +124,8 @@ def file_one(row: dict, *, live: bool, screenshot: str | None = None) -> dict:
         description=row.get("description") or "",
         answers=answers if isinstance(answers, dict) else {},
         contact=contact if isinstance(contact, dict) else {},
-        live=live, headless=True, screenshot=screenshot)
+        live=live, headless=True, screenshot=screenshot,
+        attempt_id=row["attempt_id"])          # record against this row, not a new one
     return result
 
 

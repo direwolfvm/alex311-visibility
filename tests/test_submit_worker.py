@@ -174,3 +174,17 @@ def test_submit_without_a_case_number_is_parked_not_filed_and_not_retried():
     assert "SET tries = %s" in branch and "MAX_TRIES, attempt_id" in branch
     assert "may file a duplicate" in branch
     assert 'if result.stage == "submitted" and result.case_number:' in src
+
+
+def test_the_worker_files_against_the_row_it_claimed_rather_than_inserting_one():
+    """Each Submit click used to add a second "relayed" row. The first real
+    filing left three of them, two with wrong case numbers, and the policy then
+    counted the address as having made three requests that day."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    worker = (root / "src/alex311/submit_worker.py").read_text()
+    browser = (root / "src/alex311/submit_browser.py").read_text()
+    assert 'attempt_id=row["attempt_id"]' in worker.split("def file_one(")[1].split("\ndef ")[0]
+    record = browser.split("def _record(")[1].split("\ndef ")[0]
+    assert "if attempt_id is not None:" in record
+    assert record.index("if attempt_id is not None:") < record.index("adb.record_attempt(")

@@ -278,7 +278,8 @@ async def fill_contact(pg, contact: dict) -> list[str]:
 
 async def _run(*, service_code: str, address: str, description: str, answers: dict,
                contact: dict, lat: float | None, long: float | None, live: bool,
-               headless: bool, screenshot: str | None) -> SubmitResult:
+               headless: bool, screenshot: str | None,
+               attempt_id: int | None = None) -> SubmitResult:
     from . import registry_drift as rd            # reuse the registry loader
 
     reg = rd.load_registry()
@@ -354,7 +355,8 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
 
             result.stage = "at_submit"
             if allowed:
-                _record(result, address=address, description=description, live=True)
+                _record(result, address=address, description=description, live=True,
+                        attempt_id=attempt_id)
             if screenshot:
                 await pg.screenshot(path=screenshot, full_page=True)
                 result.screenshot = screenshot
@@ -405,8 +407,16 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
             await browser.close()
 
 
-def _record(result: SubmitResult, *, address: str, description: str, live: bool) -> None:
+def _record(result: SubmitResult, *, address: str, description: str, live: bool,
+            attempt_id: int | None = None) -> None:
     """Write the attempt down, and note what the abuse policy makes of it.
+
+    When the request already has a row — the worker files what the form queued,
+    and that row is the one the tester is watching — the case number goes onto
+    it and nothing new is inserted. The first real filing took three Submit
+    clicks and left three extra "relayed" rows behind, two of them carrying
+    wrong case numbers, and the policy then counted the address as having made
+    three requests that day.
 
     Best-effort: a database that is unreachable must not stop an operator from
     filing a request they have decided to file, so this logs and moves on.
@@ -440,6 +450,9 @@ def _record(result: SubmitResult, *, address: str, description: str, live: bool)
             if decision.outcome != abuse.ALLOW:
                 log.warning("anti-abuse policy says %s: %s",
                             decision.outcome, "; ".join(decision.reasons))
+            if attempt_id is not None:
+                result.attempt_id = attempt_id
+                return
             result.attempt_id = adb.record_attempt(
                 conn, submitter_id=None, service_code=result.service_code,
                 service_name=result.service_name, address=address, address_key=key,
@@ -470,11 +483,13 @@ def prepare_submission(*, service_code: str, address: str = "", description: str
                        answers: dict | None = None, contact: dict | None = None,
                        lat: float | None = None, long: float | None = None,
                        live: bool = False, headless: bool = True,
-                       screenshot: str | None = None) -> SubmitResult:
+                       screenshot: str | None = None,
+                       attempt_id: int | None = None) -> SubmitResult:
     """Drive one request. Dry run unless both gates are open."""
     return asyncio.run(_run(service_code=service_code, address=address, description=description,
                             answers=answers or {}, contact=contact or {}, lat=lat, long=long,
-                            live=live, headless=headless, screenshot=screenshot))
+                            live=live, headless=headless, screenshot=screenshot,
+                            attempt_id=attempt_id))
 
 
 def main(argv: list[str] | None = None) -> int:
