@@ -188,9 +188,29 @@ def main(argv: list[str] | None = None) -> int:
             handled.append({"attempt_id": attempt_id, "stage": "crashed"})
             continue
 
-        if result.stage == "submitted":
+        if result.stage == "submitted" and result.case_number:
             finish(conn, attempt_id, state="filed", case_number=result.case_number)
             log.warning("attempt %s FILED as %s", attempt_id, result.case_number)
+        elif result.stage == "submitted":
+            # Submit was pressed and the City showed no case number. Either it
+            # refused the request, or it took it and we could not read the
+            # number — and retrying the second case files a duplicate in a real
+            # person's name. So this is parked, not retried: the tries counter
+            # is set to its limit so the sweep leaves it alone, and what the
+            # City showed is kept for whoever looks. The first real request
+            # went this way, and was recorded as filed under the search box's
+            # example number.
+            shown = " ".join(filter(None, [result.confirmation_text,
+                                           *(result.alerts or [])]))[:700]
+            finish(conn, attempt_id, state="failed",
+                   error="Submit was pressed but the City showed no case number. "
+                         "Check before trying again: a retry may file a duplicate. "
+                         f"The City showed: {shown or '(nothing readable)'}")
+            conn.execute("UPDATE submission_attempts SET tries = %s WHERE attempt_id = %s",
+                         (MAX_TRIES, attempt_id))
+            conn.commit()
+            log.error("attempt %s: Submit pressed, no case number; parked. City showed: %s",
+                      attempt_id, shown)
         elif not allowed and result.stage == "ready_not_submitted":
             # a rehearsal proves the path; the row stays approved for the real run
             finish(conn, attempt_id, state=CLAIMABLE, error=None)

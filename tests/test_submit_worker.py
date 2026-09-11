@@ -160,3 +160,17 @@ def test_one_request_per_run_by_default(conn, monkeypatch):
         calls.append(1), SubmitResult(True, True, "submitted", "X", "X", case_number="26-1"))[1])
     w.main(["--live"])
     assert len(calls) == 1
+
+
+def test_submit_without_a_case_number_is_parked_not_filed_and_not_retried():
+    """Either the City refused it or it took it and we could not read the
+    number. Retrying the second case files a duplicate in a real person's
+    name, so the row is parked at the tries limit with what the City showed,
+    for a person to look at."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "src/alex311/submit_worker.py").read_text()
+    branch = src.split('elif result.stage == "submitted":')[1].split("\n        else:")[0]
+    assert 'state="failed"' in branch
+    assert "SET tries = %s" in branch and "MAX_TRIES, attempt_id" in branch
+    assert "may file a duplicate" in branch
+    assert 'if result.stage == "submitted" and result.case_number:' in src
