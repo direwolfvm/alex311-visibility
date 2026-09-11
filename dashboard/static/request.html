@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service request · Alex311 Visibility</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2733; --muted:#5c6675;
+    --accent:#1d4ed8; --open:#b45309; --closed:#047857; --border:#e2e8f0;
+    --openbg:#fef3c7; --closedbg:#ecfdf5; --otherbg:#e2e8f0;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  a { color:var(--accent); }
+  .skip-link { position:absolute; left:8px; top:-48px; z-index:3000; background:var(--panel);
+               color:var(--accent); padding:8px 14px; border:1px solid var(--accent);
+               border-radius:0 0 8px 8px; transition:top .12s; }
+  .skip-link:focus { top:0; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+             clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+  /* The site bar, identical to the other pages. */
+  header { display:flex; align-items:baseline; gap:16px; padding:14px 20px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .mark { height:26px; width:26px; align-self:center; }
+  header h1 { font-size:18px; margin:0; }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; margin-left:22px; align-self:stretch; }
+  nav.tabs .tab-link { display:flex; align-items:center; gap:6px; text-decoration:none;
+                       font-size:14px; padding:6px 16px 8px; color:var(--muted);
+                       border-bottom:2px solid transparent; }
+  nav.tabs .tab-link:hover { color:var(--ink); border-bottom-color:var(--border); }
+  nav.tabs .tab-link[aria-current="page"] { color:var(--accent); font-weight:600;
+                                            border-bottom-color:var(--accent); }
+  nav.tabs .tab-link[hidden] { display:none; }
+  .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+             background:#dbeafe; color:var(--accent); padding:1px 6px; border-radius:99px; }
+  @media (max-width:640px) {
+    header { gap:2px 10px; padding:8px 14px 0; }
+    header h1 { font-size:16px; }
+    header .sub { flex-basis:100%; font-size:11px; }
+    nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
+    nav.tabs .tab-link { flex:1; padding:8px 4px; justify-content:center; text-align:center; }
+    .tab-tag { display:none; }
+  }
+
+  .wrap { max-width:1000px; margin:0 auto; padding:18px 18px 70px; }
+  .crumb { font-size:13px; margin:0 0 12px; }
+  .crumb a { text-decoration:none; }
+
+  /* the record's own heading: case number first, because that is what people
+     arrive holding */
+  .head { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin:0 0 4px; }
+  .case { font:700 26px/1.15 ui-monospace,"SF Mono",Menlo,monospace; margin:0;
+          letter-spacing:-.01em; }
+  .svc { font-size:19px; font-weight:600; margin:2px 0 6px; }
+  .where { color:var(--muted); font-size:14px; margin:0 0 18px; }
+  .badge { display:inline-block; padding:2px 11px; border-radius:99px; font-size:12px;
+           font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .badge.open { background:var(--openbg); color:var(--open); }
+  .badge.closed { background:var(--closedbg); color:var(--closed); }
+  .badge.other { background:var(--otherbg); color:var(--muted); }
+
+  .cols { display:grid; grid-template-columns:minmax(0,1.9fr) minmax(260px,1fr); gap:18px;
+          align-items:start; }
+  @media (max-width:860px) { .cols { grid-template-columns:1fr; } }
+
+  section.card { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+                 padding:16px 18px; margin-bottom:16px; }
+  section.card > h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em;
+                      color:var(--muted); margin:0 0 10px; }
+  .body-text { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .body-text + h2 { margin-top:16px; }
+
+  /* photographs are the reason this page exists, so they get real room */
+  /* 120px rather than 150: on a 375px phone the larger minimum leaves room for
+     exactly one column, and eleven full-width photographs is a long scroll. */
+  .shots { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:10px; }
+  .shot { border:none; background:none; padding:0; cursor:zoom-in; border-radius:8px;
+          overflow:hidden; line-height:0; }
+  .shot img { width:100%; aspect-ratio:4/3; object-fit:cover; background:var(--otherbg);
+              border-radius:8px; }
+  .shot:hover img { outline:2px solid var(--accent); outline-offset:-2px; }
+  .converted { display:inline-block; margin-top:8px; font-size:12px; color:var(--muted); }
+
+  .files { list-style:none; margin:0; padding:0; }
+  .files li { display:flex; align-items:center; gap:10px; padding:9px 0;
+              border-top:1px solid var(--border); font-size:14px; }
+  .files li:first-child { border-top:none; }
+  .files .kind { font:600 10px/1 ui-monospace,Menlo,monospace; text-transform:uppercase;
+                 background:var(--otherbg); color:var(--muted); padding:5px 7px;
+                 border-radius:5px; letter-spacing:.04em; }
+  .files .size { margin-left:auto; color:var(--muted); font-size:12px;
+                 font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  dl.facts { display:grid; grid-template-columns:max-content 1fr; gap:7px 14px; margin:0; }
+  dl.facts dt { color:var(--muted); font-size:11px; text-transform:uppercase;
+                letter-spacing:.04em; padding-top:2px; }
+  dl.facts dd { margin:0; overflow-wrap:anywhere; }
+
+  #map { height:190px; border-radius:8px; margin-bottom:10px; }
+  .map-note { color:var(--muted); font-size:12px; margin:0; }
+
+  .rel { list-style:none; margin:0; padding:0; }
+  .rel li { padding:8px 0; border-top:1px solid var(--border); font-size:14px; }
+  .rel li:first-child { border-top:none; }
+  .rel .tag { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+              color:var(--muted); }
+
+  .official { display:block; padding:11px 14px; border:1px solid var(--border);
+              border-radius:8px; text-decoration:none; font-size:14px; background:var(--panel); }
+  .official:hover { border-color:var(--accent); }
+  .official small { display:block; color:var(--muted); font-size:12px; margin-top:3px; }
+
+  .lb { position:fixed; inset:0; background:rgba(16,22,30,.92); z-index:2000;
+        display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+        padding:20px; }
+  /* `display:flex` above outranks the browser's own [hidden] rule, so without
+     this the lightbox covers the page from the moment it loads. */
+  .lb[hidden] { display:none; }
+  .lb img { max-width:100%; max-height:78vh; object-fit:contain; border-radius:6px; }
+  .lb-bar { display:flex; gap:12px; align-items:center; color:#e8edf4; font-size:13px;
+            flex-wrap:wrap; justify-content:center; }
+  .lb-bar a { color:#bfdbfe; }
+  .lb-bar button { background:#1f2937; color:#e8edf4; border:1px solid #374151;
+                   border-radius:7px; padding:6px 12px; font:inherit; cursor:pointer; }
+  .lb-bar button[disabled] { opacity:.4; cursor:default; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .lb :focus-visible { outline-color:#bfdbfe; }
+  .empty { color:var(--muted); font-size:14px; margin:0; }
+  .loading { color:var(--muted); padding:40px 0; text-align:center; }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header>
+  <img src="/favicon.svg" alt="" class="mark">
+  <h1>Alex311 Visibility</h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs" aria-label="Views">
+    <a class="tab-link" href="/">Explore</a>
+    <a class="tab-link" href="/#analytics">Analytics</a>
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
+  </nav>
+</header>
+
+<div class="wrap" id="main">
+  <p class="crumb"><a href="/">← All requests</a></p>
+  <div id="record"><p class="loading">Loading…</p></div>
+</div>
+
+<div class="lb" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Photo">
+  <img id="lb-img" alt="">
+  <div class="lb-bar">
+    <button id="lb-prev" type="button">← Previous</button>
+    <span id="lb-count"></span>
+    <button id="lb-next" type="button">Next →</button>
+    <a id="lb-full" target="_blank" rel="noopener">full size ↗</a>
+    <button id="lb-close" type="button">Close</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CASE = decodeURIComponent(location.pathname.replace(/^\/r\//, ''));
+
+const day = v => v ? String(v).slice(0, 10) : null;
+const stamp = v => v ? String(v).replace('T', ' ').slice(0, 16) + ' UTC' : null;
+const bytes = n => n == null ? '' : n < 1024 ? `${n} B`
+  : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+
+function badge(status) {
+  const s = (status || '').toLowerCase();
+  const cls = ['open', 'closed'].includes(s) ? s : 'other';
+  return `<span class="badge ${cls}">${esc(status || 'unknown')}</span>`;
+}
+
+// "closed after 3 days" says more than two timestamps a reader has to subtract.
+function span(from, to) {
+  if (!from || !to) return '';
+  const h = (new Date(to) - new Date(from)) / 3600000;
+  if (!isFinite(h) || h < 0) return '';
+  return h < 48 ? `${Math.round(h)} hours` : `${Math.round(h / 24)} days`;
+}
+
+const IMAGE = /^image\//;
+function kindOf(m) {
+  const mime = m.stored_mime || m.mime_type || '';
+  const ext = (m.file_name || '').split('.').pop().toLowerCase();
+  return {mime, ext, isImage: IMAGE.test(mime)};
+}
+
+function facts(d) {
+  const rows = [
+    ['Status', badge(d.status)],
+    ['Reported', stamp(d.requested_datetime)],
+    ['Expected', day(d.expected_datetime)],
+    ['Last updated', stamp(d.last_updated_datetime)],
+    ['Closed', d.closed_datetime
+      ? `${stamp(d.closed_datetime)}${span(d.requested_datetime, d.closed_datetime)
+          ? `<br><small style="color:var(--muted)">after ${span(d.requested_datetime, d.closed_datetime)}</small>` : ''}`
+      : null],
+    ['Cancelled', stamp(d.canceled_datetime)],
+    ['Department', esc(d.primary_service_department)],
+    ['Assigned to', esc(d.agency_responsible || d.owner)],
+    ['Priority', esc(d.priority)],
+    ['Reported via', esc(d.origin || d.source)],
+    ['ZIP', esc(d.zipcode)],
+  ].filter(([, v]) => v);
+  return `<dl class="facts">${rows.map(([k, v]) =>
+    `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+}
+
+function render(d) {
+  const media = (d.media || []).filter(m => m.stored);
+  const shots = media.filter(m => kindOf(m).isImage);
+  const files = media.filter(m => !kindOf(m).isImage);
+  const missing = (d.media_count || 0) - media.length;
+  // The City's record cannot display these; ours can, because the ingest
+  // rewrites them on the way in. Worth saying, quietly, where the photos are.
+  const heic = shots.filter(m => /\.heic$/i.test(m.file_name || '')).length;
+
+  const gallery = shots.length ? `
+    <section class="card">
+      <h2>Photos<span class="sr-only"> attached to this request</span></h2>
+      <div class="shots">${shots.map((m, i) => `
+        <button type="button" class="shot" data-idx="${i}">
+          <img src="/api/media/${m.media_id}?w=320" loading="lazy"
+               alt="Photo ${i + 1} of ${esc(d.service_name || 'this request')} at ${esc(d.address || 'the reported location')}"></button>`).join('')}
+      </div>
+      ${heic ? `<span class="converted">${heic} of these ${heic === 1 ? 'was' : 'were'}
+        taken as HEIC on a phone and converted here, which is why ${heic === 1 ? 'it does' : 'they do'}
+        not open on the City's own page.</span>` : ''}
+      ${missing > 0 ? `<span class="converted">${missing} more file(s) on the City's record
+        are not mirrored here.</span>` : ''}
+    </section>` : '';
+
+  const attachments = files.length ? `
+    <section class="card">
+      <h2>Attachments</h2>
+      <ul class="files">${files.map(m => {
+        const k = kindOf(m);
+        return `<li><span class="kind">${esc(k.ext || 'file')}</span>
+          <a href="/api/media/${m.media_id}" target="_blank" rel="noopener">${esc(m.file_name || m.media_id)}</a>
+          <span class="size">${bytes(m.stored_bytes)}</span></li>`;
+      }).join('')}</ul>
+    </section>` : '';
+
+  const notes = [
+    ['Description', d.description],
+    ['What the City said', d.status_notes],
+    ['How it was closed', d.closure_details],
+  ].filter(([, v]) => v);
+
+  const words = `<section class="card">` + (notes.length
+    ? notes.map(([k, v]) => `<h2>${k}</h2><p class="body-text">${esc(v)}</p>`).join('')
+    : `<h2>Description</h2><p class="empty">The City&#39;s record carries no
+       description for this one.</p>`) + `</section>`;
+
+  // Upward first: the City's record says a request is a duplicate without ever
+  // saying what of, which is the question a reader has at that moment.
+  const parents = [
+    ['The City marked this a duplicate of', d.duplicate_parent_service_request_id],
+    ['Filed under', d.parent_service_request_id],
+  ].filter(([, v]) => v);
+
+  const related = (parents.length || (d.related || []).length) ? `
+    <section class="card">
+      <h2>Tied to this request</h2>
+      <ul class="rel">${parents.map(([label, id]) => `<li>
+        <span class="tag">${label}</span><br>
+        <a href="/r/${encodeURIComponent(id)}">${esc(id)}</a></li>`).join('')}
+      ${(d.related || []).map(r => `<li>
+        <span class="tag">${r.relation === 'duplicate' ? 'duplicate of this' : 'follows this'}</span><br>
+        <a href="/r/${encodeURIComponent(r.service_request_id)}">${esc(r.service_request_id)}</a>
+        — ${esc(r.service_name)} · ${day(r.requested_datetime) || ''}</li>`).join('')}</ul>
+    </section>` : '';
+
+  const coords = d.lat && d.long;
+
+  $('record').innerHTML = `
+    <div class="head"><h2 class="case">${esc(d.service_request_id)}</h2>${badge(d.status)}</div>
+    <p class="svc">${esc(d.service_name || 'Service request')}</p>
+    <p class="where">${esc(d.address || 'No address on the record')}${
+      d.requested_datetime ? ` · reported ${day(d.requested_datetime)}` : ''}</p>
+
+    <div class="cols">
+      <div>
+        ${words}
+        ${gallery}
+        ${attachments}
+        ${related}
+        ${!d.enriched_at ? `<section class="card"><p class="empty">Only the summary of this
+          request has been ingested so far, so some fields may be missing here that exist on
+          the City's record.</p></section>` : ''}
+      </div>
+
+      <aside>
+        <section class="card">
+          ${coords ? '<div id="map"></div>' : ''}
+          <h2>The record</h2>
+          ${facts(d)}
+        </section>
+        <section class="card">
+          <a class="official" href="${esc(d.report_url)}" target="_blank" rel="noopener">
+            Open the official City record ↗
+            <small>alex311.alexandriava.gov — the authoritative copy</small></a>
+          <p style="margin:10px 0 0"><a class="official" href="/submit">Report something similar
+            <small>our prototype form, for a new request</small></a></p>
+        </section>
+      </aside>
+    </div>`;
+
+  if (coords) drawMap(d);
+  window.SHOTS = shots;
+}
+
+function drawMap(d) {
+  const map = L.map('map', {zoomControl: false, scrollWheelZoom: false, dragging: false})
+    .setView([d.lat, d.long], 16);
+  // the same tiles as the map on the Explore page, and the same attribution
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              {maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'}).addTo(map);
+  L.circleMarker([d.lat, d.long], {radius: 8, weight: 2, color: '#fff',
+    fillColor: (d.status || '').toLowerCase() === 'closed' ? '#059669' : '#d97706',
+    fillOpacity: 1}).addTo(map);
+  // Leaflet measures its container once, and this one is drawn into markup that
+  // was just written, so tell it again now that the box has a size.
+  map.invalidateSize();
+}
+
+// ------------------------------------------------------------------ photos
+const lb = {i: 0};
+function lbRender() {
+  const m = window.SHOTS[lb.i];
+  $('lb-img').src = `/api/media/${m.media_id}?w=1200`;
+  $('lb-img').alt = `Photo ${lb.i + 1}: ${m.file_name || ''}`;
+  $('lb-full').href = `/api/media/${m.media_id}`;
+  $('lb-count').textContent = window.SHOTS.length > 1
+    ? `${lb.i + 1} of ${window.SHOTS.length}` : (m.file_name || '');
+  $('lb-prev').disabled = lb.i === 0;
+  $('lb-next').disabled = lb.i === window.SHOTS.length - 1;
+  $('lb-prev').hidden = $('lb-next').hidden = window.SHOTS.length < 2;
+}
+function lbOpen(i) {
+  lb.i = i; lb.opener = document.activeElement;
+  $('lightbox').hidden = false; lbRender(); $('lb-close').focus();
+}
+function lbClose() {
+  $('lightbox').hidden = true; $('lb-img').src = '';
+  lb.opener?.focus?.(); lb.opener = null;
+}
+function lbStep(d) {
+  const i = lb.i + d;
+  if (i >= 0 && i < window.SHOTS.length) { lb.i = i; lbRender(); }
+}
+document.addEventListener('click', e => {
+  const s = e.target.closest('.shot');
+  if (s) lbOpen(+s.dataset.idx);
+});
+$('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') lbClose(); });
+$('lb-close').addEventListener('click', lbClose);
+$('lb-prev').addEventListener('click', () => lbStep(-1));
+$('lb-next').addEventListener('click', () => lbStep(1));
+document.addEventListener('keydown', e => {
+  if ($('lightbox').hidden) return;
+  if (e.key === 'Escape') lbClose();
+  if (e.key === 'ArrowLeft') lbStep(-1);
+  if (e.key === 'ArrowRight') lbStep(1);
+});
+
+// --------------------------------------------------------------------- boot
+fetch(`/api/request/${encodeURIComponent(CASE)}`)
+  .then(r => {
+    if (r.status === 404) throw new Error('notfound');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  })
+  .then(d => {
+    document.title = `${d.service_request_id} · ${d.service_name || 'Service request'} · Alex311`;
+    render(d);
+  })
+  .catch(e => {
+    $('record').innerHTML = e.message === 'notfound'
+      ? `<section class="card"><h2>Not here</h2><p class="empty">No request numbered
+         <b>${esc(CASE)}</b> is in this mirror. It may be newer than the last ingest, or the
+         number may be a typo. <a href="/">Search the map</a>.</p></section>`
+      : `<section class="card"><h2>Could not load it</h2><p class="empty">${esc(e.message)}</p></section>`;
+  });
+
+fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null})
+  .then(({user}) => { if (user && user.role === 'admin') $('nav-admin').hidden = false; })
+  .catch(() => {});
+</script>
+</body>
+</html>

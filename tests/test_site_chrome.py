@@ -16,6 +16,7 @@ PAGES = {
     "dashboard": ROOT / "static/index.html",
     "form": ROOT / "submit.html",
     "admin": ROOT / "admin.html",
+    "record": ROOT / "static/request.html",
 }
 HTML = {name: path.read_text() for name, path in PAGES.items()}
 
@@ -49,7 +50,7 @@ def test_every_page_carries_the_same_bar(page):
     assert [lab for lab, _ in ITEMS] == [lab for lab in labels if lab in dict(ITEMS)]
 
 
-@pytest.mark.parametrize("page", ["form", "admin"])
+@pytest.mark.parametrize("page", ["form", "admin", "record"])
 def test_the_other_pages_link_to_the_dashboard_views(page):
     """They cannot press a tab on a page they are not on, so they link to it —
     which is why the dashboard has to answer to the fragment."""
@@ -57,7 +58,7 @@ def test_the_other_pages_link_to_the_dashboard_views(page):
         assert f'href="{href}"' in bar(HTML[page]), f"{page} lost the link to {label}"
 
 
-@pytest.mark.parametrize("page", ["dashboard", "form"])
+@pytest.mark.parametrize("page", ["dashboard", "form", "record"])
 def test_the_admin_tab_starts_hidden(page):
     """It is revealed to administrators once they are signed in. Every other
     page in the bar is one anybody may open, so only this one hides."""

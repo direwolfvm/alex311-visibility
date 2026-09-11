@@ -8,6 +8,9 @@ Salesforce portal, so it is safe to scale and cache.
 """
 from __future__ import annotations
 
+import functools
+import io
+import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -21,6 +24,8 @@ from psycopg_pool import ConnectionPool
 
 from alex311.client import Alex311Client
 from alex311.media_store import GcsMediaStore, LocalMediaStore, store_from_env
+
+log = logging.getLogger("alex311.dashboard")
 
 pool: ConnectionPool | None = None
 
@@ -301,13 +306,27 @@ def request_detail(service_request_id: str):
         if not row:
             raise HTTPException(404, "unknown service request")
         media = conn.execute(
-            """SELECT media_id, file_name, private,
+            """SELECT media_id, file_name, private, mime_type, stored_mime,
+                      stored_bytes, created_datetime,
                       downloaded_at IS NOT NULL AS stored
                FROM media WHERE service_request_id = %s
                ORDER BY created_datetime""",
             (service_request_id,),
         ).fetchall()
+        # Requests the City tied to this one. Their own page says a request is a
+        # duplicate but not what of, or what was folded into it.
+        related = conn.execute(
+            """SELECT service_request_id, service_name, status, requested_datetime,
+                      CASE WHEN duplicate_parent_service_request_id = %(id)s
+                           THEN 'duplicate' ELSE 'child' END AS relation
+               FROM service_requests
+              WHERE duplicate_parent_service_request_id = %(id)s
+                 OR parent_service_request_id = %(id)s
+              ORDER BY requested_datetime DESC LIMIT 25""",
+            {"id": service_request_id},
+        ).fetchall()
     row["media"] = media
+    row["related"] = related
     row["report_url"] = Alex311Client.deep_link(service_request_id)
     return row
 
@@ -401,25 +420,116 @@ def analytics(
     }
 
 
+# Phone photos arrive at full resolution — a single one is routinely 6 MB — and
+# a gallery of them would be slower to open than the page it replaces. These are
+# the only widths anyone may ask for: an open parameter would let a visitor make
+# us resize the same picture a thousand different ways.
+THUMB_WIDTHS = (160, 320, 640, 1200)
+RESIZABLE = {"image/jpeg", "image/jpg", "image/png", "image/tiff"}
+
+# What a browser may render in our own origin. Anyone can attach a file to a 311
+# request, and five of the ones in this mirror are .html — served inline they
+# would run somebody else's script on our domain. Everything outside this set is
+# handed over as a download instead, which is also friendlier for a .docx.
+INLINE = {"image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+          "image/tiff", "application/pdf", "video/mp4", "video/quicktime",
+          "audio/mpeg", "audio/x-m4a", "text/plain"}
+
+
+def _delivery(mime: str, file_name: str | None) -> tuple[str, dict]:
+    """The content type to answer with, and the headers that go with it."""
+    head = {"Cache-Control": "public, max-age=86400",
+            "X-Content-Type-Options": "nosniff"}
+    if mime in INLINE:
+        return mime, head
+    name = (file_name or "attachment").replace('"', "").replace("\\", "")[:120]
+    head["Content-Disposition"] = f'attachment; filename="{name}"'
+    return "application/octet-stream", head
+
+
+def _read_stored(stored_path: str) -> bytes:
+    store = store_from_env()
+    if isinstance(store, LocalMediaStore):
+        path = store.open_path(stored_path)
+        if not path.exists():
+            raise HTTPException(404, "file missing from store")
+        return path.read_bytes()
+    assert isinstance(store, GcsMediaStore)
+    return store.get(stored_path)
+
+
+# Keyed on the path rather than on the bytes: keying on the bytes means fetching
+# the 3 MB original from storage before the cache can say it already has the
+# 40 KB answer, which is most of the cost.
+@functools.lru_cache(maxsize=128)
+def _thumbnail(stored_path: str, width: int) -> bytes:
+    from PIL import Image, ImageOps
+
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(_read_stored(stored_path))))
+    if img.width > width:
+        img = img.resize((width, round(img.height * width / img.width)),
+                         Image.LANCZOS)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+    out = io.BytesIO()
+    img.save(out, format="JPEG", quality=82, optimize=True, progressive=True)
+    return out.getvalue()
+
+
 @app.get("/api/media/{media_id}")
-def media(media_id: str):
+def media(media_id: str, w: int | None = None):
+    """The stored file, or a smaller version of a picture.
+
+    HEIC is already JPEG by the time it reaches here — the ingest converts it,
+    which is why this can show photos the City's own record cannot.
+    """
     with pool.connection() as conn:
         row = conn.execute(
-            "SELECT stored_path, mime_type, stored_mime FROM media WHERE media_id = %s AND downloaded_at IS NOT NULL",
+            "SELECT stored_path, mime_type, stored_mime, file_name FROM media "
+            "WHERE media_id = %s AND downloaded_at IS NOT NULL",
             (media_id,),
         ).fetchone()
     if not row or not row["stored_path"]:
         raise HTTPException(404, "media not stored")
     mime = row["stored_mime"] or row["mime_type"] or "application/octet-stream"
-    cache = {"Cache-Control": "public, max-age=86400"}
+
+    if w in THUMB_WIDTHS and mime in RESIZABLE:
+        try:
+            return Response(_thumbnail(row["stored_path"], w), media_type="image/jpeg",
+                            headers={"Cache-Control": "public, max-age=86400",
+                                     "X-Content-Type-Options": "nosniff"})
+        except HTTPException:
+            raise
+        except Exception:
+            # a file that is not the picture its type claims is still a file
+            log.warning("could not resize %s", media_id, exc_info=True)
+
+    served, head = _delivery(mime, row["file_name"])
     store = store_from_env()
     if isinstance(store, LocalMediaStore):
         path = store.open_path(row["stored_path"])
         if not path.exists():
             raise HTTPException(404, "file missing from store")
-        return FileResponse(path, media_type=mime, headers=cache)
+        return FileResponse(path, media_type=served, headers=head)
     assert isinstance(store, GcsMediaStore)
-    return Response(store.get(row["stored_path"]), media_type=mime, headers=cache)
+    return Response(store.get(row["stored_path"]), media_type=served, headers=head)
+
+
+@app.get("/r/{service_request_id}", response_class=FileResponse)
+def request_page(service_request_id: str):
+    """A readable record for one request.
+
+    The City's own page is the only place a case number led, and it has been
+    getting less useful: it cannot render the HEIC photos half of its reporters
+    take with their phones, among other things. Ours can, because the ingest
+    converts them. The link to the official record lives on this page rather
+    than in place of it.
+
+    The id is not read here — the page asks the API for it — but it stays in the
+    path so a case number is a URL somebody can send to somebody else.
+    """
+    return FileResponse(Path(__file__).parent / "static/request.html",
+                        media_type="text/html")
 
 
 # note: bare /healthz is a reserved path on run.app domains (GFE intercepts it)

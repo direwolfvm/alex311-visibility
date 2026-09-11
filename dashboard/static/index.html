@@ -403,9 +403,9 @@ function lbAttrs(r, i) {
 function popupHtml(r) {
   const thumbs = (r.media_ids || []).slice(0, 4)
     .map((id, i) => `<button type="button" class="thumb-btn" ${lbAttrs(r, i)}><img
-        src="/api/media/${id}" alt="Photo ${i + 1} of ${esc(r.service_name)} at ${esc(r.address)}"></button>`)
+        src="/api/media/${id}?w=160" alt="Photo ${i + 1} of ${esc(r.service_name)} at ${esc(r.address)}"></button>`)
     .join('');
-  return `<b><a href="${r.report_url}" target="_blank">${r.service_request_id}</a></b>
+  return `<b><a href="/r/${encodeURIComponent(r.service_request_id)}">${r.service_request_id}</a></b>
     ${badge(r.status)}<br>${esc(r.service_name)}<br>
     <small>${esc(r.address)} · ${(r.requested_datetime || '').slice(0, 10)}</small>
     ${r.description ? `<div class="popup-desc">${esc(r.description)}</div>` : ''}
@@ -497,8 +497,8 @@ function renderRows(append) {
         aria-expanded="false"
         aria-label="Show details for ${esc(r.service_request_id)}, ${esc(r.service_name)}"
         ><span aria-hidden="true">▶</span></button></td>
-    <td><a href="${r.report_url}" target="_blank" rel="noopener"
-        aria-label="Case ${esc(r.service_request_id)} on the official city portal"
+    <td><a href="/r/${encodeURIComponent(r.service_request_id)}"
+        aria-label="Everything on record for case ${esc(r.service_request_id)}"
         >${r.service_request_id}</a></td>
     <td>${(r.requested_datetime || '').slice(0, 10)}</td>
     <td class="c-updated">${(r.last_updated_datetime || '').slice(0, 10)}</td>
@@ -506,7 +506,7 @@ function renderRows(append) {
     <td>${esc(r.address)}</td>
     <td class="c-photos">${(r.media_ids || []).slice(0, 3).map((id, i) =>
         `<button type="button" class="thumb-btn" ${lbAttrs(r, i)}><img class="thumb" loading="lazy"
-              src="/api/media/${id}" alt="Photo ${i + 1} of ${esc(r.service_name)} at ${esc(r.address)}"></button>`)
+              src="/api/media/${id}?w=160" alt="Photo ${i + 1} of ${esc(r.service_name)} at ${esc(r.address)}"></button>`)
       .join('')}${r.media_count > 3 ? ' +' + (r.media_count - 3) : (r.media_ids || []).length ? '' : (r.media_count || '')}</td></tr>`).join('');
   if (append) $('rows').insertAdjacentHTML('beforeend', html);
   else $('rows').innerHTML = html;
@@ -803,7 +803,7 @@ function detailHtml(d) {
   const photos = stored.map((m, i) =>
     `<button type="button" class="thumb-btn" data-lb-ids="${ids}"
       data-lb-idx="${i}" data-lb-srid="${d.service_request_id}"><img
-      src="/api/media/${m.media_id}" loading="lazy"
+      src="/api/media/${m.media_id}?w=320" loading="lazy"
       alt="Photo ${i + 1} of ${esc(d.service_name || 'this request')} at ${esc(d.address || 'the reported location')}"></button>`).join('');
   const unstored = (d.media_count || 0) - stored.length;
   return `<div class="detail-grid">${grid}</div>
@@ -816,7 +816,8 @@ function detailHtml(d) {
     <div class="detail-foot">
       ${coords ? `<button class="btn-map" data-lat="${d.lat}" data-lng="${d.long}"
         data-srid="${d.service_request_id}">📍 show on map</button> · ` : ''}
-      <a href="${d.report_url}" target="_blank" rel="noopener">open official record ↗</a>
+      <a href="/r/${encodeURIComponent(d.service_request_id)}">open the full record</a> ·
+      <a href="${d.report_url}" target="_blank" rel="noopener">the City's copy ↗</a>
     </div>`;
 }
 
@@ -929,12 +930,11 @@ const lb = { ids: [], idx: 0, srid: '' };
 
 function lbRender() {
   const id = lb.ids[lb.idx];
-  $('lb-img').src = '/api/media/' + id;
+  $('lb-img').src = '/api/media/' + id + '?w=1200';
   $('lb-img').alt = lb.alt || `Photo ${lb.idx + 1} of service request ${lb.srid}`;
   $('lb-full').href = '/api/media/' + id;
   $('lb-case').textContent = lb.srid;
-  $('lb-case').href = state.rows.find(r => r.service_request_id === lb.srid)?.report_url
-    || `https://alex311.alexandriava.gov/customer/s/service-request-details?c__prePageName=service_requests__c&c__srNumber=${lb.srid}&servicerequested=all`;
+  $('lb-case').href = '/r/' + encodeURIComponent(lb.srid);
   $('lb-count').textContent = lb.ids.length > 1 ? `photo ${lb.idx + 1} of ${lb.ids.length}` : '';
   $('lb-prev').disabled = lb.idx === 0;
   $('lb-next').disabled = lb.idx === lb.ids.length - 1;
