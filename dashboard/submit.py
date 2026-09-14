@@ -127,6 +127,10 @@ class PrecheckBody(BaseModel):
     service_code: str
     service_name: str | None = None
     address: str | None = None
+    #: the City's own spelling of that address, when the lookup found one. Kept
+    #: apart from `address` on purpose: `address` is the resident's wording and
+    #: is what we show back to them, this is what the City's gazetteer accepts.
+    city_address: str | None = None
     lat: float | None = None
     long: float | None = None
     description: str = ""
@@ -429,7 +433,8 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                 service_name=body.service_name, address=body.address, address_key=key,
                 lat=body.lat, long=body.long, description=body.description,
                 answers=body.answers, outcome=decision.outcome, findings=findings,
-                cooldown_until=decision.cooldown_until)
+                cooldown_until=decision.cooldown_until,
+                city_address=(body.city_address or "").strip() or None)
 
         return {"attempt_id": attempt_id, "outcome": decision.outcome,
                 "may_proceed": decision.allowed, "findings": findings,
@@ -628,8 +633,26 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                 (prefix.replace("%", r"\%").replace("_", r"\_") + "%",),
             ).fetchall()
 
+        cands = merge_candidates(rows, key)[:limit]
+
+        # The one we would file under, and whether it reads differently from
+        # what they typed. A tester found this step hard, and the reason was
+        # that nothing ever told them the City spells their street its own way
+        # — they typed a correct address, got a match, and the request still
+        # went to the City in wording its gazetteer does not recognise.
+        best = cands[0] if cands else None
+        suggestion = None
+        if best:
+            suggestion = {
+                "address": best["address"],
+                "lat": best["lat"], "long": best["long"],
+                "seen": best["seen"], "exact": best["exact"],
+                # differs in what a person would notice, not in whitespace
+                "differs": abuse.normalize_address(q) != abuse.normalize_address(best["address"])
+                           or q.strip().upper() != best["address"].strip().upper(),
+            }
         return {"query": q, "normalized": key, "source": "city-records",
-                "candidates": merge_candidates(rows, key)[:limit]}
+                "suggestion": suggestion, "candidates": cands}
 
     @router.get("/api/reverse")
     def reverse(lat: float, long: float, within_m: int = 250):
