@@ -80,6 +80,19 @@ def normalize_address(raw: str | None) -> str:
     return " ".join(out)
 
 
+def _prefix_words(raw: str) -> list[str]:
+    text = re.sub(r"[.,\']", "", raw.upper())
+    text = re.sub(r"\s+", " ", text).strip()
+    if "&" in text:
+        text = text.split("&")[0].strip()
+    keep: list[str] = []
+    for w in text.split(" "):
+        if keep and w in _SUFFIXES:
+            break
+        keep.append(w)
+    return keep
+
+
 def sql_prefix(raw: str | None) -> str:
     """A loose, uppercase prefix for narrowing an address lookup in SQL.
 
@@ -89,19 +102,39 @@ def sql_prefix(raw: str | None) -> str:
     characters from the column, so "JANNEY'S" and "JANNEYS" meet in the middle.
     The result is deliberately loose; `normalize_address` matches exactly
     afterwards.
+
+    Directionals are abbreviated the way `normalize_address` abbreviates them,
+    and for the same reason. Without it a resident typing "100 North Pitt St"
+    built the prefix "100 NORTH PITT", which matches none of the 6,222 distinct
+    addresses the City stores as "N" — the lookup found nothing, the form
+    offered nothing, and the request went to the City in wording its own
+    gazetteer does not recognise.
     """
     if not raw:
         return ""
-    text = re.sub(r"[.,']", "", raw.upper())
-    text = re.sub(r"\s+", " ", text).strip()
-    if "&" in text:
-        text = text.split("&")[0].strip()
-    keep: list[str] = []
-    for w in text.split(" "):
-        if keep and w in _SUFFIXES:
-            break
-        keep.append(w)
-    return " ".join(keep)
+    words = _prefix_words(raw)
+    return " ".join(_DIRECTIONS.get(w, w) if i and i < len(words) - 1 else w
+                    for i, w in enumerate(words))
+
+
+def sql_prefixes(raw: str | None) -> list[str]:
+    """Both spellings of the prefix, abbreviated first.
+
+    The City writes 6,222 of its addresses with an abbreviated directional and
+    187 with one spelled out, so a lookup should try both rather than assume.
+    Distinct values only, so the usual address still costs one comparison.
+    """
+    if not raw:
+        return []
+    words = _prefix_words(raw)
+    spelled = {v: k for k, v in _DIRECTIONS.items() if len(k) > 1}
+    out = []
+    for table in (_DIRECTIONS, spelled):
+        p = " ".join(table.get(w, w) if i and i < len(words) - 1 else w
+                     for i, w in enumerate(words))
+        if p and p not in out:
+            out.append(p)
+    return out
 
 
 #: The column-side half of the pair above. Kept next to the function it must
@@ -348,6 +381,7 @@ def summarize(decision: Decision) -> str:
 
 
 __all__ = ["Policy", "DEFAULT_POLICY", "Event", "Finding", "Decision", "evaluate",
-           "normalize_address", "normalize_text", "sql_prefix", "SQL_ADDRESS_EXPR",
+           "normalize_address", "normalize_text", "sql_prefix", "sql_prefixes",
+           "SQL_ADDRESS_EXPR",
            "similarity", "summarize",
            "ALLOW", "NOTICE", "REVIEW", "BLOCK", "replace"]

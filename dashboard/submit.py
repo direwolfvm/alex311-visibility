@@ -614,8 +614,11 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
         is why neither path is required.
         """
         key = abuse.normalize_address(q)
-        prefix = abuse.sql_prefix(q)
-        if not key or len(prefix) < 2:
+        # Both spellings of the directional: the City abbreviates most of its
+        # addresses and spells out a few, and a resident may type either.
+        prefixes = [p.replace("%", r"\%").replace("_", r"\_") + "%"
+                    for p in abuse.sql_prefixes(q) if len(p) >= 2]
+        if not key or not prefixes:
             return {"query": q, "candidates": [], "source": "city-records"}
 
         with pool_getter().connection() as conn:
@@ -626,11 +629,11 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                            count(*) AS seen
                       FROM service_requests
                      WHERE lat IS NOT NULL AND long IS NOT NULL
-                       AND {abuse.SQL_ADDRESS_EXPR} LIKE %s
+                       AND {abuse.SQL_ADDRESS_EXPR} LIKE ANY(%s)
                      GROUP BY address
                      ORDER BY count(*) DESC
                      LIMIT 60""",
-                (prefix.replace("%", r"\%").replace("_", r"\_") + "%",),
+                (prefixes,),
             ).fetchall()
 
         cands = merge_candidates(rows, key)[:limit]

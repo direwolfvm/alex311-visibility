@@ -194,3 +194,29 @@ def test_short_descriptions_do_not_trigger_the_duplicate_text_rule():
                     text="potholes on my street"), mine)
     assert "duplicate_text" not in [f.rule for f in d.findings]
 
+
+
+def test_the_prefix_abbreviates_directionals_like_the_key_does():
+    """A resident typing "100 North Pitt St" built the prefix "100 NORTH PITT",
+    which matches none of the 6,222 distinct addresses the City stores with an
+    abbreviated directional. The lookup found nothing, so the form offered
+    nothing, so the request reached the City in wording its gazetteer does not
+    recognise. This is the address-normalisation friction a tester reported."""
+    from alex311.abuse import sql_prefix, sql_prefixes
+
+    assert sql_prefix("100 north pitt st") == sql_prefix("100 N PITT ST") == "100 N PITT"
+    assert sql_prefix("12 South Alfred Street") == "12 S ALFRED"
+    # a street whose name is a direction keeps it, being the last word kept
+    assert sql_prefix("500 NORTH ST") == "500 NORTH"
+    # an intersection still takes only the first side
+    assert sql_prefix("N PICKETT ST & HOLMES RUN PKWY") == "N PICKETT"
+
+
+def test_both_spellings_are_offered_so_neither_side_has_to_guess():
+    from alex311.abuse import sql_prefixes
+
+    assert sql_prefixes("100 north pitt st") == ["100 N PITT", "100 NORTH PITT"]
+    assert sql_prefixes("100 N PITT ST") == ["100 N PITT", "100 NORTH PITT"]
+    # nothing directional means nothing to try twice
+    assert sql_prefixes("400 King Street") == ["400 KING"]
+    assert sql_prefixes("") == []
