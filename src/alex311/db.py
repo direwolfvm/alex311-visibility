@@ -272,7 +272,8 @@ def record_attempt(conn: psycopg.Connection, *, submitter_id: str | None,
                    service_code: str, service_name: str | None, address: str | None,
                    address_key: str, lat: float | None, long: float | None,
                    description: str | None, answers: dict, outcome: str,
-                   findings: list, cooldown_until=None) -> int:
+                   findings: list, cooldown_until=None,
+                   city_address: str | None = None) -> int:
     """Persist one evaluated attempt. Returns its id.
 
     Written for every outcome, including `allow`: the rate limits count real
@@ -281,11 +282,13 @@ def record_attempt(conn: psycopg.Connection, *, submitter_id: str | None,
     row = conn.execute(
         """INSERT INTO submission_attempts
              (submitter_id, service_code, service_name, address, address_key,
-              lat, long, description, answers, outcome, findings, cooldown_until)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+              lat, long, description, answers, outcome, findings, cooldown_until,
+              city_address)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
            RETURNING attempt_id""",
         (submitter_id, service_code, service_name, address, address_key, lat, long,
-         description, Jsonb(answers), outcome, Jsonb(findings), cooldown_until),
+         description, Jsonb(answers), outcome, Jsonb(findings), cooldown_until,
+         city_address),
     ).fetchone()
     conn.commit()
     return row["attempt_id"]
@@ -397,7 +400,7 @@ def submission_queue(conn: psycopg.Connection,
     return conn.execute(
         """SELECT attempt_id, submitter_id, created_at, queued_at, approved_at,
                   approved_by, submit_state, tries, submit_error, service_code,
-                  service_name, address, description, contact, answers,
+                  service_name, address, city_address, description, contact, answers,
                   outcome, findings, city_case_number, relayed_at
              FROM submission_attempts
             WHERE submit_state = ANY(%s)

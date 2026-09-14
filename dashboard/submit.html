@@ -107,6 +107,18 @@
           border-radius:8px; background:#fff; font:inherit; font-size:13px; cursor:pointer; }
   .cand:hover { border-color:var(--accent); background:var(--infobg); }
   .cand small { color:var(--muted); margin-left:6px; }
+  /* The City spells addresses its own way and its search box only recognises
+     that spelling. This offers theirs without taking the resident's away. */
+  .suggest { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+             border:1px solid #bfdbfe; background:var(--infobg); color:#1e40af;
+             border-radius:8px; padding:9px 12px; margin-top:8px; font-size:13px; }
+  .suggest b { font-weight:600; }
+  .suggest .as { font:600 13px ui-monospace,"SF Mono",Menlo,monospace; }
+  .suggest button { margin-left:auto; border:1px solid var(--accent); background:#fff;
+                    color:var(--accent); border-radius:7px; padding:5px 11px;
+                    font:inherit; font-size:12px; cursor:pointer; white-space:nowrap; }
+  .suggest button:hover { background:var(--accent); color:#fff; }
+  .suggest .quiet { flex-basis:100%; color:var(--muted); font-size:12px; }
   @media (max-width: 560px) { .locbar .btn-sm { flex:1; } }
   .progress { height:8px; background:#e2e8f0; border-radius:99px; overflow:hidden; margin:4px 0 10px; }
   .progress i { display:block; height:100%; background:var(--accent); width:0; transition:width .2s; }
@@ -176,6 +188,7 @@
       <input type="text" id="address" placeholder="Start typing an address, e.g. 100 King St">
       <button type="button" class="btn-sm" id="find-addr">Find on map</button>
     </div>
+    <div id="addr-suggest" role="status" aria-live="polite"></div>
     <div class="cands" id="addr-cands" role="group" aria-label="Address matches"></div>
     <div id="loc-status" class="hint" role="status" aria-live="polite"></div>
     <div id="map" style="margin-top:8px"></div>
@@ -237,7 +250,7 @@
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? '').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const PORTAL = 'https://alex311.alexandriava.gov/customer/s/?servicerequested=all';
-const state = { services: [], svc: null, answers: {}, lat: null, long: null,
+const state = { services: [], svc: null, answers: {}, lat: null, long: null, cityAddress: null,
                 valid: null, attempt: null };
 const qkey = q => q.code || ('q' + q.order);
 
@@ -410,6 +423,34 @@ const inAlexandria = (lat, long) =>
   lat >= CITY_BOX.minLat && lat <= CITY_BOX.maxLat &&
   long >= CITY_BOX.minLong && long <= CITY_BOX.maxLong;
 
+// What the City would be handed for this request. Held apart from the text in
+// the box: the box is the resident's wording and stays theirs.
+function setCityAddress(addr) {
+  state.cityAddress = addr || null;
+  if (state.valid) $('review').textContent = summary();
+}
+
+// Offer the City's spelling, and say what happens if they would rather keep
+// their own — which is that we translate it quietly rather than let the City's
+// search box fail to find it.
+function offerSpelling(sug) {
+  const box = $('addr-suggest');
+  if (!sug || !sug.differs) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="suggest">
+      <span>The City files this address as <span class="as">${esc(sug.address)}</span></span>
+      <button type="button" id="take-spelling">Use the City&#39;s spelling</button>
+      <span class="quiet">Keep your own wording if you prefer — we will send the City
+        theirs either way, because their address search only recognises it.</span>
+    </div>`;
+  $('take-spelling').addEventListener('click', () => {
+    $('address').value = sug.address;
+    box.innerHTML = '';
+    setLocation(sug.lat, sug.long,
+                {label: `Matched ${sug.address} from the City\u2019s own records.`});
+    setCityAddress(sug.address);
+  });
+}
+
 function setLocation(lat, long, {label = null, address = null, zoom = 17, lookup = false} = {}) {
   state.lat = +(+lat).toFixed(6);
   state.long = +(+long).toFixed(6);
@@ -483,10 +524,15 @@ async function findAddress() {
   }
   const cands = data.candidates || [];
   if (!cands.length) {
+    $('addr-suggest').innerHTML = '';
+    setCityAddress(null);
     $('loc-status').textContent =
       'No match in the City\u2019s past requests for that address. Tap the map to place it.';
     return;
   }
+  // Whatever happens next, this is the wording the City will be given.
+  setCityAddress(data.suggestion ? data.suggestion.address : cands[0].address);
+  offerSpelling(data.suggestion);
   if (cands.length === 1 && cands[0].exact) {
     setLocation(cands[0].lat, cands[0].long,
                 {label: `Matched ${cands[0].address} from the City\u2019s own records.`});
@@ -499,12 +545,17 @@ async function findAddress() {
     const c = cands[+b.dataset.i];
     setLocation(c.lat, c.long, {label: `Matched ${c.address} from the City\u2019s own records.`,
                                 address: c.address});
+    $('addr-suggest').innerHTML = '';
+    setCityAddress(c.address);
   }));
 }
 
 $('find-addr').addEventListener('click', findAddress);
 let addrTimer;
 $('address').addEventListener('input', () => {
+  // their wording changed, so the spelling we resolved no longer describes it
+  setCityAddress(null);
+  $('addr-suggest').innerHTML = '';
   clearTimeout(addrTimer);
   addrTimer = setTimeout(findAddress, 500);
 });
@@ -523,7 +574,12 @@ async function checkDupes() {
 
 // ---------- 4. validate + handoff ----------
 function summary() {
-  const lines = [`Request type: ${state.svc.service_name}`, `Location: ${state.lat!=null ? state.lat+', '+state.long : '—'}`, `Address: ${$('address').value.trim()||'—'}`];
+  const typed = $('address').value.trim();
+  const lines = [`Request type: ${state.svc.service_name}`, `Location: ${state.lat!=null ? state.lat+', '+state.long : '—'}`, `Address: ${typed||'—'}`];
+  // Say it plainly rather than surprising them with different wording on the
+  // City's confirmation.
+  if (state.cityAddress && state.cityAddress.toUpperCase() !== typed.toUpperCase())
+    lines.push(`Filed with the City as: ${state.cityAddress}`);
   visibleWalked().concat(state.svc.questions.filter(q=>q.source==='data-only')).forEach(q => { const v = state.answers[qkey(q)]; if (v && (!Array.isArray(v)||v.length))
     lines.push(`${q.text}: ${Array.isArray(v)?v.join(', '):(typeof v==='object'?[v.date,v.time].filter(Boolean).join(' '):v)}`); });
   lines.push(`Additional information: ${$('desc').value.trim()||'—'}`);
@@ -569,7 +625,8 @@ async function precheck() {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         service_code: state.svc.service_code, service_name: state.svc.service_name,
-        address: $('address').value.trim(), lat: state.lat, long: state.long,
+        address: $('address').value.trim(), city_address: state.cityAddress,
+        lat: state.lat, long: state.long,
         description: $('desc').value.trim(), answers: state.answers})});
     state.attempt = await r.json();
     showPolicy();

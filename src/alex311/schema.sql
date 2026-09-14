@@ -193,6 +193,13 @@ ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS tries        INTEGER NO
 -- without them. They are the resident's own, given for this purpose, and go
 -- to the City exactly as typed.
 ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS contact      JSONB;
+-- The City's own spelling of the address, when we could find one. `address` is
+-- what the resident typed and is what we show them; this is what gets typed
+-- into the City's gazetteer box, because that box only recognises its own
+-- wording. A tester's "1437 Janneys Lane" finds nothing there; the City's
+-- "1437 JANNEY'S LN" finds it at once. Null means we had no match and the
+-- resident's own wording is all we have.
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS city_address TEXT;
 
 CREATE INDEX IF NOT EXISTS sa_state_idx ON submission_attempts (submit_state, approved_at)
     WHERE submit_state IN ('queued', 'approved', 'filing');
