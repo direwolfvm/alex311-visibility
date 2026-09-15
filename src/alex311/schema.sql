@@ -263,3 +263,44 @@ DO $$ BEGIN
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO alex311_app;
   END IF;
 END $$;
+
+-- ---------------------------------------------------------------------------
+-- Accounts, phase 3: the resident's own verdict on whether an issue was
+-- addressed. One per account per request, editable. The score is a five-point
+-- scale with NULL for "not sure"; the note is free text that is read by a
+-- person and never shown publicly — there is no moderation here because
+-- there is nothing public to moderate. `share_score` is stored now and
+-- rendered by phase 4. `status_at_rating` is what the mirror said at the time,
+-- because "still open, rated unresolved" and "closed, rated unresolved" are
+-- different findings.
+CREATE TABLE IF NOT EXISTS feedback (
+    user_id             TEXT NOT NULL REFERENCES portal_users (user_id) ON DELETE CASCADE,
+    service_request_id  TEXT NOT NULL,
+    relation            TEXT NOT NULL,              -- mine | following, at the time
+    score               SMALLINT CHECK (score BETWEEN 1 AND 5),
+    note                TEXT,
+    status_at_rating    TEXT,
+    share_score         BOOLEAN NOT NULL DEFAULT false,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, service_request_id)
+);
+CREATE INDEX IF NOT EXISTS fb_case_idx ON feedback (service_request_id);
+
+ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feedback FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own       ON feedback;
+DROP POLICY IF EXISTS admin     ON feedback;
+DROP POLICY IF EXISTS analytics ON feedback;
+CREATE POLICY own   ON feedback USING (user_id = current_setting('app.user_id', true));
+CREATE POLICY admin ON feedback USING (current_setting('app.role', true) = 'admin');
+-- The public analytics reads this table in aggregate only. The handler names
+-- this role for that one transaction and its SQL never selects `note`; a test
+-- pins the second half, since the policy cannot.
+CREATE POLICY analytics ON feedback FOR SELECT USING (current_setting('app.role', true) = 'analytics');
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON feedback TO alex311_app;
+  END IF;
+END $$;
