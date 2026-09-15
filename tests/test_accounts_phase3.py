@@ -33,7 +33,7 @@ def test_five_points_and_a_way_to_say_you_do_not_know():
 
 
 def test_the_answer_is_told_it_is_private_where_it_is_asked():
-    assert "Your answer is private" in RECORD
+    assert "private unless you choose to show the score" in RECORD
     assert "never with your name" in RECORD
 
 
@@ -71,13 +71,18 @@ def test_the_aggregate_never_selects_the_note():
     assert "user_id" not in query
 
 
-def test_small_groups_are_suppressed_with_their_counts():
-    """A count of three at one address is a re-identification waiting to
-    happen, so a suppressed cell withholds the count too."""
-    assert "SUPPRESS_BELOW = 5" in DB
+def test_the_submitters_verdict_is_the_primary_lens_and_is_never_held_back():
+    """The person who sent a request saying what happened to it is the
+    outcome of record for that request, shown from the first answer. Anyone
+    else's view is a second lens, kept apart and never averaged in. Every
+    figure carries its count, and residents are told where they answer that
+    a thin aggregate may be their answer alone."""
     fn = DB.split("def resident_resolution(")[1].split("\ndef ")[0]
-    assert 'result[k] = {"suppressed": True}' in fn
-    assert "fewer than" in INDEX
+    assert '"submitter": lens("mine")' in fn and '"community": lens("following")' in fn
+    assert '{"suppressed": True}' not in fn
+    assert "What the people who sent them said" in INDEX
+    assert "never averaged in" in INDEX
+    assert "may amount to your answer alone" in RECORD
 
 
 # ------------------------------------------------------------ the database
@@ -121,7 +126,8 @@ def test_feedback_rls_and_suppression_against_a_real_database():
             # the aggregate sees all six, never a note, and reports the cell
             agg = db.resident_resolution(conn, days=1)
             conn.rollback()
-            assert agg["overall"]["n"] >= 6 and agg["overall"]["not_sure"] >= 1
+            everyone = agg["submitter"]["total_ratings"] + agg["community"]["total_ratings"]
+            assert everyone >= 6 and agg["community"]["overall"]["not_sure"] >= 1
             assert "note" not in str(agg)
     finally:
         with db.connect() as owner:

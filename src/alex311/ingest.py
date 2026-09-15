@@ -132,7 +132,7 @@ def run_ingest(
 def _require_not_stale(conn, capped_windows: int) -> None:
     """Read nothing at all this run — fail only if that has persisted.
 
-    A refused run is normal weekend behaviour and self-heals, so it is not
+    A refused run is normal weekend behavior and self-heals, so it is not
     worth waking anyone. Data genuinely going stale is.
     """
     last_ok = db.last_successful_ingest(conn)

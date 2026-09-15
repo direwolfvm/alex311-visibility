@@ -249,7 +249,7 @@ function facts(d) {
       ? `${stamp(d.closed_datetime)}${span(d.requested_datetime, d.closed_datetime)
           ? `<br><small style="color:var(--muted)">after ${span(d.requested_datetime, d.closed_datetime)}</small>` : ''}`
       : null],
-    ['Cancelled', stamp(d.canceled_datetime)],
+    ['Canceled', stamp(d.canceled_datetime)],
     ['Department', esc(d.primary_service_department)],
     ['Assigned to', esc(d.agency_responsible || d.owner)],
     ['Priority', esc(d.priority)],
@@ -351,18 +351,23 @@ function render(d) {
       <div>
         ${words}
         ${coords ? '<section class="card" id="map-card"><div id="map"></div></section>' : ''}
-        ${(d.resident_scores || []).length ? `<section class="card">
-          <h2>Did residents say it was addressed?</h2>
-          <p class="scores">${d.resident_scores.map(s => s.score == null
-            ? `<span class="s">?</span>`
-            : `<span class="s ${s.score <= 2 ? 'low' : s.score >= 4 ? 'high' : ''}">${s.score}</span>`).join('')}
-            <span class="map-note">out of 5, from ${d.resident_scores.length} resident${d.resident_scores.length === 1 ? '' : 's'}
-            who chose to show it (1 = not at all, 5 = completely).</span></p>
-        </section>` : ''}
+        ${(d.resident_scores || []).length ? (() => {
+          const pip = s => s.score == null ? `<span class="s">?</span>`
+            : `<span class="s ${s.score <= 2 ? 'low' : s.score >= 4 ? 'high' : ''}">${s.score}</span>`;
+          const owner = d.resident_scores.filter(s => s.relation === 'mine');
+          const others = d.resident_scores.filter(s => s.relation !== 'mine');
+          return `<section class="card">
+            <h2>Was it addressed?</h2>
+            ${owner.length ? `<p class="scores">${owner.map(pip).join('')}
+              <span class="map-note"><b>The person who sent this request</b> says so, out of 5
+              (1 = not at all, 5 = completely). This is the outcome of record for it.</span></p>` : ''}
+            ${others.length ? `<p class="scores">${others.map(pip).join('')}
+              <span class="map-note"><b>Other residents</b> — ${others.length} following it, who did not
+              send it — say so, out of 5. A community view, kept separate from the submitter's.</span></p>` : ''}
+          </section>`; })() : ''}
         <section class="card" id="verdict" hidden>
-          <h2>Was this issue actually addressed?</h2>
-          <p class="map-note" style="margin-bottom:10px">Your answer is private. It is used only in
-            aggregate on the Analytics tab, and never with your name.</p>
+          <h2 id="verdict-h">Was this issue actually addressed?</h2>
+          <p class="map-note" id="verdict-lede" style="margin-bottom:10px"></p>
           <div class="scale" role="radiogroup" aria-label="Was this issue addressed">
             <button type="button" class="pt" data-score="1"><b>1</b>not at all</button>
             <button type="button" class="pt" data-score="2"><b>2</b>&nbsp;</button>
@@ -376,7 +381,7 @@ function render(d) {
           <label class="share"><input type="checkbox" id="verdict-share">
             <span>Show my score on this request's public page
             <span class="map-note">The score only, never the note, and never your name.
-            If you are the only person who could have sent this request, neighbours may still work
+            If you are the only person who could have sent this request, neighbors may still work
             out that it is yours.</span></span></label>
           <div class="verdict-row">
             <button type="button" class="official" id="verdict-save" style="width:auto;padding:8px 14px;cursor:pointer">Save</button>
@@ -505,10 +510,28 @@ function pickScore(btn) {
 async function drawVerdict(user) {
   const box = document.getElementById('verdict');
   if (!user || !box) return;
-  const r = await fetch(`/submit/api/feedback/${encodeURIComponent(CASE)}`);
+  const [r, l] = await Promise.all([
+    fetch(`/submit/api/feedback/${encodeURIComponent(CASE)}`),
+    fetch(`/submit/api/link/${encodeURIComponent(CASE)}`)]);
   if (!r.ok) return;
   const {feedback} = await r.json();
+  const relation = l.ok ? (await l.json()).relation : null;
   box.hidden = false;
+  // Two different questions, and the page should say which one it is asking.
+  // The submitter is establishing what actually happened to their request;
+  // anyone else is offering a community view of somebody else's.
+  if (relation === 'mine') {
+    document.getElementById('verdict-h').textContent = 'Was your issue actually addressed?';
+    document.getElementById('verdict-lede').innerHTML = 'You sent this request, so your answer is the '
+      + '<b>outcome of record</b> for it. It is private unless you choose to show the score, and it '
+      + 'is counted on the Analytics tab, never with your name. While this site has few filings, an '
+      + 'aggregate for your request type may amount to your answer alone.';
+  } else {
+    document.getElementById('verdict-h').textContent = 'Did the City address this?';
+    document.getElementById('verdict-lede').innerHTML = 'You did not send this request, so your answer '
+      + 'is a <b>community view</b>, kept separate from the submitter\u2019s. It is private unless you '
+      + 'choose to show the score, and it is counted on the Analytics tab, never with your name.';
+  }
   if (feedback) {
     const match = [...box.querySelectorAll('.pt')].find(b =>
       (b.dataset.score === '' ? null : +b.dataset.score) === feedback.score);

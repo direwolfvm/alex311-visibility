@@ -239,7 +239,7 @@ def abuse_history(conn: psycopg.Connection, *, address_key: str, sql_prefix: str
 
     Address matching is two-stage: SQL narrows on a prefix (cheap, indexable,
     deliberately loose), then the caller re-checks each row with the one
-    canonical `abuse.normalize_address`. Reimplementing that normaliser in SQL
+    canonical `abuse.normalize_address`. Reimplementing that normalizer in SQL
     would give us two copies to keep in step, and the suffix spellings are
     exactly where they would drift.
     """
@@ -550,33 +550,36 @@ def delete_feedback(conn: psycopg.Connection, *, user_id: str, service_request_i
     return row is not None
 
 
-#: Below this many ratings a cell is not shown. Five is conventional; with the
-#: current volume of filings it suppresses almost everything for months, which
-#: is correct rather than a bug.
-SUPPRESS_BELOW = 5
-
-
 def resident_resolution(conn: psycopg.Connection, *, days: int = 365) -> dict:
     """What residents said about whether their issue was addressed, in
-    aggregate only.
+    aggregate — through two lenses, kept apart.
 
-    Never selects `note`. Cells with fewer than SUPPRESS_BELOW ratings are
-    reported as suppressed, with the count withheld too — a count of three
-    at one address is a re-identification waiting to happen.
+    The **submitter's** verdict is the primary one: the person who sent the
+    request through this site saying what actually happened to it. That is the
+    outcome of record for that request and it is shown from the first answer,
+    not held back until five have accumulated. The **community** verdict —
+    anyone following a request they did not send — is a second lens, reported
+    beside it and never blended in.
+
+    Every cell carries its count, so a reader can see how thin the ground is.
+    Nothing is suppressed; residents are told on the page where they answer
+    that, while the site has few filings, an aggregate for their request type
+    may amount to their answer alone. Never selects `note`.
     """
     as_user(conn, None, "analytics")
     rows = conn.execute(
-        """SELECT r.service_name AS category, r.primary_service_department AS department,
+        """SELECT f.relation, r.service_name AS category,
+                  r.primary_service_department AS department,
                   f.status_at_rating, f.score,
                   count(*) AS n
              FROM feedback f
              LEFT JOIN service_requests r USING (service_request_id)
             WHERE f.updated_at > now() - make_interval(days => %s)
-            GROUP BY 1, 2, 3, 4""", (days,)).fetchall()
+            GROUP BY 1, 2, 3, 4, 5""", (days,)).fetchall()
 
-    def bucket(keyfn):
+    def bucket(subset, keyfn):
         out: dict = {}
-        for r in rows:
+        for r in subset:
             k = keyfn(r)
             cell = out.setdefault(k, {"n": 0, "scored": 0, "unresolved": 0, "sum": 0, "not_sure": 0})
             cell["n"] += r["n"]
@@ -586,22 +589,22 @@ def resident_resolution(conn: psycopg.Connection, *, days: int = 365) -> dict:
                 cell["scored"] += r["n"]; cell["sum"] += r["score"] * r["n"]
                 if r["score"] <= 2:
                     cell["unresolved"] += r["n"]
-        result = {}
-        for k, c in out.items():
-            if c["n"] < SUPPRESS_BELOW:
-                result[k] = {"suppressed": True}
-            else:
-                result[k] = {"n": c["n"], "not_sure": c["not_sure"],
-                             "mean": round(c["sum"] / c["scored"], 2) if c["scored"] else None,
-                             "rated_unresolved": c["unresolved"]}
-        return result
+        return {k: {"n": c["n"], "not_sure": c["not_sure"],
+                    "mean": round(c["sum"] / c["scored"], 2) if c["scored"] else None,
+                    "rated_unresolved": c["unresolved"]}
+                for k, c in out.items()}
 
-    total = sum(r["n"] for r in rows)
-    return {"days": days, "suppress_below": SUPPRESS_BELOW, "total_ratings": total,
-            "overall": bucket(lambda r: "all").get("all", {"suppressed": True}),
-            "by_status_at_rating": bucket(lambda r: r["status_at_rating"] or "unknown"),
-            "by_category": bucket(lambda r: r["category"] or "unknown"),
-            "by_department": bucket(lambda r: r["department"] or "unknown")}
+    def lens(relation):
+        subset = [r for r in rows if r["relation"] == relation]
+        total = sum(r["n"] for r in subset)
+        return {"total_ratings": total,
+                "overall": bucket(subset, lambda r: "all").get("all"),
+                "by_status_at_rating": bucket(subset, lambda r: r["status_at_rating"] or "unknown"),
+                "by_category": bucket(subset, lambda r: r["category"] or "unknown"),
+                "by_department": bucket(subset, lambda r: r["department"] or "unknown")}
+
+    return {"days": days, "total_ratings": sum(r["n"] for r in rows),
+            "submitter": lens("mine"), "community": lens("following")}
 
 
 def public_scores(conn: psycopg.Connection, *, service_request_id: str) -> list[dict]:

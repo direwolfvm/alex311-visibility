@@ -756,7 +756,7 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         # what they typed. A tester found this step hard, and the reason was
         # that nothing ever told them the City spells their street its own way
         # — they typed a correct address, got a match, and the request still
-        # went to the City in wording its gazetteer does not recognise.
+        # went to the City in wording its gazetteer does not recognize.
         # Only an exact match earns a suggestion. A prefix match is not the
         # same address: "500 north st" finds "500 NORTH VIEW TER", and telling
         # someone "the City files this address as 500 NORTH VIEW TER" asserts

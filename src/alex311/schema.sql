@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS submission_attempts (
     service_code    TEXT NOT NULL,
     service_name    TEXT,
     address         TEXT,
-    address_key     TEXT,                          -- normalised; what caps count on
+    address_key     TEXT,                          -- normalized; what caps count on
     lat             DOUBLE PRECISION,
     long            DOUBLE PRECISION,
     description     TEXT,
@@ -169,7 +169,7 @@ ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS tries        INTEGER NO
 ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS contact      JSONB;
 -- The City's own spelling of the address, when we could find one. `address` is
 -- what the resident typed and is what we show them; this is what gets typed
--- into the City's gazetteer box, because that box only recognises its own
+-- into the City's gazetteer box, because that box only recognizes its own
 -- wording. A tester's "1437 Janneys Lane" finds nothing there; the City's
 -- "1437 JANNEY'S LN" finds it at once. Null means we had no match and the
 -- resident's own wording is all we have.
