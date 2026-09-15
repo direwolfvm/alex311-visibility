@@ -16,6 +16,14 @@ Configuration comes from the environment so the same image serves any project:
     FIREBASE_API_KEY      the web app's public browser key, for the client SDK
     FIREBASE_AUTH_DOMAIN  usually <project>.firebaseapp.com
     FIREBASE_APP_ID       the web app id, for the client SDK
+    FIREBASE_TENANT_ID    the Identity Platform tenant this site signs into
+
+The tenant is the point. The GCP project's Identity Platform is shared with
+another application, and without a tenant the two would share one pool of
+users, one email template and one set of providers — deleting a user from one
+would sign them out of the other. A tenant is a separate pool inside the same
+project. The client asks Firebase to sign into it, and `verify_id_token`
+refuses a token minted for any other pool, tenant or default.
 """
 from __future__ import annotations
 
@@ -53,7 +61,8 @@ def client_config() -> dict | None:
         return None
     return {"apiKey": key, "projectId": project,
             "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN") or f"{project}.firebaseapp.com",
-            "appId": os.environ.get("FIREBASE_APP_ID")}
+            "appId": os.environ.get("FIREBASE_APP_ID"),
+            "tenantId": os.environ.get("FIREBASE_TENANT_ID")}
 
 
 def configured() -> bool:
@@ -79,6 +88,11 @@ def verify_id_token(token: str) -> Identity:
     if not claims or not claims.get("sub"):
         raise BadToken("token carries no subject")
     firebase = claims.get("firebase") or {}
+    # A token from the project's default pool, or from some other tenant, is
+    # a real Firebase token for a real person — and not one of ours.
+    want = os.environ.get("FIREBASE_TENANT_ID")
+    if want and firebase.get("tenant") != want:
+        raise BadToken("token is not for this site's tenant")
     return Identity(uid=claims["sub"], email=claims.get("email"),
                     email_verified=bool(claims.get("email_verified")),
                     provider=firebase.get("sign_in_provider", "unknown"))

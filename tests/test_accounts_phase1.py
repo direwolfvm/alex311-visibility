@@ -46,7 +46,7 @@ def test_the_client_config_is_only_ever_public_values(monkeypatch):
     monkeypatch.setenv("FIREBASE_PROJECT_ID", "p")
     monkeypatch.setenv("FIREBASE_API_KEY", "AIza-public")
     cfg = fb.client_config()
-    assert set(cfg) == {"apiKey", "projectId", "authDomain", "appId"}
+    assert set(cfg) == {"apiKey", "projectId", "authDomain", "appId", "tenantId"}
     assert cfg["authDomain"] == "p.firebaseapp.com"
 
 
@@ -182,3 +182,26 @@ def test_linking_rules_against_postgres():
                      "(SELECT user_id FROM portal_users WHERE email LIKE 'p1-%@test' OR firebase_uid LIKE 'p1-%')")
         conn.execute("DELETE FROM portal_users WHERE email LIKE 'p1-%@test' OR firebase_uid LIKE 'p1-%'")
         conn.commit()
+
+
+# ------------------------------------------------------------- the tenant
+
+def test_a_token_from_the_wrong_pool_is_refused(monkeypatch):
+    """The project's Identity Platform is shared with another application. A
+    tenant is our own pool inside it; a token from the default pool or another
+    tenant is a real token for a real person and still not one of ours."""
+    from alex311 import firebase_auth as fb
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "p")
+    monkeypatch.setenv("FIREBASE_TENANT_ID", "alex311-abc")
+    fn = (ROOT / "src/alex311/firebase_auth.py").read_text().split("def verify_id_token(")[1]
+    assert 'firebase.get("tenant") != want' in fn
+    assert "raise BadToken(\"token is not for this site's tenant\")" in fn
+
+
+def test_the_client_is_told_which_tenant_to_sign_into(monkeypatch):
+    from alex311 import firebase_auth as fb
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "p")
+    monkeypatch.setenv("FIREBASE_API_KEY", "k")
+    monkeypatch.setenv("FIREBASE_TENANT_ID", "alex311-abc")
+    assert fb.client_config()["tenantId"] == "alex311-abc"
+    assert "auth.tenantId = cfg.config.tenantId" in LOGIN

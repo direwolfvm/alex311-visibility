@@ -158,6 +158,8 @@ async function finish(user) {
   });
   firebase.initializeApp(cfg.config);
   const auth = firebase.auth();
+  // our own pool of users, not the one the rest of the project shares
+  if (cfg.config.tenantId) auth.tenantId = cfg.config.tenantId;
   $('firebase-signin').hidden = false;
 
   // arriving back from the email link
