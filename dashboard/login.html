@@ -34,6 +34,15 @@
   button[disabled] { opacity:.6; cursor:default; }
   .box { margin-top:16px; padding:10px 12px; border-radius:8px; font-size:13px;
          background:var(--badbg); border:1px solid #fecaca; color:var(--bad); }
+  .box.ok { background:#ecfdf5; border-color:#a7f3d0; color:#047857; }
+  button.alt { background:#fff; color:var(--accent); border:1px solid var(--accent); margin-top:0; }
+  button.alt:hover { background:#eff6ff; }
+  .or { color:var(--muted); font-size:12px; text-align:center; margin:14px 0 10px; }
+  .linkrow { display:flex; gap:8px; }
+  .linkrow input { flex:1; } .linkrow button { width:auto; padding:10px 14px; white-space:nowrap; }
+  .policy { font-size:12px; color:var(--muted); line-height:1.5; margin:14px 0 0;
+            padding:10px 12px; border:1px solid var(--border); border-radius:8px; }
+  .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
   .foot { margin-top:20px; padding-top:16px; border-top:1px solid var(--border);
           color:var(--muted); font-size:12px; }
   .explain { border:1px solid var(--border); background:#f8fafc; border-radius:8px;
@@ -67,15 +76,31 @@
          rel="noopener">alex311.alexandriava.gov</a>, and nothing here is required to use it.</p>
   </div>
 
+  <div id="firebase-signin" hidden>
+    <button type="button" class="alt" id="google">Continue with Google</button>
+    <div class="or">or get a sign-in link by email</div>
+    <div class="linkrow">
+      <label class="sr-only" for="link-email">Email for a sign-in link</label>
+      <input type="email" id="link-email" autocomplete="email" placeholder="you@example.com">
+      <button type="button" class="alt" id="send-link">Email me a link</button>
+    </div>
+    <p class="policy" id="policy">By signing in you accept that any ratings or notes you leave
+      about a request may be used in aggregate on this site — for example, to report how often
+      residents say a closed request was actually fixed. We keep an account id and nothing else;
+      your email stays with the sign-in provider.</p>
+    <div class="or">or, if you were given a password</div>
+  </div>
+
   <form id="form" method="post" action="/submit/login">
     <label for="email">Email</label>
-    <input type="email" id="email" name="email" autocomplete="username" required autofocus>
+    <input type="email" id="email" name="email" autocomplete="username" required>
     <label for="password">Password</label>
     <input type="password" id="password" name="password" autocomplete="current-password" required>
     <button type="submit" id="go">Sign in</button>
   </form>
 
   <div class="box" id="error" hidden role="alert"></div>
+  <div class="box ok" id="sent" hidden role="status"></div>
 
   <p class="foot">No account? Ask whoever invited you to the test. There is no public
     sign-up. <a href="/">Back to the public dashboard</a></p>
@@ -96,6 +121,78 @@ document.getElementById('form').addEventListener('submit', () => {
   const b = document.getElementById('go');
   b.disabled = true; b.textContent = 'Signing in…';
 });
+
+// ---------------------------------------------------------- Firebase sign-in
+// Two doors, one gate. The password form above serves the testers who were
+// given one; this is how everyone else comes in, and how a tester links the
+// two by signing in with the same address. Either way the server mints the
+// same cookie. If Firebase is not configured here, none of this shows.
+const $ = id => document.getElementById(id);
+function say(id, text) { const el = $(id); el.textContent = text; el.hidden = false; }
+
+async function finish(user) {
+  const token = await user.getIdToken();
+  const r = await fetch('/submit/api/session', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id_token: token})});
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    throw new Error(d.detail || `sign-in failed (${r.status})`);
+  }
+  location.replace('/submit');
+}
+
+(async () => {
+  let cfg;
+  try { cfg = await (await fetch('/submit/api/firebase-config')).json(); } catch { return; }
+  if (!cfg.config) return;
+  await new Promise(res => {
+    const s1 = document.createElement('script');
+    s1.src = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js';
+    s1.onload = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js';
+      s2.onload = res; document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  });
+  firebase.initializeApp(cfg.config);
+  const auth = firebase.auth();
+  // our own pool of users, not the one the rest of the project shares
+  if (cfg.config.tenantId) auth.tenantId = cfg.config.tenantId;
+  $('firebase-signin').hidden = false;
+
+  // arriving back from the email link
+  if (auth.isSignInWithEmailLink(location.href)) {
+    let email = localStorage.getItem('alex311.signin.email');
+    if (!email) email = prompt('Confirm the email address the link was sent to');
+    if (email) {
+      try {
+        const cred = await auth.signInWithEmailLink(email, location.href);
+        localStorage.removeItem('alex311.signin.email');
+        await finish(cred.user);
+      } catch (e) { say('error', e.message); }
+    }
+  }
+
+  $('google').addEventListener('click', async () => {
+    try {
+      const cred = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+      await finish(cred.user);
+    } catch (e) { if (e.code !== 'auth/popup-closed-by-user') say('error', e.message); }
+  });
+
+  $('send-link').addEventListener('click', async () => {
+    const email = $('link-email').value.trim();
+    if (!email) { $('link-email').focus(); return; }
+    try {
+      await auth.sendSignInLinkToEmail(email, {url: location.origin + '/submit/login', handleCodeInApp: true});
+      localStorage.setItem('alex311.signin.email', email);
+      say('sent', `Sent. Open the link in the email we just sent to ${email}, on this device.`);
+      $('error').hidden = true;
+    } catch (e) { say('error', e.message); }
+  });
+})();
 </script>
 </body>
 </html>

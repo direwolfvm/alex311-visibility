@@ -427,13 +427,19 @@ function renderUsers(users) {
     const self = me && u.user_id === me.user_id;
     const lastAdmin = u.role === 'admin' && !off
       && users.filter(x => x.role === 'admin' && !x.disabled_at).length === 1;
+    // An account that only ever signed in through Firebase has no email here,
+    // on purpose. The uid is what an admin grants a role against.
+    const who = u.email ? esc(u.email) : `<span class="hint">account</span> <code>${esc(u.user_id)}</code>`;
+    const how = [u.has_password ? 'password' : null, u.firebase_linked ? 'Firebase' : null]
+      .filter(Boolean).join(' + ');
     return `<tr>
-      <td>${esc(u.email)}${self ? ' <span class="hint">(you)</span>' : ''}</td>
+      <td>${who}${self ? ' <span class="hint">(you)</span>' : ''}
+          <div class="hint">${how || 'no sign-in method'}</div></td>
       <td><span class="pill ${off ? 'off' : u.role}">${off ? 'disabled' : esc(u.role)}</span></td>
       <td class="num">${day(u.created_at)}</td>
       <td class="num">${day(u.last_login_at)}</td>
       <td class="actions">
-        <button data-act="reset" data-id="${u.user_id}">Reset password</button>
+        ${u.has_password ? `<button data-act="reset" data-id="${u.user_id}">Reset password</button>` : ''}
         ${self || lastAdmin ? '' :
           `<button class="danger" data-act="${off ? 'enable' : 'disable'}"
                    data-id="${u.user_id}">${off ? 'Enable' : 'Disable'}</button>`}
@@ -479,7 +485,7 @@ async function load() {
     api('/instrument')]);
   me = who.user;
   $('who').innerHTML = me
-    ? `${esc(me.email)} · ${esc(me.role)} · <a href="/submit/logout">Sign out</a>` : '';
+    ? `${esc(me.label || me.email)} · ${esc(me.role)} · <a href="/submit/logout">Sign out</a>` : '';
   const rows = sub.queue || [];
   renderStats(metrics);
   renderInflight(rows.filter(r => IN_FLIGHT.includes(r.submit_state)));

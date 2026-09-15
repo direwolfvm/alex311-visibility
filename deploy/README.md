@@ -161,6 +161,42 @@ gcloud run deploy alex311-dashboard --image=$IMAGE --region=$REGION \
 (The dashboard only reads Postgres/GCS — it never calls the city portal, so
 public traffic can't generate load on the municipal site.)
 
+## 5a. Sign-in with Firebase (Identity Platform)
+
+The dashboard's sign-in page offers Google and an emailed link as well as the
+password form. Both come from Identity Platform in this project, which is
+**shared with another application (SpinUp)**. Alex311 signs into its own
+**tenant** so the two never share users or email templates:
+
+| | value |
+|---|---|
+| tenant | `alex311-qfnem` — display name `alex311` |
+| web app | "Alex311 Visibility", `1:650621702399:web:b56cf6a8bd8d4868273cca` |
+| auth domain | `permitting-ai-helper.firebaseapp.com` |
+| browser key | the project's "Browser key (auto created by Firebase)" |
+
+The service needs these, all public values:
+
+```bash
+gcloud run services update alex311-dashboard --region=$REGION \
+    --update-env-vars=FIREBASE_PROJECT_ID=$PROJECT,FIREBASE_TENANT_ID=alex311-qfnem,\
+FIREBASE_AUTH_DOMAIN=$PROJECT.firebaseapp.com,\
+FIREBASE_APP_ID=1:650621702399:web:b56cf6a8bd8d4868273cca,\
+FIREBASE_API_KEY=$(gcloud services api-keys get-key-string \
+    projects/$PROJECT/locations/global/keys/550aa1df-b4b4-4c1b-8e6e-7fda4d325e38 --format='value(keyString)')
+```
+
+Without them the page is the password-only site it was. The token check refuses
+a token from any pool but this tenant, so a mistake in `FIREBASE_TENANT_ID`
+fails closed.
+
+> **Do not delete Firebase users from anything Alex311 runs.** A Google account
+> that has signed into SpinUp and into Alex311 is one Firebase user in the
+> project's view; the tenant separates the sign-ins, not the person's Google
+> identity as Google sees it. Disable the `portal_users` row instead. And do
+> not change the project-level Identity Platform settings — the tenant carries
+> its own — because SpinUp's users live at project level.
+
 ## 6. Registry drift check (weekly)
 
 `docs/data/form-registry.json` describes a form the City controls. This job asks

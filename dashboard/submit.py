@@ -23,7 +23,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
-from alex311 import (abuse, db as adb, identity as ident, job_runner,
+from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner,
                      portal_auth as pa)
 
 from . import registry as R
@@ -89,6 +89,10 @@ def merge_candidates(rows: list[dict], key: str) -> list[dict]:
     return sorted(merged.values(), key=lambda c: (not c["exact"], -c["seen"]))
 
 
+class FirebaseSession(BaseModel):
+    id_token: str
+
+
 class NewUser(BaseModel):
     email: str
     role: str = "user"
@@ -99,7 +103,6 @@ class ValidateBody(BaseModel):
     answers: dict = {}
 
 
-SESSION_COOKIE = "alex311_submitter"
 
 
 class AuthStart(BaseModel):
@@ -151,13 +154,13 @@ def _identify(request: Request, pool_getter,
         with pool_getter().connection() as conn:
             user = pa.session_user(conn, token)
         if user is not None:
-            return user.email, user
+            return user.user_id, user
     if _basic_ok(creds):
         return os.environ.get("SUBMIT_USER", "alex311user"), None
     raise Unauthenticated()
 
 
-def register_submit_routes(app, pool_getter, sender=None) -> None:
+def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: kept for callers
     """Attach the gated /submit routes. pool_getter() returns the live pool.
 
     Two layers of access, doing different jobs. HTTP Basic decides who may see
@@ -165,7 +168,6 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
     open. The session below decides *which resident* is submitting, which is
     what the per-submitter abuse rules need.
     """
-    sender = sender or ident.sender_from_env()
 
     def gate(request: Request,
              creds: HTTPBasicCredentials | None = Depends(_security)) -> str:
@@ -209,6 +211,11 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                              user_agent=request.headers.get("user-agent"))
         if not token:
             return RedirectResponse("/submit/login?error=1", status_code=303)
+        with pool_getter().connection() as conn:
+            conn.execute("UPDATE portal_users SET policy_version = %s WHERE user_id = "
+                         "(SELECT user_id FROM portal_sessions WHERE token_hash = %s)",
+                         (fb.POLICY_VERSION, pa._token_hash(token)))
+            conn.commit()
         resp = RedirectResponse("/submit", status_code=303)
         resp.set_cookie(pa.SESSION_COOKIE, token, httponly=True, samesite="lax",
                         secure=request.url.scheme == "https", path="/submit",
@@ -226,6 +233,41 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
         resp.delete_cookie(pa.SESSION_COOKIE, path="/submit")
         return resp
 
+    @public.get("/api/firebase-config")
+    def firebase_config():
+        """What the sign-in page hands the Firebase SDK. Public by nature: a
+        browser key is meant to be in the page, and it is scoped to Firebase
+        APIs and does nothing without a signed-in user behind it."""
+        return {"config": fb.client_config(), "policy_version": fb.POLICY_VERSION}
+
+    @public.post("/api/session")
+    def session_from_firebase(body: FirebaseSession, request: Request):
+        """Trade a Firebase ID token for our session cookie.
+
+        The browser has just signed in with Firebase and holds a token that
+        says so. We check it is genuine and for this project, and from there
+        the account and the cookie are the same ones a password login gets —
+        one gate, two doors.
+        """
+        try:
+            who = fb.verify_id_token(body.id_token)
+        except fb.NotConfigured:
+            raise HTTPException(503, "sign-in with Firebase is not set up here")
+        except fb.BadToken:
+            raise HTTPException(401, "that sign-in could not be verified")
+        with pool_getter().connection() as conn:
+            token = pa.sign_in_with_firebase(
+                conn, uid=who.uid, email=who.email, email_verified=who.email_verified,
+                policy_version=fb.POLICY_VERSION,
+                user_agent=request.headers.get("user-agent"))
+        if not token:
+            raise HTTPException(403, "that account cannot sign in")
+        resp = JSONResponse({"ok": True})
+        resp.set_cookie(pa.SESSION_COOKIE, token, httponly=True, samesite="lax",
+                        secure=request.url.scheme == "https", path="/submit",
+                        max_age=int(pa.SESSION_TTL.total_seconds()))
+        return resp
+
     @public.get("/api/whoami")
     def whoami_portal(request: Request,
                       creds: HTTPBasicCredentials | None = Depends(_security)):
@@ -240,8 +282,10 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
             _actor, user = _identify(request, pool_getter, creds)
         except Unauthenticated:
             return {"user": None}
-        return {"user": ({"user_id": user.user_id, "email": user.email, "role": user.role}
-                         if user else None)}
+        return {"user": ({"user_id": user.user_id, "email": user.email, "role": user.role,
+                          "label": user.label, "firebase_uid": user.firebase_uid}
+                         if user else None),
+                "firebase": fb.configured()}
 
     @app.exception_handler(Unauthenticated)
     def _needs_login(request: Request, exc: Unauthenticated):
@@ -336,60 +380,18 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
         return R.validate(s, body.answers)
 
     def _submitter(request: Request) -> str | None:
-        """Who is signed in, according to the session cookie alone."""
-        token = request.cookies.get(SESSION_COOKIE)
+        """Which account is making this request, from the portal session.
+
+        This used to read a separate resident-identity cookie that almost
+        nobody had, so per-submitter limits were decorative. The portal session
+        is the one thing every request already carries.
+        """
+        token = request.cookies.get(pa.SESSION_COOKIE)
         if not token:
             return None
         with pool_getter().connection() as conn:
-            return ident.session_submitter(conn, token)
-
-    @router.get("/api/auth/me")
-    def whoami(request: Request):
-        sid = _submitter(request)
-        return {"signed_in": sid is not None, "submitter_id": sid}
-
-    @router.post("/api/auth/start")
-    def auth_start(body: AuthStart):
-        """Send a one-time code.
-
-        The reply is identical whether or not the address is known, and whether
-        or not it was rate limited. Anything else turns this into a way to test
-        which addresses have accounts.
-        """
-        try:
-            with pool_getter().connection() as conn:
-                ident.start_verification(conn, body.email, sender)
-        except ident.InvalidEmail:
-            raise HTTPException(400, "that does not look like an email address")
-        return {"sent": True,
-                "message": "If that address can receive mail, a code is on its way."}
-
-    @router.post("/api/auth/confirm")
-    def auth_confirm(body: AuthConfirm, request: Request, response: Response):
-        try:
-            with pool_getter().connection() as conn:
-                session = ident.confirm_verification(
-                    conn, body.email, body.code,
-                    user_agent=request.headers.get("user-agent"))
-        except ident.InvalidEmail:
-            raise HTTPException(400, "that does not look like an email address")
-        except ident.VerificationFailed:
-            raise HTTPException(400, "that code is not valid")
-        response.set_cookie(
-            SESSION_COOKIE, session.token, httponly=True, samesite="lax",
-            secure=request.url.scheme == "https", path="/submit",
-            expires=session.expires_at)
-        return {"submitter_id": session.submitter_id,
-                "expires_at": session.expires_at}
-
-    @router.post("/api/auth/signout")
-    def auth_signout(request: Request, response: Response):
-        token = request.cookies.get(SESSION_COOKIE)
-        if token:
-            with pool_getter().connection() as conn:
-                ident.revoke_session(conn, token)
-        response.delete_cookie(SESSION_COOKIE, path="/submit")
-        return {"signed_out": True}
+            user = pa.session_user(conn, token)
+        return user.user_id if user else None
 
     @router.post("/api/precheck")
     def precheck(body: PrecheckBody, request: Request):
@@ -593,9 +595,10 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
                     "SELECT submitter_id FROM submission_attempts WHERE attempt_id = %s",
                     (attempt_id,)).fetchone()
                 if not row or not row["submitter_id"]:
-                    raise HTTPException(400, "that attempt has no submitter to block")
-                ident.block_submitter(conn, row["submitter_id"],
-                                      reason or "blocked from the review queue")
+                    raise HTTPException(400, "that attempt has no account behind it to block")
+                if not pa.count_admins(conn, excluding=row["submitter_id"]):
+                    raise HTTPException(409, "that is the last administrator")
+                pa.set_disabled(conn, row["submitter_id"], True)
         return {"action_id": action_id, "attempt_id": attempt_id, "action": action}
 
     @router.get("/api/geocode")
