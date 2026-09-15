@@ -98,6 +98,8 @@ class FeedbackBody(BaseModel):
     """A resident's verdict. `score` 1–5, or null for "not sure"."""
     score: int | None = None
     note: str = ""
+    #: show the score (never the note) on the request's public page
+    share_score: bool = False
 
 
 class NewUser(BaseModel):
@@ -392,7 +394,8 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         user_id = _account(request)
         with pool_getter().connection() as conn:
             saved = adb.save_feedback(conn, user_id=user_id, service_request_id=case,
-                                      score=body.score, note=body.note.strip()[:2000])
+                                      score=body.score, note=body.note.strip()[:2000],
+                                      share_score=body.share_score)
         return {"case": case, "feedback": saved}
 
     @router.delete("/api/feedback/{case}")
@@ -401,6 +404,23 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         with pool_getter().connection() as conn:
             removed = adb.delete_feedback(conn, user_id=user_id, service_request_id=case)
         return {"case": case, "removed": removed}
+
+    @router.delete("/api/account")
+    def delete_my_account(request: Request, actor: str = Depends(gate)):
+        """Remove the account and everything hanging off it.
+
+        The last administrator cannot delete themselves: there would be
+        nobody left who could let anyone in. Firebase is never touched — see
+        db.delete_account for why.
+        """
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            if not pa.count_admins(conn, excluding=user_id):
+                raise HTTPException(409, "that is the last administrator")
+            removed = adb.delete_account(conn, user_id=user_id)
+        resp = JSONResponse({"removed": removed})
+        resp.delete_cookie(pa.SESSION_COOKIE, path="/submit")
+        return resp
 
     @router.get("/users")
     def users_ui(actor: str = Depends(admin_only)):

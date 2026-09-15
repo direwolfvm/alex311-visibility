@@ -145,6 +145,14 @@
   #verdict textarea { width:100%; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
                       font:inherit; font-size:13px; resize:vertical; }
   .verdict-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .share { display:flex; gap:8px; align-items:flex-start; font-size:13px; margin-top:10px; }
+  .share input { margin-top:3px; flex:none; }
+  .share .map-note { display:block; margin-top:2px; }
+  /* what residents chose to show, on the record itself */
+  .scores { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:0; }
+  .scores .s { font:600 15px ui-monospace,"SF Mono",Menlo,monospace; border:1px solid var(--border);
+               border-radius:7px; padding:2px 9px; background:var(--panel); }
+  .scores .s.low { color:var(--open); } .scores .s.high { color:var(--closed); }
   .loading { color:var(--muted); padding:40px 0; text-align:center; }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 </style>
@@ -310,6 +318,14 @@ function render(d) {
     <div class="cols">
       <div>
         ${words}
+        ${(d.resident_scores || []).length ? `<section class="card">
+          <h2>Did residents say it was addressed?</h2>
+          <p class="scores">${d.resident_scores.map(s => s.score == null
+            ? `<span class="s">?</span>`
+            : `<span class="s ${s.score <= 2 ? 'low' : s.score >= 4 ? 'high' : ''}">${s.score}</span>`).join('')}
+            <span class="map-note">out of 5, from ${d.resident_scores.length} resident${d.resident_scores.length === 1 ? '' : 's'}
+            who chose to show it (1 = not at all, 5 = completely).</span></p>
+        </section>` : ''}
         ${gallery}
         ${attachments}
         ${related}
@@ -346,6 +362,11 @@ function render(d) {
           </div>
           <label class="sr-only" for="verdict-note">Anything else about how it went</label>
           <textarea id="verdict-note" rows="2" placeholder="Anything else about how it went (optional, private)"></textarea>
+          <label class="share"><input type="checkbox" id="verdict-share">
+            Show my score on this request's public page
+            <span class="map-note">— the score only, never the note, and never your name.
+            If you are the only person who could have sent this request, neighbours may still work
+            out that it is yours.</span></label>
           <div class="verdict-row">
             <button type="button" class="official" id="verdict-save" style="width:auto;padding:8px 14px;cursor:pointer">Save</button>
             <span class="map-note" id="verdict-status"></span>
@@ -478,6 +499,7 @@ async function drawVerdict(user) {
       (b.dataset.score === '' ? null : +b.dataset.score) === feedback.score);
     if (match) pickScore(match);
     document.getElementById('verdict-note').value = feedback.note || '';
+    document.getElementById('verdict-share').checked = !!feedback.share_score;
     document.getElementById('verdict-status').textContent =
       `Saved ${String(feedback.updated_at).replace('T', ' ').slice(0, 16)} UTC. Change it any time.`;
   }
@@ -487,7 +509,8 @@ async function drawVerdict(user) {
     if (!verdict.chosen) { st.textContent = 'Pick a number, or "not sure".'; return; }
     const res = await fetch(`/submit/api/feedback/${encodeURIComponent(CASE)}`, {
       method: 'PUT', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({score: verdict.score, note: document.getElementById('verdict-note').value})});
+      body: JSON.stringify({score: verdict.score, note: document.getElementById('verdict-note').value,
+                            share_score: document.getElementById('verdict-share').checked})});
     st.textContent = res.ok ? 'Saved. Thank you — this is the part the City\u2019s data cannot tell us.'
                             : 'Could not save that.';
     if (res.ok) drawFollow(user);          // rating implies following

@@ -328,8 +328,14 @@ def request_detail(service_request_id: str):
               ORDER BY requested_datetime DESC LIMIT 25""",
             {"id": service_request_id},
         ).fetchall()
+        # scores residents chose to show — never a note, never a name
+        from alex311 import db as adb
+        scores = adb.public_scores(conn, service_request_id=service_request_id)
+        conn.rollback()
     row["media"] = media
     row["related"] = related
+    row["resident_scores"] = [{"score": s["score"], "relation": s["relation"],
+                               "status_at_rating": s["status_at_rating"]} for s in scores]
     row["report_url"] = Alex311Client.deep_link(service_request_id)
     return row
 
