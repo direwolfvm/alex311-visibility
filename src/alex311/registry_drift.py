@@ -19,7 +19,7 @@ the City some way other than the wizard — staff typing a phone call, an emaile
 or tweeted report transcribed by staff, a third-party app with its own form —
 and in all of those a human keys in answers the wizard would have refused. The
 data checks therefore use an **allowlist** of wizard channels (`WEB_SOURCES`),
-so an unrecognised channel is excluded rather than mistaken for the web form.
+so an unrecognized channel is excluded rather than mistaken for the web form.
 
 Usage: python -m alex311.registry_drift [--days 30] [--min-rows 5]
 Exits non-zero when drift is found — wire it to a weekly Cloud Run job so the
@@ -47,7 +47,7 @@ log = logging.getLogger("alex311.registry_drift")
 #: report transcribed by staff (origin Email/Facebook/Twitter/Sprout Social), or
 #: a third-party app with its own form (snap311) — and none of those exercise
 #: the wizard's validation, so they say nothing about what the web form accepts.
-#: An allowlist, not a denylist: a channel we do not recognise is excluded
+#: An allowlist, not a denylist: a channel we do not recognize is excluded
 #: rather than assumed to be the wizard.
 WEB_SOURCES = {"web", "ios", "ios browser", "android", "android browser"}
 NON_WEB_ORIGINS = {"phone"}

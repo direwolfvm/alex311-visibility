@@ -263,7 +263,7 @@ Only wizard channels count. About a third of records arrive another way — staf
 typing a phone call, an emailed or tweeted report transcribed by staff, a
 third-party app with its own form — and in all of those a human keys in answers
 the wizard would have refused. The check uses an **allowlist** (`WEB_SOURCES`:
-Web, iOS, iOS Browser, Android, Android Browser), so an unrecognised channel is
+Web, iOS, iOS Browser, Android, Android Browser), so an unrecognized channel is
 excluded rather than mistaken for the web form. The job prints the channels it
 skipped, which is how you would notice the City renaming one.
 

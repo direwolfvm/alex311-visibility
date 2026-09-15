@@ -129,7 +129,7 @@ def file_one(row: dict, *, live: bool, screenshot: str | None = None) -> dict:
     answers = row.get("answers") or {}
     result = prepare_submission(
         service_code=row["service_code"],
-        # The City's gazetteer only recognises its own spelling, so send that
+        # The City's gazetteer only recognizes its own spelling, so send that
         # when we have it and fall back to the resident's own wording.
         address=row.get("city_address") or row.get("address") or "",
         description=row.get("description") or "",

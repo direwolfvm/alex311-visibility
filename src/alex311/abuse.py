@@ -59,7 +59,7 @@ _DIRECTIONS = {"NORTH": "N", "SOUTH": "S", "EAST": "E", "WEST": "W",
 def normalize_address(raw: str | None) -> str:
     """A stable key for one location, tolerant of the portal's spellings.
 
-    Intersections ("A ST & B RD") normalise each side and sort them, so the
+    Intersections ("A ST & B RD") normalize each side and sort them, so the
     same corner keys the same however it was typed.
     """
     if not raw:
@@ -108,7 +108,7 @@ def sql_prefix(raw: str | None) -> str:
     built the prefix "100 NORTH PITT", which matches none of the 6,222 distinct
     addresses the City stores as "N" — the lookup found nothing, the form
     offered nothing, and the request went to the City in wording its own
-    gazetteer does not recognise.
+    gazetteer does not recognize.
     """
     if not raw:
         return ""
@@ -177,7 +177,7 @@ class Policy:
     targeting_share: float = 0.60
     targeting_min_events: int = 3
     #: an address getting this many requests in a week whose descriptions
-    #: barely differ looks like one voice, not a neighbourhood
+    #: barely differ looks like one voice, not a neighborhood
     burst_events: int = 5
     burst_days: int = 7
     burst_diversity: float = 0.50

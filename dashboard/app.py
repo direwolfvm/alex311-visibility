@@ -354,7 +354,7 @@ def analytics(
 
     Time-to-close uses closed - requested, floored at 0 (a handful of
     records carry closed timestamps before the request timestamp).
-    "Open age" is now - requested for not-yet-closed/cancelled records.
+    "Open age" is now - requested for not-yet-closed/canceled records.
     """
     where, params = _filters(start, end, category, status, q, polygon)
     ttc = "GREATEST(0, EXTRACT(epoch FROM closed_datetime - requested_datetime) / 86400.0)"

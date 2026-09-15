@@ -47,6 +47,8 @@
   nav.tabs button.active,
   nav.tabs .tab-link[aria-current="page"] { color: var(--accent); font-weight: 600;
                                             border-bottom-color: var(--accent); }
+  .lens { font-size: 13px; margin: 14px 0 2px; }
+  .lens:first-child { margin-top: 0; }
   .tab-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
              background: #dbeafe; color: var(--accent); padding: 1px 6px; border-radius: 99px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -249,8 +251,8 @@
               aria-selected="false" aria-controls="tab-analytics" tabindex="-1">Analytics</button>
     </div>
     <!-- A link, not a tab: it goes to another page rather than swapping a panel
-         here, and calling it a tab would promise keyboard behaviour it cannot
-         honour. It sits outside the tablist for the same reason. -->
+         here, and calling it a tab would promise keyboard behavior it cannot
+         honor. It sits outside the tablist for the same reason. -->
     <a class="tab-link" href="/submit">Report an issue
       <span class="tab-tag">beta</span></a>
     <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
@@ -340,8 +342,11 @@
         <div class="chart-box tall"><canvas id="ch-ttc-cat" role="img" aria-label="Bar chart: median days to close, by request type."></canvas></div></div>
       <div class="card wide" id="resident-card"><h2>Did residents say it was addressed?</h2>
         <p class="hint" id="resident-lede">Residents with an account can rate a request on its record page,
-          from 1 (not at all) to 5 (completely). This is their answer, in aggregate only; any group with
-          fewer than five ratings is not shown.</p>
+          from 1 (not at all) to 5 (completely). Two lenses, kept apart: what the <b>person who sent
+          the request</b> through this site said happened to it — the outcome of record for that request —
+          and, separately, what <b>other residents following it</b> said. Every figure carries its count.
+          While this site has few filings, a group may be one person's answer; residents are told that
+          where they answer.</p>
         <div id="resident-body"></div></div>
       <div class="card"><h2>Average age of open requests by type</h2>
         <div class="chart-box tall"><canvas id="ch-age-cat" role="img" aria-label="Bar chart: average age of open requests, by request type."></canvas></div></div>
@@ -607,22 +612,24 @@ const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 function renderResident(r) {
   const box = $('resident-body');
   if (!r) { box.innerHTML = ''; return; }
-  const cell = c => c.suppressed ? '<span class="hint">fewer than ' + r.suppress_below + '</span>'
-    : `<b>${c.mean == null ? '–' : c.mean.toFixed(1)}</b> / 5 · ${c.n} rating${c.n === 1 ? '' : 's'}`
+  const cell = c => !c ? '<span class="hint">no answers yet</span>'
+    : `<b>${c.mean == null ? '–' : c.mean.toFixed(1)}</b> / 5 · ${c.n} answer${c.n === 1 ? '' : 's'}`
       + (c.rated_unresolved ? ` · ${c.rated_unresolved} said not addressed` : '')
       + (c.not_sure ? ` · ${c.not_sure} not sure` : '');
-  if (r.overall.suppressed) {
-    box.innerHTML = `<p class="hint">${r.total_ratings} rating${r.total_ratings === 1 ? '' : 's'} so far —
-      nothing is shown until a group has at least ${r.suppress_below}.</p>`;
-    return;
-  }
   const rows = obj => Object.entries(obj).sort((a, b) => (b[1].n || 0) - (a[1].n || 0))
     .map(([k, c]) => `<tr><td>${esc(k)}</td><td>${cell(c)}</td></tr>`).join('');
-  box.innerHTML = `<p>Overall: ${cell(r.overall)}</p>
-    <div class="tbl-wrap"><table class="mini"><thead><tr><th>Status when rated</th><th></th></tr></thead>
-      <tbody>${rows(r.by_status_at_rating)}</tbody></table></div>
-    <div class="tbl-wrap"><table class="mini"><thead><tr><th>Request type</th><th></th></tr></thead>
-      <tbody>${rows(r.by_category)}</tbody></table></div>`;
+  const lens = (title, who, L) => `
+    <h3 class="lens">${title}</h3>
+    <p class="hint">${who}</p>
+    ${L.total_ratings ? `<p>Overall: ${cell(L.overall)}</p>
+      <div class="tbl-wrap"><table class="mini"><thead><tr><th>Status when answered</th><th></th></tr></thead>
+        <tbody>${rows(L.by_status_at_rating)}</tbody></table></div>
+      <div class="tbl-wrap"><table class="mini"><thead><tr><th>Request type</th><th></th></tr></thead>
+        <tbody>${rows(L.by_category)}</tbody></table></div>`
+      : '<p class="hint">No answers yet.</p>'}`;
+  box.innerHTML =
+    lens('What the people who sent them said', 'The primary measure: the submitter of a request filed through this site, on whether it was addressed.', r.submitter)
+    + lens('What other residents said', 'A second lens: residents following a request they did not send. Kept separate from the submitter\u2019s answer, never averaged in.', r.community);
 }
 
 async function loadAnalytics() {
@@ -739,7 +746,7 @@ function selectTab(b, focus = false) {
 tabButtons.forEach(b => b.addEventListener('click', () => selectTab(b)));
 
 // The bar is shared with the other pages, and from there Analytics is a link
-// rather than a button it can press. Honour the fragment it arrives with.
+// rather than a button it can press. Honor the fragment it arrives with.
 function tabFromHash() {
   const want = location.hash.replace('#', '');
   const b = tabButtons.find(x => x.dataset.tab === want);
@@ -817,7 +824,7 @@ function detailHtml(d) {
     ['Requested', fmtTs(d.requested_datetime)],
     ['Last updated', fmtTs(d.last_updated_datetime)],
     ['Closed', fmtTs(d.closed_datetime)],
-    ['Cancelled', fmtTs(d.canceled_datetime)],
+    ['Canceled', fmtTs(d.canceled_datetime)],
     ['Expected by', fmtTs(d.expected_datetime)],
     ['Department', d.primary_service_department],
     ['Agency', d.agency_responsible],
@@ -1046,7 +1053,7 @@ window.addEventListener('resize', () => {
 });
 remeasureMap();      // sync: rAF is suspended when the page is not painting
 
-// Summarise the active filters on the collapsed control, so a phone user can
+// Summarize the active filters on the collapsed control, so a phone user can
 // see what is being applied without opening it.
 function renderFilterSummary() {
   const cats = document.querySelectorAll('#categories input:checked').length;

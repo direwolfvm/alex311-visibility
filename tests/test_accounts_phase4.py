@@ -42,12 +42,13 @@ def test_the_warning_sits_beside_the_checkbox():
     import re
     share = re.sub(r"\s+", " ", RECORD.split('id="verdict-share"')[1].split("</label>")[0])
     assert "never the note, and never your name" in share
-    assert "neighbours may still work out" in share
+    assert "neighbors may still work out" in share
 
 
 def test_what_is_shown_publicly_is_a_score_and_a_count():
-    block = RECORD.split("Did residents say it was addressed?</h2>")[1].split("</section>")[0]
-    assert "s.score" in block and "resident_scores.length" in block
+    block = RECORD.split("<h2>Was it addressed?</h2>")[1].split("</section>")[0]
+    assert "pip" in block and "others.length" in block
+    assert "The person who sent this request" in block and "Other residents" in block
     assert ".note" not in block and "s.note" not in block   # the CSS class map-note is not a note
 
 
@@ -102,3 +103,24 @@ def test_sharing_and_deletion_against_a_real_database():
     finally:
         with db.connect() as owner:
             owner.execute("DELETE FROM portal_users WHERE email LIKE 'p4-%@test'"); owner.commit()
+
+
+def test_the_page_says_whose_answer_it_is_asking_for():
+    """Two different questions. The submitter is establishing what happened
+    to their request; anyone else is offering a community view of somebody
+    else's. The heading and the lede change with the relation."""
+    assert "Was your issue actually addressed?" in RECORD
+    assert "outcome of record" in RECORD
+    assert "Did the City address this?" in RECORD
+    assert "community view" in RECORD
+
+
+def test_american_spellings_in_what_residents_read():
+    import re
+    pages = "".join((ROOT / f).read_text() for f in
+                    ("dashboard/static/request.html", "dashboard/static/index.html",
+                     "dashboard/submit.html", "dashboard/my.html", "dashboard/login.html",
+                     "dashboard/admin.html"))
+    # aria-labelledby is an HTML attribute, not a spelling
+    hits = re.findall(r"\b(neighbour\w*|recognis\w+|behaviour|honour|labelled\b|summarise|colour\w*|organis\w+|centre\b)", pages, re.I)
+    assert not hits, hits
