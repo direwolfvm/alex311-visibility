@@ -643,13 +643,18 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:
         # that nothing ever told them the City spells their street its own way
         # — they typed a correct address, got a match, and the request still
         # went to the City in wording its gazetteer does not recognise.
-        best = cands[0] if cands else None
+        # Only an exact match earns a suggestion. A prefix match is not the
+        # same address: "500 north st" finds "500 NORTH VIEW TER", and telling
+        # someone "the City files this address as 500 NORTH VIEW TER" asserts
+        # an identity that is false. Near misses still appear in the candidate
+        # list, where the wording asks rather than tells.
+        best = cands[0] if cands and cands[0]["exact"] else None
         suggestion = None
         if best:
             suggestion = {
                 "address": best["address"],
                 "lat": best["lat"], "long": best["long"],
-                "seen": best["seen"], "exact": best["exact"],
+                "seen": best["seen"], "exact": True,
                 # differs in what a person would notice, not in whitespace
                 "differs": abuse.normalize_address(q) != abuse.normalize_address(best["address"])
                            or q.strip().upper() != best["address"].strip().upper(),
