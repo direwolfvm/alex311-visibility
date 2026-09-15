@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import secrets
 from urllib.parse import parse_qs
 from datetime import datetime, timezone
@@ -189,6 +190,7 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
     public = APIRouter(prefix="/submit")
     login_page = Path(__file__).parent / "login.html"
     admin_page = Path(__file__).parent / "admin.html"
+    my_page = Path(__file__).parent / "my.html"
 
     @public.get("/login", response_class=HTMLResponse)
     def login_form(request: Request):
@@ -310,6 +312,57 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         """Moderation and user management. The gate is here, not in the page:
         a hidden link is a courtesy, not a permission."""
         return admin_page.read_text()
+
+    @router.get("/my", response_class=HTMLResponse)
+    def my_ui(actor: str = Depends(gate)):
+        """An account's own requests: the ones it sent, and the ones it follows."""
+        return my_page.read_text()
+
+    # ------------------------------------------------------------- links
+    # A link is a pointer: the City's case number, and whether this account
+    # sent the request or is only watching it. The City holds the request;
+    # the mirror holds the public record; we hold neither twice.
+
+    CASE_ID = re.compile(r"^\d{2}-\d{8}$")
+
+    def _account(request: Request) -> str:
+        user_id = _submitter(request)
+        if not user_id:
+            # the shared script credential has no account to hang links on
+            raise HTTPException(403, "sign in with an account to keep a list")
+        return user_id
+
+    @router.get("/api/my")
+    def my_requests(request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            links = adb.my_links(conn, user_id=user_id)
+        return {"links": links}
+
+    @router.get("/api/link/{case}")
+    def link_state(case: str, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            return {"case": case, "relation": adb.link_state(conn, user_id=user_id,
+                                                              service_request_id=case)}
+
+    @router.post("/api/follow/{case}")
+    def follow(case: str, request: Request, actor: str = Depends(gate)):
+        """Follow needs no proof; "mine" is never set here, only by the worker."""
+        if not CASE_ID.match(case):
+            raise HTTPException(400, "that is not a case number")
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            relation = adb.link_request(conn, user_id=user_id, service_request_id=case,
+                                        relation="following")
+        return {"case": case, "relation": relation}
+
+    @router.delete("/api/follow/{case}")
+    def unfollow(case: str, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            removed = adb.unlink_request(conn, user_id=user_id, service_request_id=case)
+        return {"case": case, "relation": None, "removed": removed}
 
     @router.get("/users")
     def users_ui(actor: str = Depends(admin_only)):

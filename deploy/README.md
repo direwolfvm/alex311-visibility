@@ -197,6 +197,43 @@ fails closed.
 > not change the project-level Identity Platform settings — the tenant carries
 > its own — because SpinUp's users live at project level.
 
+## 5b. The application database role (row-level security)
+
+The account tables (`request_links`, and `feedback` when it lands) carry
+row-level security: the database, not the handler, decides whose rows come
+back. That only means something if the web service connects as a role that
+**does not own the tables** — RLS never applies to an owner, and the jobs and
+`init-db` connect as the owner, `alex311`. So the service connects as
+`alex311_app`, which owns nothing.
+
+Create it once, as the owner, through the proxy:
+
+```sql
+CREATE ROLE alex311_app LOGIN PASSWORD '<generate one>';
+```
+
+then apply the schema again — its grants block runs only once the role exists —
+and give the service the connection string as a secret:
+
+```bash
+DATABASE_URL=... python -m alex311.ingest init-db
+printf 'postgresql://alex311_app:<password>@/alex311?host=/cloudsql/%s' "$SQL_INSTANCE" \
+  | gcloud secrets create alex311-app-database-url --data-file=-
+gcloud run services update alex311-dashboard --region=$REGION \
+    --update-secrets=APP_DATABASE_URL=alex311-app-database-url:latest
+```
+
+The jobs keep `DATABASE_URL`. The worker writes `mine` links as the owner and
+RLS is *forced* on that table, so it names the account first (`db.as_user`);
+so does every handler. Reading the table by hand as the owner needs the same:
+
+```sql
+SELECT set_config('app.role', 'admin', false);   -- for this psql session
+```
+
+A handler that forgets to name the account gets no rows, not everyone's. There
+is a test that proves it against a real database (`tests/test_accounts_phase2.py`).
+
 ## 6. Registry drift check (weekly)
 
 `docs/data/form-registry.json` describes a form the City controls. This job asks

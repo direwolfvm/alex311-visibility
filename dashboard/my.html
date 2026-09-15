@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My requests · Alex311</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#fff; --ink:#1c2733; --muted:#5c6675; --border:#e2e8f0;
+    --accent:#1d4ed8; --open:#b45309; --openbg:#fef3c7; --closed:#047857; --closedbg:#ecfdf5;
+    --otherbg:#e2e8f0;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--accent); }
+  /* The site bar, identical to the other pages. */
+  header { display:flex; align-items:baseline; gap:16px; padding:14px 20px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .mark { height:26px; width:26px; align-self:center; }
+  header h1 { font-size:18px; margin:0; }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; margin-left:22px; align-self:stretch; }
+  nav.tabs .tab-link { display:flex; align-items:center; gap:6px; text-decoration:none;
+                       font-size:14px; padding:6px 16px 8px; color:var(--muted);
+                       border-bottom:2px solid transparent; }
+  nav.tabs .tab-link:hover { color:var(--ink); border-bottom-color:var(--border); }
+  nav.tabs .tab-link[aria-current="page"] { color:var(--accent); font-weight:600;
+                                            border-bottom-color:var(--accent); }
+  nav.tabs .tab-link[hidden] { display:none; }
+  .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+             background:#dbeafe; color:var(--accent); padding:1px 6px; border-radius:99px; }
+  header .who { margin-left:auto; color:var(--muted); font-size:13px; }
+  @media (max-width:640px) {
+    header { gap:2px 10px; padding:8px 14px 0; }
+    header h1 { font-size:16px; }
+    header .sub { flex-basis:100%; font-size:11px; }
+    nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
+    nav.tabs .tab-link { flex:1; padding:8px 4px; justify-content:center; text-align:center; }
+    .tab-tag { display:none; }
+    header .who { order:2; }
+  }
+
+  .wrap { max-width:900px; margin:0 auto; padding:18px 18px 80px; }
+  .page-title { font-size:17px; margin:0 0 4px; }
+  .lede { color:var(--muted); font-size:13px; margin:0 0 16px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+          padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 10px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:9px 12px; border-top:1px solid var(--border); vertical-align:top; }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-top:none; white-space:nowrap; }
+  td.num { font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap; }
+  td.actions { text-align:right; white-space:nowrap; }
+  .case { font:600 13px ui-monospace,"SF Mono",Menlo,monospace; }
+  .badge { display:inline-block; padding:1px 9px; border-radius:99px; font-size:11px; font-weight:700;
+           text-transform:uppercase; letter-spacing:.04em; }
+  .badge.open { background:var(--openbg); color:var(--open); }
+  .badge.closed { background:var(--closedbg); color:var(--closed); }
+  .badge.other { background:var(--otherbg); color:var(--muted); }
+  .rel { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .rel.mine { color:var(--accent); }
+  button { padding:5px 10px; border:1px solid var(--border); border-radius:7px; background:#fff;
+           font:inherit; font-size:13px; cursor:pointer; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .empty { color:var(--muted); font-size:14px; margin:0; }
+  .hint { color:var(--muted); font-size:12px; }
+  .box.bad { padding:11px 13px; border-radius:8px; font-size:13px; margin:0 0 12px;
+             background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/favicon.svg" alt="" class="mark">
+  <h1>Alex311 Visibility</h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs" aria-label="Views">
+    <a class="tab-link" href="/">Explore</a>
+    <a class="tab-link" href="/#analytics">Analytics</a>
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/my" id="nav-my" aria-current="page">My requests</a>
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
+  </nav>
+  <span class="who" id="who"></span>
+</header>
+
+<div class="wrap">
+  <h2 class="page-title">My requests</h2>
+  <p class="lede">The requests you sent through this site, and the ones you chose to follow.
+    What each one says is what the City's own record says, as of the last time this mirror
+    read it — four times a day — so a request you sent minutes ago shows here without a
+    status until then.</p>
+  <div class="box bad" id="error" hidden role="alert"></div>
+
+  <div class="card">
+    <h2>Sent from here</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Case</th><th>Request</th><th>Where</th><th>Status</th><th>Reported</th><th>Updated</th><th></th></tr></thead>
+      <tbody id="mine"></tbody>
+    </table></div>
+    <p class="empty" id="mine-empty" hidden>Nothing yet. When you send a request from the
+      <a href="/submit">report page</a> and the City gives it a case number, it appears here.</p>
+  </div>
+
+  <div class="card">
+    <h2>Following</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Case</th><th>Request</th><th>Where</th><th>Status</th><th>Reported</th><th>Updated</th><th></th></tr></thead>
+      <tbody id="following"></tbody>
+    </table></div>
+    <p class="empty" id="following-empty" hidden>Not following anything. Any record on the
+      map has a <b>Follow</b> button once you are signed in.</p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const day = v => v ? String(v).slice(0, 10) : '—';
+function badge(st) {
+  const s = (st || '').toLowerCase();
+  return st ? `<span class="badge ${['open','closed'].includes(s) ? s : 'other'}">${esc(st)}</span>`
+            : '<span class="hint">not in the mirror yet</span>';
+}
+async function api(path, opts = {}) {
+  const r = await fetch('/submit/api' + path, {headers: {'Content-Type': 'application/json'}, ...opts});
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail || `HTTP ${r.status}`);
+  return body;
+}
+function row(l) {
+  return `<tr>
+    <td><a class="case" href="/r/${encodeURIComponent(l.service_request_id)}">${esc(l.service_request_id)}</a></td>
+    <td>${esc(l.service_name || '—')}</td>
+    <td>${esc(l.address || '—')}</td>
+    <td>${badge(l.status)}</td>
+    <td class="num">${day(l.requested_datetime)}</td>
+    <td class="num">${day(l.last_updated_datetime)}</td>
+    <td class="actions"><button data-unlink="${esc(l.service_request_id)}">${l.relation === 'mine' ? 'Remove from list' : 'Stop following'}</button></td>
+  </tr>`;
+}
+async function load() {
+  const [who, my] = await Promise.all([api('/whoami'), api('/my')]);
+  const me = who.user;
+  $('who').innerHTML = me ? `${esc(me.label || me.email)} · <a href="/submit/logout">Sign out</a>` : '';
+  if (me && me.role === 'admin') $('nav-admin').hidden = false;
+  const mine = my.links.filter(l => l.relation === 'mine');
+  const following = my.links.filter(l => l.relation !== 'mine');
+  $('mine').innerHTML = mine.map(row).join(''); $('mine-empty').hidden = mine.length > 0;
+  $('following').innerHTML = following.map(row).join(''); $('following-empty').hidden = following.length > 0;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-unlink]');
+  if (!b) return;
+  $('error').hidden = true;
+  try { await api(`/follow/${encodeURIComponent(b.dataset.unlink)}`, {method: 'DELETE'}); await load(); }
+  catch (err) { $('error').textContent = err.message; $('error').hidden = false; }
+});
+load().catch(err => { $('error').textContent = err.message; $('error').hidden = false; });
+</script>
+</body>
+</html>
