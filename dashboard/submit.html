@@ -530,8 +530,11 @@ async function findAddress() {
       'No match in the City\u2019s past requests for that address. Tap the map to place it.';
     return;
   }
-  // Whatever happens next, this is the wording the City will be given.
-  setCityAddress(data.suggestion ? data.suggestion.address : cands[0].address);
+  // Only an exact match translates. Filing "500 north st" as "500 NORTH VIEW
+  // TER" because it happened to share a prefix would be a silent error, and a
+  // silent one is the worst kind here — nobody would see it until the City's
+  // confirmation named a street they had never heard of.
+  setCityAddress(data.suggestion ? data.suggestion.address : null);
   offerSpelling(data.suggestion);
   if (cands.length === 1 && cands[0].exact) {
     setLocation(cands[0].lat, cands[0].long,

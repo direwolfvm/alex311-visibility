@@ -41,10 +41,11 @@ def test_the_form_never_replaces_the_box_unless_the_resident_asks():
 
 
 def test_declining_the_suggestion_still_files_under_the_citys_spelling():
-    """This is the whole point. `setCityAddress` is called on every successful
-    lookup, before and independently of the offer being accepted."""
+    """This is the whole point. `setCityAddress` is called on every exact
+    lookup, before and independently of the offer being accepted — so keeping
+    your own wording still sends the City its own."""
     fn = FORM.split("async function findAddress()")[1].split("\n$('find-addr')")[0]
-    assert "setCityAddress(data.suggestion ? data.suggestion.address : cands[0].address)" in fn
+    assert "setCityAddress(data.suggestion ? data.suggestion.address : null)" in fn
     assert fn.index("setCityAddress(data.suggestion") < fn.index("offerSpelling(data.suggestion)")
 
 
@@ -88,3 +89,26 @@ def test_the_api_says_whether_its_spelling_differs_from_what_was_typed():
 def test_the_offer_is_silent_when_the_spellings_agree():
     offer = FORM.split("function offerSpelling(")[1].split("\nfunction ")[0]
     assert "if (!sug || !sug.differs)" in offer
+
+
+def test_a_near_miss_is_never_presented_as_the_same_address():
+    """"500 north st" finds "500 NORTH VIEW TER" on a shared prefix. Saying
+    "the City files this address as 500 NORTH VIEW TER" asserts an identity
+    that is false, and it was doing exactly that in production."""
+    fn = API.split("def geocode(")[1].split("\n    @router")[0]
+    assert 'cands and cands[0]["exact"]' in fn
+
+
+def test_a_near_miss_is_never_quietly_filed_under_either():
+    """The silent half is the dangerous half: nobody would notice until the
+    City's confirmation named a street they had never heard of."""
+    find = FORM.split("async function findAddress()")[1].split("\n$('find-addr')")[0]
+    assert "setCityAddress(data.suggestion ? data.suggestion.address : null)" in find
+
+
+def test_near_misses_still_reach_the_person_as_a_question():
+    """They are not discarded — the candidate list asks rather than tells, and
+    picking one is an explicit choice."""
+    find = FORM.split("async function findAddress()")[1].split("\n$('find-addr')")[0]
+    assert "Pick the closest match" in find
+    assert "cands.map" in find
