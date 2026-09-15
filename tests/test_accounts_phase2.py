@@ -70,8 +70,10 @@ def test_a_case_number_has_to_look_like_one():
 # ---------------------------------------------------------- the pages
 
 def test_the_record_page_offers_follow_and_says_when_it_is_yours():
-    assert "Follow this request" in RECORD
-    assert "You sent this one." in RECORD
+    """A small pill beside the case number: following is a state of the case,
+    not a card of its own in the sidebar."""
+    assert 'id="follow-btn"' in RECORD and ">Follow</button>" in RECORD
+    assert "You sent this one" in RECORD
     assert "/submit/api/link/" in RECORD
 
 

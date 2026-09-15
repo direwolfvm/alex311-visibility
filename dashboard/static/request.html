@@ -45,7 +45,9 @@
     header h1 { font-size:16px; }
     header .sub { flex-basis:100%; font-size:11px; }
     nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
-    nav.tabs .tab-link { flex:1; padding:8px 4px; justify-content:center; text-align:center; }
+    nav.tabs { flex-wrap: wrap; }
+    nav.tabs .tab-link { flex: 1 1 auto; padding: 8px 8px; font-size: 13px; white-space: nowrap;
+                         justify-content: center; text-align: center; }
     .tab-tag { display:none; }
   }
 
@@ -134,20 +136,30 @@
   .lb :focus-visible { outline-color:#bfdbfe; }
   .empty { color:var(--muted); font-size:14px; margin:0; }
   /* the verdict: five points and a way to say you do not know */
-  .scale { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 10px; }
-  .scale .pt { flex:1 1 56px; min-width:56px; border:1px solid var(--border); background:var(--panel);
+  .scale { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 10px; }
+  .scale .pt { flex:1 1 80px; min-width:64px; border:1px solid var(--border); background:var(--panel);
                color:var(--ink); border-radius:8px; padding:7px 4px; font:inherit; font-size:12px;
                line-height:1.25; cursor:pointer; text-align:center; }
   .scale .pt b { display:block; font:600 17px ui-monospace,"SF Mono",Menlo,monospace; }
   .scale .pt.ns { color:var(--muted); }
   .scale .pt:hover { border-color:var(--accent); }
   .scale .pt[aria-checked="true"] { border-color:var(--accent); background:#e8effc; color:var(--accent); }
+  #verdict { margin-top:0; }
   #verdict textarea { width:100%; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
                       font:inherit; font-size:13px; resize:vertical; }
   .verdict-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
   .share { display:flex; gap:8px; align-items:flex-start; font-size:13px; margin-top:10px; }
   .share input { margin-top:3px; flex:none; }
-  .share .map-note { display:block; margin-top:2px; }
+  .share > span { flex:1; }
+  .share .map-note { display:block; margin-top:2px; max-width:60ch; }
+  /* following is a state of the case, so it lives beside the case number */
+  .follow { display:inline-flex; align-items:center; gap:6px; font-size:13px; }
+  .follow button { border:1px solid var(--border); background:var(--panel); color:var(--accent);
+                   border-radius:99px; padding:3px 12px; font:inherit; font-size:13px; cursor:pointer; }
+  .follow button:hover { border-color:var(--accent); }
+  .follow button.on { background:#e8effc; border-color:#bfdbfe; }
+  .follow .mine { color:var(--muted); font-size:13px; }
+  .follow .mine a { color:var(--accent); }
   /* what residents chose to show, on the record itself */
   .scores { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:0; }
   .scores .s { font:600 15px ui-monospace,"SF Mono",Menlo,monospace; border:1px solid var(--border);
@@ -310,7 +322,8 @@ function render(d) {
   const coords = d.lat && d.long;
 
   $('record').innerHTML = `
-    <div class="head"><h2 class="case">${esc(d.service_request_id)}</h2>${badge(d.status)}</div>
+    <div class="head"><h2 class="case">${esc(d.service_request_id)}</h2>${badge(d.status)}
+      <span id="follow" class="follow" hidden></span></div>
     <p class="svc">${esc(d.service_name || 'Service request')}</p>
     <p class="where">${esc(d.address || 'No address on the record')}${
       d.requested_datetime ? ` · reported ${day(d.requested_datetime)}` : ''}</p>
@@ -326,6 +339,30 @@ function render(d) {
             <span class="map-note">out of 5, from ${d.resident_scores.length} resident${d.resident_scores.length === 1 ? '' : 's'}
             who chose to show it (1 = not at all, 5 = completely).</span></p>
         </section>` : ''}
+        <section class="card" id="verdict" hidden>
+          <h2>Was this issue actually addressed?</h2>
+          <p class="map-note" style="margin-bottom:10px">Your answer is private. It is used only in
+            aggregate on the Analytics tab, and never with your name.</p>
+          <div class="scale" role="radiogroup" aria-label="Was this issue addressed">
+            <button type="button" class="pt" data-score="1"><b>1</b>not at all</button>
+            <button type="button" class="pt" data-score="2"><b>2</b>&nbsp;</button>
+            <button type="button" class="pt" data-score="3"><b>3</b>partly</button>
+            <button type="button" class="pt" data-score="4"><b>4</b>&nbsp;</button>
+            <button type="button" class="pt" data-score="5"><b>5</b>completely</button>
+            <button type="button" class="pt ns" data-score=""><b>?</b>not sure</button>
+          </div>
+          <label class="sr-only" for="verdict-note">Anything else about how it went</label>
+          <textarea id="verdict-note" rows="2" placeholder="Anything else about how it went (optional, private)"></textarea>
+          <label class="share"><input type="checkbox" id="verdict-share">
+            <span>Show my score on this request's public page
+            <span class="map-note">The score only, never the note, and never your name.
+            If you are the only person who could have sent this request, neighbours may still work
+            out that it is yours.</span></span></label>
+          <div class="verdict-row">
+            <button type="button" class="official" id="verdict-save" style="width:auto;padding:8px 14px;cursor:pointer">Save</button>
+            <span class="map-note" id="verdict-status"></span>
+          </div>
+        </section>
         ${gallery}
         ${attachments}
         ${related}
@@ -346,31 +383,6 @@ function render(d) {
             <small>alex311.alexandriava.gov — the authoritative copy</small></a>
           <p style="margin:10px 0 0"><a class="official" href="/submit">Report something similar
             <small>our prototype form, for a new request</small></a></p>
-          <div id="follow" hidden style="margin-top:10px"></div>
-        </section>
-        <section class="card" id="verdict" hidden>
-          <h2>Was this issue actually addressed?</h2>
-          <p class="map-note" style="margin-bottom:10px">Your answer is private. It is used only in
-            aggregate on the Analytics tab, and never with your name.</p>
-          <div class="scale" role="radiogroup" aria-label="Was this issue addressed">
-            <button type="button" class="pt" data-score="1"><b>1</b>not at all</button>
-            <button type="button" class="pt" data-score="2"><b>2</b>&nbsp;</button>
-            <button type="button" class="pt" data-score="3"><b>3</b>partly</button>
-            <button type="button" class="pt" data-score="4"><b>4</b>&nbsp;</button>
-            <button type="button" class="pt" data-score="5"><b>5</b>completely</button>
-            <button type="button" class="pt ns" data-score=""><b>?</b>not sure</button>
-          </div>
-          <label class="sr-only" for="verdict-note">Anything else about how it went</label>
-          <textarea id="verdict-note" rows="2" placeholder="Anything else about how it went (optional, private)"></textarea>
-          <label class="share"><input type="checkbox" id="verdict-share">
-            Show my score on this request's public page
-            <span class="map-note">— the score only, never the note, and never your name.
-            If you are the only person who could have sent this request, neighbours may still work
-            out that it is yours.</span></label>
-          <div class="verdict-row">
-            <button type="button" class="official" id="verdict-save" style="width:auto;padding:8px 14px;cursor:pointer">Save</button>
-            <span class="map-note" id="verdict-status"></span>
-          </div>
         </section>
       </aside>
     </div>`;
@@ -462,19 +474,16 @@ async function drawFollow(user) {
   if (!r.ok) return;
   const {relation} = await r.json();
   box.hidden = false;
+  const act = async (method) => {
+    await fetch(`/submit/api/follow/${encodeURIComponent(CASE)}`, {method}); drawFollow(user); };
   if (relation === 'mine') {
-    box.innerHTML = `<p class="official" style="border-style:dashed"><b>You sent this one.</b>
-      <small>It is on <a href="/submit/my">your requests</a>.</small></p>`;
+    box.innerHTML = `<span class="mine">You sent this one · <a href="/submit/my">your requests</a></span>`;
   } else if (relation === 'following') {
-    box.innerHTML = `<button type="button" class="official" id="follow-btn" style="width:100%;cursor:pointer;text-align:left">
-      Following <small>on <a href="/submit/my">your requests</a> · click to stop</small></button>`;
-    document.getElementById('follow-btn').addEventListener('click', async () => {
-      await fetch(`/submit/api/follow/${encodeURIComponent(CASE)}`, {method: 'DELETE'}); drawFollow(user); });
+    box.innerHTML = `<button type="button" class="on" id="follow-btn" title="Stop following">Following ✓</button>`;
+    document.getElementById('follow-btn').addEventListener('click', () => act('DELETE'));
   } else {
-    box.innerHTML = `<button type="button" class="official" id="follow-btn" style="width:100%;cursor:pointer;text-align:left">
-      Follow this request <small>keep it on your list and see its status when you come back</small></button>`;
-    document.getElementById('follow-btn').addEventListener('click', async () => {
-      await fetch(`/submit/api/follow/${encodeURIComponent(CASE)}`, {method: 'POST'}); drawFollow(user); });
+    box.innerHTML = `<button type="button" id="follow-btn" title="Keep it on your list and see its status when you come back">Follow</button>`;
+    document.getElementById('follow-btn').addEventListener('click', () => act('POST'));
   }
 }
 
