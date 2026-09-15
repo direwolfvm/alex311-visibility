@@ -430,3 +430,73 @@ def record_moderation(conn: psycopg.Connection, *, attempt_id: int, actor: str,
     ).fetchone()
     conn.commit()
     return row["action_id"]
+
+
+# --------------------------------------------------------------- accounts
+
+def as_user(conn: psycopg.Connection, user_id: str | None, role: str = "user") -> None:
+    """Tell the database who this transaction is for.
+
+    Row-level security on the account tables reads these two settings. They
+    are transaction-local (the `true`), so they vanish at commit or rollback
+    and can never leak into the next request that borrows this connection.
+    """
+    conn.execute("SELECT set_config('app.user_id', %s, true), set_config('app.role', %s, true)",
+                 (user_id or "", role))
+
+
+def link_request(conn: psycopg.Connection, *, user_id: str, service_request_id: str,
+                 relation: str, attempt_id: int | None = None) -> str:
+    """Point an account at a request. Returns the relation that now stands.
+
+    `mine` outranks `following`: following something you later turn out to
+    have filed becomes mine, and nothing downgrades mine.
+    """
+    as_user(conn, user_id)
+    row = conn.execute(
+        """INSERT INTO request_links (user_id, service_request_id, relation, attempt_id)
+           VALUES (%s, %s, %s, %s)
+           ON CONFLICT (user_id, service_request_id) DO UPDATE
+             SET relation = CASE WHEN EXCLUDED.relation = 'mine' THEN 'mine'
+                                 ELSE request_links.relation END,
+                 attempt_id = COALESCE(EXCLUDED.attempt_id, request_links.attempt_id)
+           RETURNING relation""",
+        (user_id, service_request_id, relation, attempt_id)).fetchone()
+    conn.commit()
+    return row["relation"]
+
+
+def unlink_request(conn: psycopg.Connection, *, user_id: str, service_request_id: str) -> bool:
+    as_user(conn, user_id)
+    row = conn.execute(
+        "DELETE FROM request_links WHERE user_id = %s AND service_request_id = %s RETURNING 1",
+        (user_id, service_request_id)).fetchone()
+    conn.commit()
+    return row is not None
+
+
+def link_state(conn: psycopg.Connection, *, user_id: str, service_request_id: str) -> str | None:
+    as_user(conn, user_id)
+    row = conn.execute(
+        "SELECT relation FROM request_links WHERE user_id = %s AND service_request_id = %s",
+        (user_id, service_request_id)).fetchone()
+    return row["relation"] if row else None
+
+
+def my_links(conn: psycopg.Connection, *, user_id: str) -> list[dict]:
+    """An account's requests, with what the mirror currently knows of each.
+
+    The join is LEFT: a request filed minutes ago is not in the mirror until
+    the next ingest, and it still belongs on the list.
+    """
+    as_user(conn, user_id)
+    return conn.execute(
+        """SELECT l.service_request_id, l.relation, l.created_at AS linked_at,
+                  r.status, r.service_name, r.address, r.requested_datetime,
+                  r.last_updated_datetime, r.closed_datetime,
+                  (r.service_request_id IS NOT NULL) AS in_mirror
+             FROM request_links l
+             LEFT JOIN service_requests r USING (service_request_id)
+            WHERE l.user_id = %s
+            ORDER BY (l.relation = 'mine') DESC, l.created_at DESC""",
+        (user_id,)).fetchall()

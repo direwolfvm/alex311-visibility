@@ -203,6 +203,18 @@ def main(argv: list[str] | None = None) -> int:
         if result.stage == "submitted" and result.case_number:
             finish(conn, attempt_id, state="filed", case_number=result.case_number)
             log.warning("attempt %s FILED as %s", attempt_id, result.case_number)
+            # The one moment "mine" can be vouched for: this account sent it,
+            # and the City has just said what it is called. Bookkeeping only —
+            # a failure here must not unsay the filing.
+            if row.get("submitter_id"):
+                try:
+                    db.link_request(conn, user_id=row["submitter_id"],
+                                    service_request_id=result.case_number,
+                                    relation="mine", attempt_id=attempt_id)
+                except Exception as e:
+                    conn.rollback()
+                    log.warning("filed %s but could not link it to its account: %s",
+                                result.case_number, e)
         elif result.stage == "submitted":
             # Submit was pressed and the City showed no case number. Either it
             # refused the request, or it took it and we could not read the

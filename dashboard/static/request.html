@@ -148,6 +148,7 @@
     <a class="tab-link" href="/#analytics">Analytics</a>
     <a class="tab-link" href="/submit">Report an issue
       <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
     <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
 </header>
@@ -317,6 +318,7 @@ function render(d) {
             <small>alex311.alexandriava.gov — the authoritative copy</small></a>
           <p style="margin:10px 0 0"><a class="official" href="/submit">Report something similar
             <small>our prototype form, for a new request</small></a></p>
+          <div id="follow" hidden style="margin-top:10px"></div>
         </section>
       </aside>
     </div>`;
@@ -398,8 +400,38 @@ fetch(`/api/request/${encodeURIComponent(CASE)}`)
       : `<section class="card"><h2>Could not load it</h2><p class="empty">${esc(e.message)}</p></section>`;
   });
 
+// ---------------------------------------------------------------- follow
+// A pointer from an account to this case: "following" is anyone who cares,
+// "mine" only ever comes from the worker when the City hands back a number.
+async function drawFollow(user) {
+  const box = document.getElementById('follow');
+  if (!user || !box) return;
+  const r = await fetch(`/submit/api/link/${encodeURIComponent(CASE)}`);
+  if (!r.ok) return;
+  const {relation} = await r.json();
+  box.hidden = false;
+  if (relation === 'mine') {
+    box.innerHTML = `<p class="official" style="border-style:dashed"><b>You sent this one.</b>
+      <small>It is on <a href="/submit/my">your requests</a>.</small></p>`;
+  } else if (relation === 'following') {
+    box.innerHTML = `<button type="button" class="official" id="follow-btn" style="width:100%;cursor:pointer;text-align:left">
+      Following <small>on <a href="/submit/my">your requests</a> · click to stop</small></button>`;
+    document.getElementById('follow-btn').addEventListener('click', async () => {
+      await fetch(`/submit/api/follow/${encodeURIComponent(CASE)}`, {method: 'DELETE'}); drawFollow(user); });
+  } else {
+    box.innerHTML = `<button type="button" class="official" id="follow-btn" style="width:100%;cursor:pointer;text-align:left">
+      Follow this request <small>keep it on your list and see its status when you come back</small></button>`;
+    document.getElementById('follow-btn').addEventListener('click', async () => {
+      await fetch(`/submit/api/follow/${encodeURIComponent(CASE)}`, {method: 'POST'}); drawFollow(user); });
+  }
+}
+
 fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null})
-  .then(({user}) => { if (user && user.role === 'admin') $('nav-admin').hidden = false; })
+  .then(({user}) => {
+    // the record renders first; the follow box waits for it
+    const tick = () => document.getElementById('follow') ? drawFollow(user) : setTimeout(tick, 200);
+    tick(); if (user) $('nav-my').hidden = false;
+  if (user && user.role === 'admin') $('nav-admin').hidden = false; })
   .catch(() => {});
 </script>
 </body>

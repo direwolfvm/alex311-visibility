@@ -219,3 +219,47 @@ CREATE TABLE IF NOT EXISTS portal_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS ps_user_idx ON portal_sessions (user_id, expires_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Accounts, phase 2: a pointer from an account to a request.
+--
+-- A row is a case number and nothing the City already holds. `mine` is written
+-- by the worker at the one moment it can be vouched for — when the City hands
+-- back a case number for a request this account sent. `following` is anyone
+-- saying "I care about this", and needs no proof.
+--
+-- Row-level security is on, and FORCED so it binds the table's owner too. The
+-- application sets app.user_id and app.role at the start of each transaction
+-- (see db.as_user); a handler that forgets to filter by account then gets
+-- nothing rather than everything. Operators reading this table by hand need
+-- the same: SELECT set_config('app.role', 'admin', false);
+CREATE TABLE IF NOT EXISTS request_links (
+    user_id             TEXT NOT NULL REFERENCES portal_users (user_id) ON DELETE CASCADE,
+    service_request_id  TEXT NOT NULL,              -- the City's case number
+    relation            TEXT NOT NULL CHECK (relation IN ('mine', 'following')),
+    attempt_id          BIGINT REFERENCES submission_attempts (attempt_id) ON DELETE SET NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, service_request_id)
+);
+CREATE INDEX IF NOT EXISTS rl_case_idx ON request_links (service_request_id);
+
+ALTER TABLE request_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE request_links FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own   ON request_links;
+DROP POLICY IF EXISTS admin ON request_links;
+CREATE POLICY own   ON request_links USING (user_id = current_setting('app.user_id', true));
+CREATE POLICY admin ON request_links USING (current_setting('app.role', true) = 'admin');
+
+-- The web service connects as a role that owns nothing, so that RLS applies
+-- to it without FORCE having to carry the whole weight. The role is created
+-- by an operator (it needs a password); these grants take effect the next
+-- time the schema is applied after it exists, and cover tables created later.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT USAGE ON SCHEMA public TO alex311_app;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO alex311_app;
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO alex311_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO alex311_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO alex311_app;
+  END IF;
+END $$;

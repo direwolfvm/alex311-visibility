@@ -152,6 +152,7 @@
     <a class="tab-link" href="/#analytics">Analytics</a>
     <a class="tab-link" href="/submit" aria-current="page">Report an issue
       <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
     <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
   <span class="whoami" id="whoami"></span>
@@ -788,7 +789,8 @@ $('copy').addEventListener('click', async () => { await navigator.clipboard.writ
       ? `${esc(user.label || user.email)} · <a href="/submit/logout">Sign out</a>`
       : '<a href="/submit/login">Sign in</a>';
     // moderation and user management both live behind the Admin tab now
-    if (user && user.role === 'admin') $('nav-admin').hidden = false;
+    if (user) $('nav-my').hidden = false;
+  if (user && user.role === 'admin') $('nav-admin').hidden = false;
   } catch { /* the gate already refused if this mattered */ }
 })();
 

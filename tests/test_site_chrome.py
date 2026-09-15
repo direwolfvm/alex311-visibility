@@ -17,6 +17,7 @@ PAGES = {
     "form": ROOT / "submit.html",
     "admin": ROOT / "admin.html",
     "record": ROOT / "static/request.html",
+    "my": ROOT / "my.html",
 }
 HTML = {name: path.read_text() for name, path in PAGES.items()}
 
@@ -24,7 +25,7 @@ HTML = {name: path.read_text() for name, path in PAGES.items()}
 # dashboard, so they are buttons there and links everywhere else; the text and
 # the destination are what a reader actually compares.
 ITEMS = [("Explore", "/"), ("Analytics", "/#analytics"), ("Report an issue", "/submit"),
-         ("Admin", "/submit/admin")]
+         ("My requests", "/submit/my"), ("Admin", "/submit/admin")]
 
 TOKENS = ("--bg", "--panel", "--ink", "--muted", "--accent", "--border")
 
@@ -50,7 +51,7 @@ def test_every_page_carries_the_same_bar(page):
     assert [lab for lab, _ in ITEMS] == [lab for lab in labels if lab in dict(ITEMS)]
 
 
-@pytest.mark.parametrize("page", ["form", "admin", "record"])
+@pytest.mark.parametrize("page", ["form", "admin", "record", "my"])
 def test_the_other_pages_link_to_the_dashboard_views(page):
     """They cannot press a tab on a page they are not on, so they link to it —
     which is why the dashboard has to answer to the fragment."""

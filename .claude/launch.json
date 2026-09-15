@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "FIREBASE_TENANT_ID=alex311-qfnem FIREBASE_PROJECT_ID=permitting-ai-helper FIREBASE_API_KEY=AIzaSyDO7YTX1BF7joEJvTeZsbI0c4kAaINFhC0 FIREBASE_AUTH_DOMAIN=permitting-ai-helper.firebaseapp.com FIREBASE_APP_ID=1:650621702399:web:b56cf6a8bd8d4868273cca DATABASE_URL=postgresql://postgres:alex311@localhost:54329/alex311 MEDIA_DIR=./media_store SUBMIT_USER=alex311user SUBMIT_PASSWORD=localtest SUBMIT_SECRET=local-dev-pepper uv run uvicorn dashboard.app:app --port 8311"
+        "APP_DATABASE_URL=postgresql://alex311_app:app-local@localhost:54329/alex311 FIREBASE_TENANT_ID=alex311-qfnem FIREBASE_PROJECT_ID=permitting-ai-helper FIREBASE_API_KEY=AIzaSyDO7YTX1BF7joEJvTeZsbI0c4kAaINFhC0 FIREBASE_AUTH_DOMAIN=permitting-ai-helper.firebaseapp.com FIREBASE_APP_ID=1:650621702399:web:b56cf6a8bd8d4868273cca DATABASE_URL=postgresql://postgres:alex311@localhost:54329/alex311 MEDIA_DIR=./media_store SUBMIT_USER=alex311user SUBMIT_PASSWORD=localtest SUBMIT_SECRET=local-dev-pepper uv run uvicorn dashboard.app:app --port 8311"
       ],
       "port": 8311
     }

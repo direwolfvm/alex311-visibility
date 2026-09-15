@@ -33,8 +33,11 @@ pool: ConnectionPool | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pool
+    # The web service should connect as a role that owns nothing, so that
+    # row-level security on the account tables applies to it. APP_DATABASE_URL
+    # is that role's connection string; the jobs keep DATABASE_URL, the owner.
     pool = ConnectionPool(
-        os.environ["DATABASE_URL"],
+        os.environ.get("APP_DATABASE_URL") or os.environ["DATABASE_URL"],
         min_size=1,
         max_size=int(os.environ.get("DB_POOL_SIZE", "5")),
         kwargs={"row_factory": dict_row},
