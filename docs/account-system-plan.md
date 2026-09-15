@@ -202,7 +202,7 @@ been closed. That was inferred from re-reports. A direct signal is better.
 > **4** · **5** completely · *not sure*
 
 with an optional note. Stored with `relation` (the submitter's verdict and a
-neighbour's are both useful, and different) and `status_at_rating`, because
+neighbor's are both useful, and different) and `status_at_rating`, because
 "rated unresolved while the City still says open" and "rated unresolved after
 the City closed it" are different findings.
 
@@ -291,7 +291,7 @@ requests. Needs an SMTP provider first.
 3. **Five-point scale or yes/no.** Five, with "not sure", is my recommendation
    for the reason given.
 4. **Who may rate.** Submitters only, or anyone following? I would allow both
-   and record which, since a neighbour's "still broken" is evidence too.
+   and record which, since a neighbor's "still broken" is evidence too.
 5. **Public notes at all.** The alternative is scores public, notes
    analytics-only. That removes the moderation work in phase 4 entirely. Worth
    considering if moderation capacity is the constraint it was last week.
@@ -311,7 +311,7 @@ requests. Needs an SMTP provider first.
   "residents rated" and never "was not fixed". The same discipline the
   severity work needed.
 - **Re-identification through notes.** A note reading "the cord outside my
-  house at 1 W Oak" identifies its author to their neighbours whatever we
+  house at 1 W Oak" identifies its author to their neighbors whatever we
   strip. The sign-in page should say that plainly beside the share checkbox.
 - **Firebase is a dependency the City's data is not.** If it goes away, sign-in
   goes away; nothing about the mirror or the filing path depends on it, and the

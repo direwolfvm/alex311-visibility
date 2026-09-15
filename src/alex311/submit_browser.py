@@ -301,7 +301,7 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
                                            service.get("groups") or [], address=address or None)
             except wizard.LocationRejected as e:
                 result.stage = "address_not_serviceable"
-                result.note = f"the City does not recognise that address: {e}"
+                result.note = f"the City does not recognize that address: {e}"
                 return result
             result.stage = "in_wizard"
             await _fill_from_registry(pg, service, answers, description, result,

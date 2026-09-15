@@ -109,7 +109,7 @@
           border-radius:8px; background:#fff; font:inherit; font-size:13px; cursor:pointer; }
   .cand:hover { border-color:var(--accent); background:var(--infobg); }
   .cand small { color:var(--muted); margin-left:6px; }
-  /* The City spells addresses its own way and its search box only recognises
+  /* The City spells addresses its own way and its search box only recognizes
      that spelling. This offers theirs without taking the resident's away. */
   .suggest { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
              border:1px solid #bfdbfe; background:var(--infobg); color:#1e40af;
@@ -443,7 +443,7 @@ function offerSpelling(sug) {
       <span>The City files this address as <span class="as">${esc(sug.address)}</span></span>
       <button type="button" id="take-spelling">Use the City&#39;s spelling</button>
       <span class="quiet">Keep your own wording if you prefer — we will send the City
-        theirs either way, because their address search only recognises it.</span>
+        theirs either way, because their address search only recognizes it.</span>
     </div>`;
   $('take-spelling').addEventListener('click', () => {
     $('address').value = sug.address;

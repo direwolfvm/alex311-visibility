@@ -434,7 +434,7 @@ CURRENT_LOCATION = "current location"
 
 
 class LocationRejected(Exception):
-    """The City's gazetteer does not recognise the address as serviceable."""
+    """The City's gazetteer does not recognize the address as serviceable."""
 
 
 async def location_suggestions(pg, address: str) -> list[str]:

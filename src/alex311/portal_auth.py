@@ -87,7 +87,7 @@ class PortalUser:
 
     @property
     def label(self) -> str:
-        """Something a person can recognise: the email where we hold one, else
+        """Something a person can recognize: the email where we hold one, else
         a short form of the uid. We do not fetch the email from Firebase to
         show it — the uid is what we chose to keep."""
         return self.email or f"account {self.user_id[-6:]}"

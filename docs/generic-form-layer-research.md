@@ -45,7 +45,7 @@ Repeat activity at one address is common and mostly legitimate; **bursts are rar
 | Pattern | Example | Signature |
 |---|---|---|
 | **Burst campaign** | **80 S Earley St: 52 noise complaints in one day**, only 2 distinct descriptions, all `API/Web` — a business's truck loading being hammered | many/day, near-identical text, one category |
-| **Persistent single target** | 493 N Armistead St: 16 noise complaints over 14 days, 16 different write-ups, vs. a downstairs neighbour | same address + category, spread over weeks, one submitter's voice |
+| **Persistent single target** | 493 N Armistead St: 16 noise complaints over 14 days, 16 different write-ups, vs. a downstairs neighbor | same address + category, spread over weeks, one submitter's voice |
 | **Legitimately busy** | 400 King St: 19 requests, **9 categories, 18 distinct descriptions** | many categories, many voices, commercial |
 | **Genuine recurring defect** | 1437 Janney's La: 10 traffic-signal reports from different people | one category, many reporters, infrastructure |
 
@@ -237,7 +237,7 @@ Three design points, each of which the first production run earned. **Channel is
 an allowlist, not a denylist:** only Web, iOS, iOS Browser, Android and Android
 Browser are the wizard. About a third of records arrive by phone, email, social
 media or a third-party app, and in all of those a human keys in answers the
-wizard would have refused, so an unrecognised channel is excluded rather than
+wizard would have refused, so an unrecognized channel is excluded rather than
 assumed. **Only records newer than the crawl can contradict a rule:** an answer
 the wizard rejects today may well appear in older data, which is the phone-channel
 skew the registry already records — the check compares against the registry's own

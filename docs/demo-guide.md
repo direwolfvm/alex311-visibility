@@ -357,7 +357,7 @@ Things worth knowing before you do:
   email and phone; the run stops with `needs_contact` rather than inventing any.
   Those details go to the City with the request.
 - **The address must be one the City services.** It is matched against the
-  City's own gazetteer on the location step; an unrecognised one stops the run
+  City's own gazetteer on the location step; an unrecognized one stops the run
   with `address_not_serviceable` rather than filing at the wrong place.
 - **A live run will not invent an answer.** Anything the wizard asks that you
   did not supply stops the run. A dry run is allowed to make something up so the
