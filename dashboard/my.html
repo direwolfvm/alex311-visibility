@@ -115,6 +115,15 @@
     <p class="empty" id="following-empty" hidden>Not following anything. Any record on the
       map has a <b>Follow</b> button once you are signed in.</p>
   </div>
+
+  <div class="card">
+    <h2>Your account</h2>
+    <p class="hint" style="margin:0 0 10px">We hold an account id and this list: the requests
+      above, and any verdicts you gave. Deleting the account removes all of it, including any
+      score you chose to show. Your sign-in itself lives with the provider and is not touched.</p>
+    <button type="button" id="delete-account">Delete my account</button>
+    <span class="hint" id="delete-status"></span>
+  </div>
 </div>
 
 <script>
@@ -160,6 +169,16 @@ document.addEventListener('click', async e => {
   try { await api(`/follow/${encodeURIComponent(b.dataset.unlink)}`, {method: 'DELETE'}); await load(); }
   catch (err) { $('error').textContent = err.message; $('error').hidden = false; }
 });
+$('delete-account').addEventListener('click', async () => {
+  // two presses, and the second says what it does
+  const b = $('delete-account');
+  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Confirm: delete my account and my list'; return; }
+  try {
+    await api('/account', {method: 'DELETE'});
+    location.replace('/');
+  } catch (err) { $('delete-status').textContent = err.message; delete b.dataset.armed; b.textContent = 'Delete my account'; }
+});
+
 load().catch(err => { $('error').textContent = err.message; $('error').hidden = false; });
 </script>
 </body>

@@ -111,7 +111,7 @@ def test_feedback_rls_and_suppression_against_a_real_database():
         with conn:
             su = conn.execute("SELECT rolsuper FROM pg_roles WHERE rolname = current_user").fetchone()["rolsuper"]
             if not su:
-                # nobody named: nothing
+                # nobody named: nothing — none of these six chose to share
                 assert conn.execute("SELECT count(*) AS n FROM feedback WHERE service_request_id='26-00000009'").fetchone()["n"] == 0
                 # one account: its own row only, note included, because it is theirs
                 db.as_user(conn, users[0].user_id)

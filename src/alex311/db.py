@@ -602,3 +602,35 @@ def resident_resolution(conn: psycopg.Connection, *, days: int = 365) -> dict:
             "by_status_at_rating": bucket(lambda r: r["status_at_rating"] or "unknown"),
             "by_category": bucket(lambda r: r["category"] or "unknown"),
             "by_department": bucket(lambda r: r["department"] or "unknown")}
+
+
+def public_scores(conn: psycopg.Connection, *, service_request_id: str) -> list[dict]:
+    """The scores residents chose to show on this request's page.
+
+    Read with no account named, so the only policy that admits rows is
+    `shared`. Never selects the note or the account: a score without a name
+    is what was offered, and it is all that leaves this function.
+    """
+    as_user(conn, None, "public")
+    return conn.execute(
+        """SELECT score, relation, status_at_rating, updated_at
+             FROM feedback
+            WHERE service_request_id = %s AND share_score
+            ORDER BY updated_at""",
+        (service_request_id,)).fetchall()
+
+
+def delete_account(conn: psycopg.Connection, *, user_id: str) -> bool:
+    """Remove an account and everything hanging off it: sessions, links,
+    verdicts, shared or not. The cascade does the work.
+
+    Never touches Firebase. This project's Identity Platform is shared with
+    another application, and a Google account that has signed into both is
+    one Firebase user as Google sees it; deleting it there would sign the
+    person out of the other application too. What we hold is the uid, and
+    that goes with the row.
+    """
+    row = conn.execute("DELETE FROM portal_users WHERE user_id = %s RETURNING 1",
+                       (user_id,)).fetchone()
+    conn.commit()
+    return row is not None

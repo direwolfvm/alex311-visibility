@@ -304,3 +304,15 @@ DO $$ BEGIN
     GRANT SELECT, INSERT, UPDATE, DELETE ON feedback TO alex311_app;
   END IF;
 END $$;
+
+-- ---------------------------------------------------------------------------
+-- Accounts, phase 4: a score a resident chose to show.
+--
+-- `share_score` is off by default and set per verdict. This policy lets any
+-- reader — signed in or not, naming no account — see rows the resident opted
+-- to share. It exposes the row; the public query selects the score, the
+-- relation and the status at rating, and never the note or the account. A
+-- test pins that, since a policy cannot. Nothing here ever shows a note:
+-- there are no public notes, so there is nothing to moderate.
+DROP POLICY IF EXISTS shared ON feedback;
+CREATE POLICY shared ON feedback FOR SELECT USING (share_score);
