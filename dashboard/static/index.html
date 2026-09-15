@@ -47,8 +47,17 @@
   nav.tabs button.active,
   nav.tabs .tab-link[aria-current="page"] { color: var(--accent); font-weight: 600;
                                             border-bottom-color: var(--accent); }
-  .lens { font-size: 13px; margin: 14px 0 2px; }
-  .lens:first-child { margin-top: 0; }
+  /* The resident-verdict card is prose and small tables, not a canvas: pad it
+     like a chart box and keep it on the page's 13px scale. */
+  #resident-card .body { padding: 10px 14px 14px; font-size: 13px; }
+  #resident-card .body p { margin: 0 0 8px; }
+  #resident-card .hint { color: var(--muted); font-size: 12px; }
+  #resident-card .lenses { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin-top: 6px; }
+  #resident-card .lens { font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+  #resident-card table.mini { font-size: 12px; margin-bottom: 8px; }
+  #resident-card table.mini th, #resident-card table.mini td { padding: 5px 0; }
+  #resident-card table.mini th:first-child { width: 55%; }
+  @media (max-width: 900px) { #resident-card .lenses { grid-template-columns: 1fr; } }
   .tab-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
              background: #dbeafe; color: var(--accent); padding: 1px 6px; border-radius: 99px; }
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -340,16 +349,16 @@
         <div class="chart-box"><canvas id="ch-weekly" role="img" aria-label="Bar chart: requests opened versus closed each week."></canvas></div></div>
       <div class="card"><h2>Median days to close by type</h2>
         <div class="chart-box tall"><canvas id="ch-ttc-cat" role="img" aria-label="Bar chart: median days to close, by request type."></canvas></div></div>
+      <div class="card"><h2>Average age of open requests by type</h2>
+        <div class="chart-box tall"><canvas id="ch-age-cat" role="img" aria-label="Bar chart: average age of open requests, by request type."></canvas></div></div>
       <div class="card wide" id="resident-card"><h2>Did residents say it was addressed?</h2>
-        <p class="hint" id="resident-lede">Residents with an account can rate a request on its record page,
+        <div class="body"><p class="hint" id="resident-lede">Residents with an account can rate a request on its record page,
           from 1 (not at all) to 5 (completely). Two lenses, kept apart: what the <b>person who sent
           the request</b> through this site said happened to it — the outcome of record for that request —
           and, separately, what <b>other residents following it</b> said. Every figure carries its count.
           While this site has few filings, a group may be one person's answer; residents are told that
           where they answer.</p>
-        <div id="resident-body"></div></div>
-      <div class="card"><h2>Average age of open requests by type</h2>
-        <div class="chart-box tall"><canvas id="ch-age-cat" role="img" aria-label="Bar chart: average age of open requests, by request type."></canvas></div></div>
+        <div id="resident-body" class="lenses"></div></div></div>
       <div class="card wide"><h2>Requests by day of week</h2>
         <div class="chart-box"><canvas id="ch-dow" role="img" aria-label="Bar chart: number of requests by day of the week."></canvas></div></div>
     </div>
@@ -618,7 +627,7 @@ function renderResident(r) {
       + (c.not_sure ? ` · ${c.not_sure} not sure` : '');
   const rows = obj => Object.entries(obj).sort((a, b) => (b[1].n || 0) - (a[1].n || 0))
     .map(([k, c]) => `<tr><td>${esc(k)}</td><td>${cell(c)}</td></tr>`).join('');
-  const lens = (title, who, L) => `
+  const lens = (title, who, L) => `<section>
     <h3 class="lens">${title}</h3>
     <p class="hint">${who}</p>
     ${L.total_ratings ? `<p>Overall: ${cell(L.overall)}</p>
@@ -626,7 +635,7 @@ function renderResident(r) {
         <tbody>${rows(L.by_status_at_rating)}</tbody></table></div>
       <div class="tbl-wrap"><table class="mini"><thead><tr><th>Request type</th><th></th></tr></thead>
         <tbody>${rows(L.by_category)}</tbody></table></div>`
-      : '<p class="hint">No answers yet.</p>'}`;
+      : '<p class="hint">No answers yet.</p>'}</section>`;
   box.innerHTML =
     lens('What the people who sent them said', 'The primary measure: the submitter of a request filed through this site, on whether it was addressed.', r.submitter)
     + lens('What other residents said', 'A second lens: residents following a request they did not send. Kept separate from the submitter\u2019s answer, never averaged in.', r.community);
