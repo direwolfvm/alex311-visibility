@@ -337,6 +337,11 @@
         <div class="chart-box"><canvas id="ch-weekly" role="img" aria-label="Bar chart: requests opened versus closed each week."></canvas></div></div>
       <div class="card"><h2>Median days to close by type</h2>
         <div class="chart-box tall"><canvas id="ch-ttc-cat" role="img" aria-label="Bar chart: median days to close, by request type."></canvas></div></div>
+      <div class="card wide" id="resident-card"><h2>Did residents say it was addressed?</h2>
+        <p class="hint" id="resident-lede">Residents with an account can rate a request on its record page,
+          from 1 (not at all) to 5 (completely). This is their answer, in aggregate only; any group with
+          fewer than five ratings is not shown.</p>
+        <div id="resident-body"></div></div>
       <div class="card"><h2>Average age of open requests by type</h2>
         <div class="chart-box tall"><canvas id="ch-age-cat" role="img" aria-label="Bar chart: average age of open requests, by request type."></canvas></div></div>
       <div class="card wide"><h2>Requests by day of week</h2>
@@ -598,12 +603,34 @@ const TTC_LABELS = ['< 1 day', '1–3 days', '3–7 days', '1–2 weeks',
                     '2–4 weeks', '1–3 months', '> 3 months'];
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+function renderResident(r) {
+  const box = $('resident-body');
+  if (!r) { box.innerHTML = ''; return; }
+  const cell = c => c.suppressed ? '<span class="hint">fewer than ' + r.suppress_below + '</span>'
+    : `<b>${c.mean == null ? '–' : c.mean.toFixed(1)}</b> / 5 · ${c.n} rating${c.n === 1 ? '' : 's'}`
+      + (c.rated_unresolved ? ` · ${c.rated_unresolved} said not addressed` : '')
+      + (c.not_sure ? ` · ${c.not_sure} not sure` : '');
+  if (r.overall.suppressed) {
+    box.innerHTML = `<p class="hint">${r.total_ratings} rating${r.total_ratings === 1 ? '' : 's'} so far —
+      nothing is shown until a group has at least ${r.suppress_below}.</p>`;
+    return;
+  }
+  const rows = obj => Object.entries(obj).sort((a, b) => (b[1].n || 0) - (a[1].n || 0))
+    .map(([k, c]) => `<tr><td>${esc(k)}</td><td>${cell(c)}</td></tr>`).join('');
+  box.innerHTML = `<p>Overall: ${cell(r.overall)}</p>
+    <div class="tbl-wrap"><table class="mini"><thead><tr><th>Status when rated</th><th></th></tr></thead>
+      <tbody>${rows(r.by_status_at_rating)}</tbody></table></div>
+    <div class="tbl-wrap"><table class="mini"><thead><tr><th>Request type</th><th></th></tr></thead>
+      <tbody>${rows(r.by_category)}</tbody></table></div>`;
+}
+
 async function loadAnalytics() {
   analyticsStale = false;
   const d = await (await fetch('/api/analytics?' + params())).json();
   const s = d.summary;
   const days = v => v == null ? '–' : (+v).toFixed(1);
   const pct30 = s.closed ? Math.round(100 * s.closed_within_30d / s.closed) + '%' : '–';
+  renderResident(d.resident_resolution);
   $('stat-cards').innerHTML = [
     [s.total.toLocaleString(), 'requests'],
     [s.open.toLocaleString(), 'open now'],

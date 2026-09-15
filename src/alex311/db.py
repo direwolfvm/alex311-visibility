@@ -500,3 +500,105 @@ def my_links(conn: psycopg.Connection, *, user_id: str) -> list[dict]:
             WHERE l.user_id = %s
             ORDER BY (l.relation = 'mine') DESC, l.created_at DESC""",
         (user_id,)).fetchall()
+
+
+# --------------------------------------------------------------- feedback
+
+def get_feedback(conn: psycopg.Connection, *, user_id: str, service_request_id: str) -> dict | None:
+    as_user(conn, user_id)
+    return conn.execute(
+        """SELECT score, note, relation, status_at_rating, share_score, updated_at
+             FROM feedback WHERE user_id = %s AND service_request_id = %s""",
+        (user_id, service_request_id)).fetchone()
+
+
+def save_feedback(conn: psycopg.Connection, *, user_id: str, service_request_id: str,
+                  score: int | None, note: str | None, share_score: bool = False) -> dict:
+    """Record or revise a verdict. Rating something implies caring about it,
+    so a link is made if none exists — `following`, never `mine`."""
+    as_user(conn, user_id)
+    conn.execute(
+        """INSERT INTO request_links (user_id, service_request_id, relation)
+           VALUES (%s, %s, 'following') ON CONFLICT DO NOTHING""",
+        (user_id, service_request_id))
+    row = conn.execute(
+        """INSERT INTO feedback (user_id, service_request_id, relation, score, note,
+                                 status_at_rating, share_score)
+           VALUES (%s, %s,
+                   (SELECT relation FROM request_links WHERE user_id = %s AND service_request_id = %s),
+                   %s, NULLIF(%s, ''),
+                   (SELECT status FROM service_requests WHERE service_request_id = %s),
+                   %s)
+           ON CONFLICT (user_id, service_request_id) DO UPDATE
+             SET score = EXCLUDED.score, note = EXCLUDED.note,
+                 share_score = EXCLUDED.share_score,
+                 status_at_rating = COALESCE(EXCLUDED.status_at_rating, feedback.status_at_rating),
+                 updated_at = now()
+           RETURNING score, note, relation, status_at_rating, share_score, updated_at""",
+        (user_id, service_request_id, user_id, service_request_id, score, note or "",
+         service_request_id, share_score)).fetchone()
+    conn.commit()
+    return row
+
+
+def delete_feedback(conn: psycopg.Connection, *, user_id: str, service_request_id: str) -> bool:
+    as_user(conn, user_id)
+    row = conn.execute(
+        "DELETE FROM feedback WHERE user_id = %s AND service_request_id = %s RETURNING 1",
+        (user_id, service_request_id)).fetchone()
+    conn.commit()
+    return row is not None
+
+
+#: Below this many ratings a cell is not shown. Five is conventional; with the
+#: current volume of filings it suppresses almost everything for months, which
+#: is correct rather than a bug.
+SUPPRESS_BELOW = 5
+
+
+def resident_resolution(conn: psycopg.Connection, *, days: int = 365) -> dict:
+    """What residents said about whether their issue was addressed, in
+    aggregate only.
+
+    Never selects `note`. Cells with fewer than SUPPRESS_BELOW ratings are
+    reported as suppressed, with the count withheld too — a count of three
+    at one address is a re-identification waiting to happen.
+    """
+    as_user(conn, None, "analytics")
+    rows = conn.execute(
+        """SELECT r.service_name AS category, r.primary_service_department AS department,
+                  f.status_at_rating, f.score,
+                  count(*) AS n
+             FROM feedback f
+             LEFT JOIN service_requests r USING (service_request_id)
+            WHERE f.updated_at > now() - make_interval(days => %s)
+            GROUP BY 1, 2, 3, 4""", (days,)).fetchall()
+
+    def bucket(keyfn):
+        out: dict = {}
+        for r in rows:
+            k = keyfn(r)
+            cell = out.setdefault(k, {"n": 0, "scored": 0, "unresolved": 0, "sum": 0, "not_sure": 0})
+            cell["n"] += r["n"]
+            if r["score"] is None:
+                cell["not_sure"] += r["n"]
+            else:
+                cell["scored"] += r["n"]; cell["sum"] += r["score"] * r["n"]
+                if r["score"] <= 2:
+                    cell["unresolved"] += r["n"]
+        result = {}
+        for k, c in out.items():
+            if c["n"] < SUPPRESS_BELOW:
+                result[k] = {"suppressed": True}
+            else:
+                result[k] = {"n": c["n"], "not_sure": c["not_sure"],
+                             "mean": round(c["sum"] / c["scored"], 2) if c["scored"] else None,
+                             "rated_unresolved": c["unresolved"]}
+        return result
+
+    total = sum(r["n"] for r in rows)
+    return {"days": days, "suppress_below": SUPPRESS_BELOW, "total_ratings": total,
+            "overall": bucket(lambda r: "all").get("all", {"suppressed": True}),
+            "by_status_at_rating": bucket(lambda r: r["status_at_rating"] or "unknown"),
+            "by_category": bucket(lambda r: r["category"] or "unknown"),
+            "by_department": bucket(lambda r: r["department"] or "unknown")}

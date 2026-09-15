@@ -94,6 +94,12 @@ class FirebaseSession(BaseModel):
     id_token: str
 
 
+class FeedbackBody(BaseModel):
+    """A resident's verdict. `score` 1–5, or null for "not sure"."""
+    score: int | None = None
+    note: str = ""
+
+
 class NewUser(BaseModel):
     email: str
     role: str = "user"
@@ -363,6 +369,38 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         with pool_getter().connection() as conn:
             removed = adb.unlink_request(conn, user_id=user_id, service_request_id=case)
         return {"case": case, "relation": None, "removed": removed}
+
+    # ---------------------------------------------------------- feedback
+    # "Was this issue actually addressed?" — the resident's own verdict, one
+    # per account per request, private. It is the one signal the City's data
+    # cannot carry: the record says closed; the person says whether it was.
+
+    @router.get("/api/feedback/{case}")
+    def feedback_get(case: str, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            return {"case": case, "feedback": adb.get_feedback(conn, user_id=user_id,
+                                                                service_request_id=case)}
+
+    @router.put("/api/feedback/{case}")
+    def feedback_put(case: str, body: FeedbackBody, request: Request,
+                     actor: str = Depends(gate)):
+        if not CASE_ID.match(case):
+            raise HTTPException(400, "that is not a case number")
+        if body.score is not None and not 1 <= body.score <= 5:
+            raise HTTPException(400, "score is 1 to 5, or nothing for not sure")
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            saved = adb.save_feedback(conn, user_id=user_id, service_request_id=case,
+                                      score=body.score, note=body.note.strip()[:2000])
+        return {"case": case, "feedback": saved}
+
+    @router.delete("/api/feedback/{case}")
+    def feedback_delete(case: str, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            removed = adb.delete_feedback(conn, user_id=user_id, service_request_id=case)
+        return {"case": case, "removed": removed}
 
     @router.get("/users")
     def users_ui(actor: str = Depends(admin_only)):

@@ -414,8 +414,15 @@ def analytics(
             params,
         ).fetchall()
 
+    # What residents themselves said, in aggregate and suppressed below five.
+    # Read under the 'analytics' policy; the query never touches a note.
+    from alex311 import db as adb
+    with pool.connection() as conn:
+        resident = adb.resident_resolution(conn, days=365)
+        conn.rollback()                              # drop the analytics role setting
     return {
         "summary": summary,
+        "resident_resolution": resident,
         "ttc_histogram": ttc_hist,
         "by_category": by_category,
         "weekly": weekly,

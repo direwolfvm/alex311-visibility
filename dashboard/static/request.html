@@ -133,6 +133,18 @@
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .lb :focus-visible { outline-color:#bfdbfe; }
   .empty { color:var(--muted); font-size:14px; margin:0; }
+  /* the verdict: five points and a way to say you do not know */
+  .scale { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 10px; }
+  .scale .pt { flex:1 1 56px; min-width:56px; border:1px solid var(--border); background:var(--panel);
+               color:var(--ink); border-radius:8px; padding:7px 4px; font:inherit; font-size:12px;
+               line-height:1.25; cursor:pointer; text-align:center; }
+  .scale .pt b { display:block; font:600 17px ui-monospace,"SF Mono",Menlo,monospace; }
+  .scale .pt.ns { color:var(--muted); }
+  .scale .pt:hover { border-color:var(--accent); }
+  .scale .pt[aria-checked="true"] { border-color:var(--accent); background:#e8effc; color:var(--accent); }
+  #verdict textarea { width:100%; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+                      font:inherit; font-size:13px; resize:vertical; }
+  .verdict-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
   .loading { color:var(--muted); padding:40px 0; text-align:center; }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 </style>
@@ -320,6 +332,25 @@ function render(d) {
             <small>our prototype form, for a new request</small></a></p>
           <div id="follow" hidden style="margin-top:10px"></div>
         </section>
+        <section class="card" id="verdict" hidden>
+          <h2>Was this issue actually addressed?</h2>
+          <p class="map-note" style="margin-bottom:10px">Your answer is private. It is used only in
+            aggregate on the Analytics tab, and never with your name.</p>
+          <div class="scale" role="radiogroup" aria-label="Was this issue addressed">
+            <button type="button" class="pt" data-score="1"><b>1</b>not at all</button>
+            <button type="button" class="pt" data-score="2"><b>2</b>&nbsp;</button>
+            <button type="button" class="pt" data-score="3"><b>3</b>partly</button>
+            <button type="button" class="pt" data-score="4"><b>4</b>&nbsp;</button>
+            <button type="button" class="pt" data-score="5"><b>5</b>completely</button>
+            <button type="button" class="pt ns" data-score=""><b>?</b>not sure</button>
+          </div>
+          <label class="sr-only" for="verdict-note">Anything else about how it went</label>
+          <textarea id="verdict-note" rows="2" placeholder="Anything else about how it went (optional, private)"></textarea>
+          <div class="verdict-row">
+            <button type="button" class="official" id="verdict-save" style="width:auto;padding:8px 14px;cursor:pointer">Save</button>
+            <span class="map-note" id="verdict-status"></span>
+          </div>
+        </section>
       </aside>
     </div>`;
 
@@ -426,10 +457,48 @@ async function drawFollow(user) {
   }
 }
 
+// --------------------------------------------------------------- verdict
+// The one signal the City's data cannot carry: the record says closed; the
+// person says whether it was. Private; aggregated on the Analytics tab.
+const verdict = {score: undefined, chosen: false};
+function pickScore(btn) {
+  document.querySelectorAll('#verdict .pt').forEach(b => b.setAttribute('aria-checked', String(b === btn)));
+  verdict.score = btn.dataset.score === '' ? null : +btn.dataset.score;
+  verdict.chosen = true;
+}
+async function drawVerdict(user) {
+  const box = document.getElementById('verdict');
+  if (!user || !box) return;
+  const r = await fetch(`/submit/api/feedback/${encodeURIComponent(CASE)}`);
+  if (!r.ok) return;
+  const {feedback} = await r.json();
+  box.hidden = false;
+  if (feedback) {
+    const match = [...box.querySelectorAll('.pt')].find(b =>
+      (b.dataset.score === '' ? null : +b.dataset.score) === feedback.score);
+    if (match) pickScore(match);
+    document.getElementById('verdict-note').value = feedback.note || '';
+    document.getElementById('verdict-status').textContent =
+      `Saved ${String(feedback.updated_at).replace('T', ' ').slice(0, 16)} UTC. Change it any time.`;
+  }
+  box.querySelectorAll('.pt').forEach(b => b.addEventListener('click', () => pickScore(b)));
+  document.getElementById('verdict-save').addEventListener('click', async () => {
+    const st = document.getElementById('verdict-status');
+    if (!verdict.chosen) { st.textContent = 'Pick a number, or "not sure".'; return; }
+    const res = await fetch(`/submit/api/feedback/${encodeURIComponent(CASE)}`, {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({score: verdict.score, note: document.getElementById('verdict-note').value})});
+    st.textContent = res.ok ? 'Saved. Thank you — this is the part the City\u2019s data cannot tell us.'
+                            : 'Could not save that.';
+    if (res.ok) drawFollow(user);          // rating implies following
+  });
+}
+
 fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null})
   .then(({user}) => {
     // the record renders first; the follow box waits for it
-    const tick = () => document.getElementById('follow') ? drawFollow(user) : setTimeout(tick, 200);
+    const tick = () => document.getElementById('follow')
+      ? (drawFollow(user), drawVerdict(user)) : setTimeout(tick, 200);
     tick(); if (user) $('nav-my').hidden = false;
   if (user && user.role === 'admin') $('nav-admin').hidden = false; })
   .catch(() => {});
