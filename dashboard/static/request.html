@@ -68,9 +68,13 @@
   .badge.closed { background:var(--closedbg); color:var(--closed); }
   .badge.other { background:var(--otherbg); color:var(--muted); }
 
-  .cols { display:grid; grid-template-columns:minmax(0,1.9fr) minmax(260px,1fr); gap:18px;
+  .cols { display:grid; grid-template-columns:minmax(240px,1fr) minmax(0,2.2fr); gap:18px;
           align-items:start; }
-  @media (max-width:860px) { .cols { grid-template-columns:1fr; } }
+  .cols > aside { position:sticky; top:12px; }
+  @media (max-width:860px) {
+    .cols { grid-template-columns:1fr; }
+    .cols > aside { position:static; order:2; }   /* the record reads first on a phone */
+  }
 
   section.card { background:var(--panel); border:1px solid var(--border); border-radius:10px;
                  padding:16px 18px; margin-bottom:16px; }
@@ -105,7 +109,8 @@
                 letter-spacing:.04em; padding-top:2px; }
   dl.facts dd { margin:0; overflow-wrap:anywhere; }
 
-  #map { height:190px; border-radius:8px; margin-bottom:10px; }
+  #map { height:300px; border-radius:8px; }
+  @media (max-width:860px) { #map { height:220px; } }
   .map-note { color:var(--muted); font-size:12px; margin:0; }
 
   .rel { list-style:none; margin:0; padding:0; }
@@ -148,6 +153,7 @@
   #verdict textarea { width:100%; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
                       font:inherit; font-size:13px; resize:vertical; }
   .verdict-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
+  #map-card { padding:6px; }
   .share { display:flex; gap:8px; align-items:flex-start; font-size:13px; margin-top:10px; }
   .share input { margin-top:3px; flex:none; }
   .share > span { flex:1; }
@@ -329,8 +335,22 @@ function render(d) {
       d.requested_datetime ? ` · reported ${day(d.requested_datetime)}` : ''}</p>
 
     <div class="cols">
+      <aside>
+        <section class="card">
+          <h2>The record</h2>
+          ${facts(d)}
+        </section>
+        <section class="card">
+          <a class="official" href="${esc(d.report_url)}" target="_blank" rel="noopener">
+            Open the official City record ↗
+            <small>alex311.alexandriava.gov — the authoritative copy</small></a>
+          <p style="margin:10px 0 0"><a class="official" href="/submit">Report something similar
+            <small>our prototype form, for a new request</small></a></p>
+        </section>
+      </aside>
       <div>
         ${words}
+        ${coords ? '<section class="card" id="map-card"><div id="map"></div></section>' : ''}
         ${(d.resident_scores || []).length ? `<section class="card">
           <h2>Did residents say it was addressed?</h2>
           <p class="scores">${d.resident_scores.map(s => s.score == null
@@ -371,20 +391,6 @@ function render(d) {
           the City's record.</p></section>` : ''}
       </div>
 
-      <aside>
-        <section class="card">
-          ${coords ? '<div id="map"></div>' : ''}
-          <h2>The record</h2>
-          ${facts(d)}
-        </section>
-        <section class="card">
-          <a class="official" href="${esc(d.report_url)}" target="_blank" rel="noopener">
-            Open the official City record ↗
-            <small>alex311.alexandriava.gov — the authoritative copy</small></a>
-          <p style="margin:10px 0 0"><a class="official" href="/submit">Report something similar
-            <small>our prototype form, for a new request</small></a></p>
-        </section>
-      </aside>
     </div>`;
 
   if (coords) drawMap(d);
