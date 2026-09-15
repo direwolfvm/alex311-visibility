@@ -91,14 +91,23 @@ def claim_next(conn) -> dict | None:
 
 def finish(conn, attempt_id: int, *, state: str, case_number: str | None = None,
            error: str | None = None) -> None:
+    """Record how a claim ended.
+
+    A filed request loses its contact details here. They were needed to type
+    into the City's form and for nothing else; the City holds them now, under
+    a case number we also hold. Keeping a second copy would be the largest
+    piece of personal information on this site, for no use. A failed row keeps
+    them until it is retried or given up.
+    """
     conn.execute(
         """UPDATE submission_attempts
               SET submit_state = %s,
                   city_case_number = COALESCE(%s, city_case_number),
                   relayed_at = CASE WHEN %s = 'filed' THEN now() ELSE relayed_at END,
+                  contact = CASE WHEN %s = 'filed' THEN NULL ELSE contact END,
                   submit_error = %s
             WHERE attempt_id = %s""",
-        (state, case_number, state, error, attempt_id))
+        (state, case_number, state, state, error, attempt_id))
     conn.commit()
 
 

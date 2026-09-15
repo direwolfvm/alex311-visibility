@@ -11,6 +11,10 @@ dependencies = [
     "uvicorn>=0.30",
     "pillow>=10.4",
     "pillow-heif>=0.18",
+    # verifying Firebase ID tokens; already present via google-cloud-storage in
+    # production, named here so the sign-in path does not depend on the gcs extra
+    "google-auth>=2.30",
+    "requests>=2.31",
 ]
 
 [project.optional-dependencies]

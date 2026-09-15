@@ -12,11 +12,13 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "google-auth" },
     { name = "httpx" },
     { name = "pillow" },
     { name = "pillow-heif" },
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
+    { name = "requests" },
     { name = "uvicorn" },
 ]
 
@@ -34,12 +36,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "google-auth", specifier = ">=2.30" },
     { name = "google-cloud-storage", marker = "extra == 'gcs'", specifier = ">=2.16" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "pillow", specifier = ">=10.4" },
     { name = "pillow-heif", specifier = ">=0.18" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "psycopg-pool", specifier = ">=3.2" },
+    { name = "requests", specifier = ">=2.31" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
 provides-extras = ["gcs"]

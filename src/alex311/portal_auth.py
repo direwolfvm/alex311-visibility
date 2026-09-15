@@ -1,6 +1,8 @@
 """Who may open the gated prototype at all.
 
-Not to be confused with `alex311.identity`, which answers "which *resident* is
+Two ways in, one account. The password path serves the testers already here;
+`sign_in_with_firebase` is how everyone else arrives, and how an existing
+tester links the two. (An earlier `alex311.identity` module answered "which *resident* is
 submitting this request". This answers "is this person allowed in the building",
 and it exists because the browser's HTTP Basic popup is a poor front door: it
 cannot be styled, cannot say what the site is, cannot be logged out of, and
@@ -78,9 +80,17 @@ def normalize_email(raw: str) -> str:
 @dataclass
 class PortalUser:
     user_id: str
-    email: str
+    email: str | None          # None for an account that only ever signed in through Firebase
     role: str
     disabled: bool = False
+    firebase_uid: str | None = None
+
+    @property
+    def label(self) -> str:
+        """Something a person can recognise: the email where we hold one, else
+        a short form of the uid. We do not fetch the email from Firebase to
+        show it — the uid is what we chose to keep."""
+        return self.email or f"account {self.user_id[-6:]}"
 
     @property
     def is_admin(self) -> bool:
@@ -138,8 +148,10 @@ def set_role(conn, user_id: str, role: str) -> None:
 
 def list_users(conn) -> list[dict]:
     return conn.execute(
-        """SELECT user_id, email, role, created_at, created_by, last_login_at, disabled_at
-             FROM portal_users ORDER BY email""").fetchall()
+        """SELECT user_id, email, role, created_at, created_by, last_login_at, disabled_at,
+                  firebase_uid IS NOT NULL AS firebase_linked, policy_version,
+                  password_hash IS NOT NULL AS has_password
+             FROM portal_users ORDER BY created_at""").fetchall()
 
 
 def count_admins(conn, *, excluding: str | None = None) -> int:
@@ -177,17 +189,64 @@ def login(conn, email: str, password: str, *, user_agent: str | None = None) -> 
     return token
 
 
+def sign_in_with_firebase(conn, *, uid: str, email: str | None, email_verified: bool,
+                          policy_version: str, user_agent: str | None = None) -> str | None:
+    """Turn a verified Firebase identity into a session. Returns the token,
+    or None if the account is disabled.
+
+    Three cases, in order:
+      1. an account already linked to this uid — sign it in;
+      2. a tester account with a matching, verified email — link the uid to it
+         so they keep their role and history rather than gaining a twin;
+      3. nobody — create an account holding the uid and nothing else.
+
+    Case 2 is the only place the email from the token is used, and only when
+    Firebase says it is verified: an unverified address must not be able to
+    claim an existing account.
+    """
+    row = conn.execute("SELECT user_id, disabled_at FROM portal_users WHERE firebase_uid = %s",
+                       (uid,)).fetchone()
+    if row is None and email and email_verified:
+        row = conn.execute(
+            "SELECT user_id, disabled_at FROM portal_users "
+            "WHERE firebase_uid IS NULL AND email = %s", (normalize_email(email),)).fetchone()
+        if row is not None:
+            conn.execute("UPDATE portal_users SET firebase_uid = %s WHERE user_id = %s",
+                         (uid, row["user_id"]))
+    if row is None:
+        user_id = "pu_" + secrets.token_hex(8)
+        conn.execute(
+            """INSERT INTO portal_users (user_id, firebase_uid, role, created_by, policy_version)
+               VALUES (%s, %s, 'user', 'firebase', %s)""",
+            (user_id, uid, policy_version))
+        row = {"user_id": user_id, "disabled_at": None}
+    if row["disabled_at"] is not None:
+        conn.commit()
+        return None
+    token = secrets.token_urlsafe(32)
+    conn.execute(
+        """INSERT INTO portal_sessions (token_hash, user_id, expires_at, user_agent)
+           VALUES (%s, %s, now() + %s, %s)""",
+        (_token_hash(token), row["user_id"], SESSION_TTL, (user_agent or "")[:200]))
+    conn.execute(
+        "UPDATE portal_users SET last_login_at = now(), policy_version = %s WHERE user_id = %s",
+        (policy_version, row["user_id"]))
+    conn.commit()
+    return token
+
+
 def session_user(conn, token: str | None) -> PortalUser | None:
     if not token:
         return None
     row = conn.execute(
-        """SELECT u.user_id, u.email, u.role, u.disabled_at
+        """SELECT u.user_id, u.email, u.role, u.disabled_at, u.firebase_uid
              FROM portal_sessions s JOIN portal_users u USING (user_id)
             WHERE s.token_hash = %s AND s.revoked_at IS NULL AND s.expires_at > now()""",
         (_token_hash(token),)).fetchone()
     if row is None or row["disabled_at"] is not None:
         return None
-    return PortalUser(row["user_id"], row["email"], row["role"])
+    return PortalUser(row["user_id"], row["email"], row["role"],
+                      firebase_uid=row.get("firebase_uid"))
 
 
 def logout(conn, token: str) -> None:

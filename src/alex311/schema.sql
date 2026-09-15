@@ -95,19 +95,19 @@ CREATE INDEX IF NOT EXISTS ingest_runs_started_idx ON ingest_runs (started_at DE
 -- did about it" has to be answerable.
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS submitters (
-    submitter_id    TEXT PRIMARY KEY,              -- opaque; not the email
-    email           TEXT UNIQUE,
-    verified_at     TIMESTAMPTZ,                   -- NULL until the address is proven
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    blocked_at      TIMESTAMPTZ,
-    blocked_reason  TEXT,
-    notes           TEXT
-);
+-- The resident-identity tables (submitters, submitter_sessions,
+-- submitter_verifications) that once lived here were retired with the account
+-- system: Firebase Authentication proves control of a mailbox now, and holds
+-- the address instead of us. `submission_attempts.submitter_id` is the portal
+-- account's user_id.
+DROP TABLE IF EXISTS submitter_verifications;
+DROP TABLE IF EXISTS submitter_sessions;
+ALTER TABLE IF EXISTS submission_attempts DROP CONSTRAINT IF EXISTS submission_attempts_submitter_id_fkey;
+DROP TABLE IF EXISTS submitters;
 
 CREATE TABLE IF NOT EXISTS submission_attempts (
     attempt_id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    submitter_id    TEXT REFERENCES submitters (submitter_id),
+    submitter_id    TEXT,                          -- the portal account (user_id)
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     service_code    TEXT NOT NULL,
     service_name    TEXT,
@@ -144,32 +144,6 @@ CREATE TABLE IF NOT EXISTS moderation_actions (
 
 CREATE INDEX IF NOT EXISTS ma_attempt_idx ON moderation_actions (attempt_id, acted_at);
 
--- One-time codes proving control of a mailbox. Only the salted hash is stored:
--- a six-digit code is guessable from a leaked table without one.
-CREATE TABLE IF NOT EXISTS submitter_verifications (
-    verification_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    email           TEXT NOT NULL,                 -- canonical form (+tags folded)
-    code_hash       TEXT NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at      TIMESTAMPTZ NOT NULL,
-    attempts        INTEGER NOT NULL DEFAULT 0,
-    consumed_at     TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS sv_email_idx ON submitter_verifications (email, created_at DESC);
-
--- Sessions. The token itself only ever exists in the client; we keep its hash,
--- so the table cannot be used to impersonate anyone.
-CREATE TABLE IF NOT EXISTS submitter_sessions (
-    token_hash      TEXT PRIMARY KEY,
-    submitter_id    TEXT NOT NULL REFERENCES submitters (submitter_id) ON DELETE CASCADE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at      TIMESTAMPTZ NOT NULL,
-    revoked_at      TIMESTAMPTZ,
-    user_agent      TEXT
-);
-
-CREATE INDEX IF NOT EXISTS ss_submitter_idx ON submitter_sessions (submitter_id, expires_at DESC);
 
 -- The submission queue. A browser cannot live in the public web image, and
 -- Cloud Run rejects per-execution argument overrides in this project, so the
@@ -214,15 +188,26 @@ CREATE INDEX IF NOT EXISTS sa_state_idx ON submission_attempts (submit_state, ap
 
 CREATE TABLE IF NOT EXISTS portal_users (
     user_id         TEXT PRIMARY KEY,
-    email           TEXT UNIQUE NOT NULL,
-    password_hash   TEXT NOT NULL,
-    salt            TEXT NOT NULL,
+    email           TEXT,                           -- only where a password login needs it
+    password_hash   TEXT,
+    salt            TEXT,
     role            TEXT NOT NULL DEFAULT 'user',   -- admin | user
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      TEXT,
     last_login_at   TIMESTAMPTZ,
     disabled_at     TIMESTAMPTZ
 );
+-- Two ways in, one account. The password columns serve the testers already
+-- here; a Firebase sign-in carries only the uid, and for such an account we
+-- hold no email at all — Firebase does. An existing tester who signs in with
+-- Firebase using the same address is linked, not duplicated.
+ALTER TABLE portal_users ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE portal_users ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE portal_users ALTER COLUMN salt DROP NOT NULL;
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS firebase_uid   TEXT;
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS policy_version TEXT;   -- the data policy accepted
+CREATE UNIQUE INDEX IF NOT EXISTS pu_firebase_uid_idx ON portal_users (firebase_uid) WHERE firebase_uid IS NOT NULL;
+-- the original UNIQUE on email allows many NULLs, which is what we want
 
 CREATE TABLE IF NOT EXISTS portal_sessions (
     token_hash      TEXT PRIMARY KEY,               -- the token itself lives in the cookie
