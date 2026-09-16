@@ -197,6 +197,35 @@ fails closed.
 > not change the project-level Identity Platform settings — the tenant carries
 > its own — because SpinUp's users live at project level.
 
+## 5a½. The sign-in email, in this site's name
+
+Left to itself, Firebase sends the email-link sign-in message from
+`noreply@permitting-ai-helper.firebaseapp.com`, with the *project's* name in
+the subject and a link into `permitting-ai-helper.firebaseapp.com`. Those are
+project-level settings shared with another application, so they stay as they
+are. Instead the service mints the link (`accounts:sendOobCode` with
+`returnOobLink`, in our tenant), rewrites it onto our own domain, and sends it
+itself — `POST /submit/api/email-link`. The page falls back to Firebase's own
+email when this is not configured (the endpoint answers 503).
+
+Configure a sender and one transport on the **dashboard service** only:
+
+```bash
+# Mailgun (the domain must be added and verified in Mailgun: SPF + DKIM records)
+gcloud run services update alex311-dashboard --region=$REGION \
+    --set-env-vars=ALEX311_MAIL_FROM="Alex311 Visibility <no-reply@alex311visibility.me>",ALEX311_MAIL_DOMAIN=alex311visibility.me,SITE_ORIGIN=https://alex311visibility.me \
+    --set-secrets=MAILGUN_API_KEY=MAILGUN_API_KEY:latest
+# or any SMTP relay with STARTTLS instead of Mailgun:
+#   --set-env-vars=SMTP_HOST=...,SMTP_PORT=587,SMTP_USER=... --set-secrets=SMTP_PASSWORD=...
+```
+
+`SITE_ORIGIN` is where the link lands; without it the service uses the
+request's own origin, which behind Cloud Run may be the `run.app` address.
+The service account needs to mint links: `roles/editor` (which it has)
+covers `firebaseauth.users.sendEmail`; a narrower role is
+`roles/firebaseauth.admin`. Two emails per address per hour, ten per
+caller per hour, enforced in-process.
+
 ## 5b. The application database role (row-level security)
 
 The account tables (`request_links`, and `feedback` when it lands) carry
