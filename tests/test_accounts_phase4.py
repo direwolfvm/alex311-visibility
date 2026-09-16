@@ -17,6 +17,7 @@ DB = (ROOT / "src/alex311/db.py").read_text()
 SCHEMA = (ROOT / "src/alex311/schema.sql").read_text()
 RECORD = (ROOT / "dashboard/static/request.html").read_text()
 MY = (ROOT / "dashboard/my.html").read_text()
+ACCOUNT = (ROOT / "dashboard/account.html").read_text()
 
 
 def test_sharing_is_off_by_default_and_per_verdict():
@@ -67,8 +68,9 @@ def test_the_last_administrator_cannot_delete_themselves():
 
 
 def test_deletion_takes_two_presses_and_says_what_it_does():
-    assert "Confirm: delete my account and my list" in MY
-    assert "is not touched" in MY
+    assert "Confirm: delete my account and my list" in ACCOUNT
+    assert "is not touched" in ACCOUNT
+    assert 'href="/submit/account"' in MY   # My requests points at the account page
 
 
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="needs DATABASE_URL")
@@ -119,6 +121,7 @@ def test_american_spellings_in_what_residents_read():
     import re
     pages = "".join((ROOT / f).read_text() for f in
                     ("dashboard/static/request.html", "dashboard/static/explore.html", "dashboard/static/home.html",
+                     "dashboard/account.html",
                      "dashboard/submit.html", "dashboard/my.html", "dashboard/login.html",
                      "dashboard/admin.html"))
     # aria-labelledby is an HTML attribute, not a spelling

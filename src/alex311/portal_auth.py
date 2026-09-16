@@ -84,6 +84,8 @@ class PortalUser:
     role: str
     disabled: bool = False
     firebase_uid: str | None = None
+    has_password: bool = False
+    policy_version: str | None = None
 
     @property
     def label(self) -> str:
@@ -239,14 +241,26 @@ def session_user(conn, token: str | None) -> PortalUser | None:
     if not token:
         return None
     row = conn.execute(
-        """SELECT u.user_id, u.email, u.role, u.disabled_at, u.firebase_uid
+        """SELECT u.user_id, u.email, u.role, u.disabled_at, u.firebase_uid,
+                  u.password_hash IS NOT NULL AS has_password, u.policy_version
              FROM portal_sessions s JOIN portal_users u USING (user_id)
             WHERE s.token_hash = %s AND s.revoked_at IS NULL AND s.expires_at > now()""",
         (_token_hash(token),)).fetchone()
     if row is None or row["disabled_at"] is not None:
         return None
     return PortalUser(row["user_id"], row["email"], row["role"],
-                      firebase_uid=row.get("firebase_uid"))
+                      firebase_uid=row.get("firebase_uid"),
+                      has_password=bool(row.get("has_password")),
+                      policy_version=row.get("policy_version"))
+
+
+def logout_all(conn, user_id: str) -> int:
+    """Revoke every live session of one account — "sign out everywhere"."""
+    n = conn.execute("UPDATE portal_sessions SET revoked_at = now() "
+                     "WHERE user_id = %s AND revoked_at IS NULL AND expires_at > now()",
+                     (user_id,)).rowcount
+    conn.commit()
+    return n
 
 
 def logout(conn, token: str) -> None:

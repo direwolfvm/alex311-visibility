@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account · Alex311</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#fff; --ink:#1c2733; --muted:#5c6675; --border:#e2e8f0;
+    --accent:#1d4ed8; --open:#b45309; --openbg:#fef3c7; --closed:#047857; --closedbg:#ecfdf5;
+    --otherbg:#e2e8f0;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--accent); }
+  /* The site bar, identical to the other pages. */
+  header { display:flex; align-items:baseline; gap:16px; padding:14px 20px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .mark { height:26px; width:26px; align-self:center; }
+  header h1 { font-size:18px; margin:0; }
+  header h1 .home { color: inherit; text-decoration: none; }
+  header h1 .home:hover { color: var(--accent); }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; margin-left:22px; align-self:stretch; }
+  nav.tabs .tab-link { display:flex; align-items:center; gap:6px; text-decoration:none;
+                       font-size:14px; padding:6px 16px 8px; color:var(--muted);
+                       border-bottom:2px solid transparent; }
+  nav.tabs .tab-link:hover { color:var(--ink); border-bottom-color:var(--border); }
+  nav.tabs .tab-link[aria-current="page"] { color:var(--accent); font-weight:600;
+                                            border-bottom-color:var(--accent); }
+  nav.tabs .tab-link[hidden] { display:none; }
+  .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+             background:#dbeafe; color:var(--accent); padding:1px 6px; border-radius:99px; }
+  @media (max-width:640px) {
+    header { gap:2px 10px; padding:8px 14px 0; }
+    header h1 { font-size:16px; }
+    header .sub { flex-basis:100%; font-size:11px; }
+    nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
+    nav.tabs { flex-wrap: wrap; }
+    nav.tabs .tab-link { flex: 1 1 auto; padding: 8px 8px; font-size: 13px; white-space: nowrap;
+                         justify-content: center; text-align: center; }
+    .tab-tag { display:none; }
+  }
+
+  .wrap { max-width:900px; margin:0 auto; padding:18px 18px 80px; }
+  .page-title { font-size:17px; margin:0 0 4px; }
+  .lede { color:var(--muted); font-size:13px; margin:0 0 16px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+          padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 10px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:9px 12px; border-top:1px solid var(--border); vertical-align:top; }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-top:none; white-space:nowrap; }
+  td.num { font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap; }
+  td.actions { text-align:right; white-space:nowrap; }
+  .case { font:600 13px ui-monospace,"SF Mono",Menlo,monospace; }
+  .badge { display:inline-block; padding:1px 9px; border-radius:99px; font-size:11px; font-weight:700;
+           text-transform:uppercase; letter-spacing:.04em; }
+  .badge.open { background:var(--openbg); color:var(--open); }
+  .badge.closed { background:var(--closedbg); color:var(--closed); }
+  .badge.other { background:var(--otherbg); color:var(--muted); }
+  .rel { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .rel.mine { color:var(--accent); }
+  button { padding:5px 10px; border:1px solid var(--border); border-radius:7px; background:#fff;
+           font:inherit; font-size:13px; cursor:pointer; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .empty { color:var(--muted); font-size:14px; margin:0; }
+  .hint { color:var(--muted); font-size:12px; }
+  .box.bad { padding:11px 13px; border-radius:8px; font-size:13px; margin:0 0 12px;
+             background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+  .ident { display:flex; gap:14px; align-items:center; }
+  .ident .avatar { width:44px; height:44px; border-radius:50%; background:var(--accent); color:#fff;
+                   font-size:18px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+  .ident .label { font-size:16px; font-weight:600; word-break:break-all; }
+  .held { margin:0 0 10px; padding-left:18px; font-size:14px; }
+  .held li { margin:4px 0; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .btn { display:inline-block; padding:5px 10px; border:1px solid var(--border); border-radius:7px;
+         background:#fff; color:var(--ink); text-decoration:none; font-size:13px; }
+  .btn:hover { border-color:var(--accent); color:var(--accent); }
+</style>
+<script src="/account-chip.js" defer></script>
+</head>
+<body>
+<header>
+  <img src="/favicon.svg" alt="" class="mark">
+  <h1><a href="/" class="home">Alex311 Visibility</a></h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs" aria-label="Views">
+    <a class="tab-link" href="/explore">Explore</a>
+    <a class="tab-link" href="/explore#analytics">Analytics</a>
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/my" id="nav-my">My requests</a>
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
+  </nav>
+  <div class="account" id="account"></div>
+</header>
+
+<div class="wrap">
+  <h2 class="page-title">Your account</h2>
+  <p class="lede">What this site knows about you, how you sign in, and the ways out. An account here
+    is for this site only — it is not your Alex311 account with the City, and does not connect to one.</p>
+  <div class="error" id="error" hidden role="alert"></div>
+
+  <div class="card" id="identity">
+    <h2>Who you are here</h2>
+    <div class="ident">
+      <span class="avatar" id="avatar" aria-hidden="true">?</span>
+      <div>
+        <div class="label" id="label">Loading…</div>
+        <div class="hint" id="signin-how"></div>
+        <div class="hint" id="role"></div>
+      </div>
+    </div>
+    <p class="hint" style="margin:12px 0 0">There is no name or profile to fill in, on purpose: this
+      site keeps an account id and nothing about you, so a rating can be counted without a person
+      being identifiable. Your email, where we hold one, is only used to sign you in and to link a
+      password sign-in with a Google or email-link sign-in to the same account.</p>
+  </div>
+
+  <div class="card">
+    <h2>What we hold</h2>
+    <ul class="held">
+      <li><b>Your list</b> — the requests you sent from here and the ones you follow.
+        <a href="/submit/my">See My requests</a>.</li>
+      <li><b>Your ratings</b> — whether a request was addressed, from 1 to 5, and any private note.
+        Private unless you chose to show a score on its record page. Counted in aggregate on the
+        Analytics tab, never with your name.</li>
+      <li><b>Sign-in details</b> — an account id; your email where we hold one; the version of the
+        data policy you accepted (<span id="policy">—</span>).</li>
+    </ul>
+    <p class="hint">Nothing here is shared with the City. Requests you send from here go to the
+      City's Alex311 with the contact details you type into the form, and those are purged from this
+      site once the City has filed the request.</p>
+  </div>
+
+  <div class="card">
+    <h2>Signed-in devices</h2>
+    <p class="hint" style="margin:0 0 10px">A sign-in lasts a while on each device. Sign out here, or
+      everywhere at once if you signed in somewhere you no longer control.</p>
+    <div class="row">
+      <a class="btn" href="/submit/logout">Sign out on this device</a>
+      <button type="button" id="logout-all">Sign out everywhere</button>
+      <span class="hint" id="logout-status"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Delete this account</h2>
+    <p class="hint" style="margin:0 0 10px">Removes the account id, your list and every rating you
+      gave, including any score you chose to show. Your sign-in itself lives with the provider and
+      is not touched — signing in again later starts a fresh, empty account.</p>
+    <div class="row">
+      <button type="button" id="delete-account">Delete my account</button>
+      <span class="hint" id="delete-status"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+async function api(path, opts = {}) {
+  const r = await fetch('/submit/api' + path, {headers: {'Content-Type': 'application/json'}, ...opts});
+  if (r.status === 401) { location.replace('/submit/login'); throw new Error('sign in first'); }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.detail || `request failed (${r.status})`);
+  return d;
+}
+(async () => {
+  // its own fetch: this inline script runs before the deferred chip script has set window.alex311
+  const {user} = await api('/whoami');
+  if (!user) { location.replace('/submit/login'); return; }
+  const label = user.label || user.email || 'account';
+  $('label').textContent = label;
+  const m = /[A-Za-z0-9]/.exec(label); $('avatar').textContent = m ? m[0].toUpperCase() : '?';
+  const ways = [];
+  if (user.firebase_linked) ways.push('Google or an emailed link');
+  if (user.has_password) ways.push('a password');
+  $('signin-how').textContent = ways.length
+    ? `You sign in with ${ways.join(', and with ')}${user.email ? `, as ${user.email}` : ''}.`
+    : 'Signed in through the shared prototype credential.';
+  $('role').textContent = user.role === 'admin' ? 'Administrator of this site.' : '';
+  $('policy').textContent = user.policy_version ? `version ${user.policy_version}` : 'not yet recorded';
+})().catch(err => { $('error').textContent = err.message; $('error').hidden = false; });
+
+$('logout-all').addEventListener('click', async () => {
+  const b = $('logout-all');
+  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Confirm: sign out on every device'; return; }
+  try { await api('/logout-all', {method: 'POST'}); location.replace('/submit/login'); }
+  catch (err) { $('logout-status').textContent = err.message; delete b.dataset.armed; b.textContent = 'Sign out everywhere'; }
+});
+
+$('delete-account').addEventListener('click', async () => {
+  // two presses, and the second says what it does
+  const b = $('delete-account');
+  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Confirm: delete my account and my list'; return; }
+  try {
+    await api('/account', {method: 'DELETE'});
+    location.replace('/');
+  } catch (err) { $('delete-status').textContent = err.message; delete b.dataset.armed; b.textContent = 'Delete my account'; }
+});
+</script>
+</body>
+</html>
