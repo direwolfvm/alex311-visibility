@@ -61,6 +61,19 @@ def test_it_shows_the_live_thing():
     assert "report_url" not in HOME
 
 
+def test_the_front_page_has_a_door():
+    """A sign-in / register callout for a visitor, which turns into "signed in
+    as" with the two account links once the chip script has answered."""
+    assert 'id="account-callout"' in HOME
+    assert "Sign in or create an account" in HOME
+    assert '<a class="btn primary" href="/submit/login">Sign in or register</a>' in HOME
+    assert "separate from any Alex311 account with the City" in HOME
+    assert "Signed in as ${user.label" in HOME
+    assert 'href="/submit/account">Account</a>' in HOME
+    # it reads the chip's answer rather than asking again
+    assert "window.alex311.whoami" in HOME and "fetch('/submit/api/whoami')" not in HOME
+
+
 def test_it_says_what_it_is_not():
     assert "not an official City of Alexandria service" in HOME
     assert "call 911" in HOME

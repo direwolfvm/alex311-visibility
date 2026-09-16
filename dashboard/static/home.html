@@ -78,6 +78,14 @@
                margin-top:2px; }
   .figures-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
 
+  /* ---- the door: sign in or create an account, or where you already are ---- */
+  .callout { margin-top:22px; display:flex; gap:14px 24px; align-items:center; flex-wrap:wrap;
+             background:var(--accentbg); border:1px solid #bfdbfe; border-radius:10px; padding:16px 18px; }
+  .callout .text { flex:1 1 320px; min-width:0; }
+  .callout h3 { font-size:16px; margin:0 0 4px; }
+  .callout p { margin:0; font-size:14px; color:var(--muted); }
+  .callout .btns { display:flex; gap:10px; flex-wrap:wrap; }
+
   /* ---- the three things, given equal room on purpose ---- */
   .three { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; margin:30px 0 8px; }
   .do { background:var(--panel); border:1px solid var(--border); border-radius:10px;
@@ -177,6 +185,18 @@
       <div class="figure"><div class="v" id="f-30d">–</div><div class="l">closed within 30 days</div></div>
     </div>
     <p class="figures-note" id="f-note">Counting every request the City has published.</p>
+
+    <div class="callout" id="account-callout" aria-live="polite">
+      <div class="text">
+        <h3 id="callout-h">Sign in or create an account</h3>
+        <p id="callout-p">With Google or an emailed link — no password to remember. Keep the requests
+          you send from here in one place, follow others, and say whether they were addressed.
+          An account here is separate from any Alex311 account with the City.</p>
+      </div>
+      <div class="btns" id="callout-btns">
+        <a class="btn primary" href="/submit/login">Sign in or register</a>
+      </div>
+    </div>
   </section>
 
   <section class="three" aria-label="What you can do here">
@@ -294,13 +314,19 @@ fetch('/api/requests?sort=requested&dir=desc&limit=6').then(r => r.json()).then(
     <span class="when">${ago(r.requested_datetime)}</span></li>`).join('');
 }).catch(() => { $('latest').innerHTML = '<li class="empty">Could not load the newest requests.</li>'; });
 
-// Signed in: the account links appear, and the rating card points at the list.
-fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null})
-  .then(({user}) => {
-    if (user) { $('nav-my').hidden = false;
-                $('rate-go').innerHTML = '<a href="/submit/my">My requests</a>'; }
-    if (user && user.role === 'admin') $('nav-admin').hidden = false; })
-  .catch(() => {});
+// Signed in: the callout becomes "you are signed in", and the rating card points at
+// the list. The chip script (deferred, so it has run by DOMContentLoaded) did the
+// fetch and reveals the bar links; this only reads its answer.
+document.addEventListener('DOMContentLoaded', () => {
+  (window.alex311 && window.alex311.whoami || Promise.resolve({user: null})).then(({user}) => {
+    if (!user) return;
+    $('rate-go').innerHTML = '<a href="/submit/my">My requests</a>';
+    $('callout-h').textContent = `Signed in as ${user.label || user.email || 'your account'}`;
+    $('callout-p').textContent = 'Your requests, the ones you follow, and your ratings are under My requests. Your sign-in details and the ways out are on your account page.';
+    $('callout-btns').innerHTML = '<a class="btn primary" href="/submit/my">My requests</a>'
+      + '<a class="btn quiet" href="/submit/account">Account</a>';
+  });
+});
 </script>
 </body>
 </html>

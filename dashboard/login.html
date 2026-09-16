@@ -3,23 +3,53 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in · Alex311 prototype</title>
+<title>Sign in · Alex311 Visibility</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="/account-chip.js" defer></script>
 <style>
   :root {
     --bg:#f6f7f9; --panel:#fff; --ink:#1c2733; --muted:#5c6675;
     --border:#e2e8f0; --accent:#1d4ed8; --bad:#b91c1c; --badbg:#fef2f2;
   }
   * { box-sizing:border-box; }
-  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-         background:var(--bg); color:var(--ink); padding:24px;
+  body { margin:0; background:var(--bg); color:var(--ink);
          font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  /* The site bar, identical to the other pages. */
+  header { display:flex; align-items:baseline; gap:16px; padding:14px 20px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .mark { height:26px; width:26px; align-self:center; }
+  header h1 { font-size:18px; margin:0; }
+  header h1 .home { color: inherit; text-decoration: none; }
+  header h1 .home:hover { color: var(--accent); }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; margin-left:22px; align-self:stretch; }
+  nav.tabs .tab-link { display:flex; align-items:center; gap:6px; text-decoration:none;
+                       font-size:14px; padding:6px 16px 8px; color:var(--muted);
+                       border-bottom:2px solid transparent; }
+  nav.tabs .tab-link:hover { color:var(--ink); border-bottom-color:var(--border); }
+  nav.tabs .tab-link[aria-current="page"] { color:var(--accent); font-weight:600;
+                                            border-bottom-color:var(--accent); }
+  nav.tabs .tab-link[hidden] { display:none; }
+  .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+             background:var(--accentbg); color:var(--accent); padding:1px 6px; border-radius:99px; }
+  @media (max-width:640px) {
+    header { gap:2px 10px; padding:8px 14px 0; }
+    header h1 { font-size:16px; }
+    header .sub { flex-basis:100%; font-size:11px; }
+    nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
+    nav.tabs { flex-wrap: wrap; }
+    nav.tabs .tab-link { flex: 1 1 auto; padding: 8px 8px; font-size: 13px; white-space: nowrap;
+                         justify-content: center; text-align: center; }
+    .tab-tag { display:none; }
+  }
+
+  .wrap { display:flex; justify-content:center; padding:28px 18px 70px; }
   .card { background:var(--panel); border:1px solid var(--border); border-radius:12px;
           padding:28px; width:100%; max-width:400px;
           box-shadow:0 1px 2px rgba(28,39,51,.05), 0 12px 32px -20px rgba(28,39,51,.4); }
   .brand { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
   .brand img { width:26px; height:26px; }
-  h1 { font-size:18px; margin:0; }
+  .brand h2 { font-size:18px; margin:0; }
   .beta { font-size:10px; font-weight:700; letter-spacing:.06em; background:#dbeafe;
           color:var(--accent); padding:2px 7px; border-radius:99px; }
   .sub { color:var(--muted); font-size:13px; margin:0 0 20px; }
@@ -55,21 +85,38 @@
 </style>
 </head>
 <body>
+<header>
+  <img src="/favicon.svg" alt="" class="mark">
+  <h1><a href="/" class="home">Alex311 Visibility</a></h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs" aria-label="Views">
+    <a class="tab-link" href="/explore">Explore</a>
+    <a class="tab-link" href="/explore#analytics">Analytics</a>
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
+  </nav>
+  <div class="account" id="account"></div>
+</header>
+<div class="wrap">
 <main class="card">
   <div class="brand">
-    <img src="/favicon.svg" alt="">
-    <h1>Alex311 prototype</h1>
-    <span class="beta">BETA</span>
+    <h2>Sign in or create an account</h2>
   </div>
-  <p class="sub">A test feature, open to a small group while it is being evaluated.</p>
+  <p class="sub">Keep the requests you send from here in one place, follow others, and say whether
+    they were addressed. New here? Continue with Google or ask for an emailed link — an account
+    is created for you. Passwords are only for the test group.</p>
 
   <div class="explain">
-    <p><b>What this is.</b> An experiment in making the City's own request form easier to
-      use: every question on one page, the City's rules explained next to the answer that
-      triggers them, and a warning when the issue you are reporting has already been
-      reported nearby.</p>
-    <p><b>Why it needs a sign-in.</b> It can send real requests to the City, which
-      dispatches real staff. Access is limited while that is being evaluated with them.</p>
+    <p><b>What this is.</b> An unofficial mirror of the City's Alex311 requests, with a way to
+      send your own from here and to rate what happened. Reporting from here is a test feature
+      while it is evaluated with the City: every question on one page, the City's rules explained
+      next to the answer that triggers them, and a warning when the issue has already been reported
+      nearby.</p>
+    <p><b>Why it needs a sign-in.</b> It can send real requests to the City, which dispatches
+      real staff, and it keeps your list and your ratings — so it has to know which resident is
+      which. It keeps an account id and nothing else about you.</p>
     <p><b>What it is not.</b> Not an official City of Alexandria service, and not
       affiliated with or endorsed by the City. <b>This sign-in is for this site only:</b> it is
       not your Alex311 account with the City, and it does not connect to one. The official portal is always available at
@@ -103,9 +150,11 @@
   <div class="box" id="error" hidden role="alert"></div>
   <div class="box ok" id="sent" hidden role="status"></div>
 
-  <p class="foot">No account? Ask whoever invited you to the test. There is no public
-    sign-up. <a href="/">Back to the site</a></p>
+  <p class="foot">Google or an emailed link creates your account the first time you use it —
+    there is no separate registration form. Passwords are only for the test group; ask whoever
+    invited you. <a href="/">Back to the site</a></p>
 </main>
+</div>
 
 <script>
 const params = new URLSearchParams(location.search);
