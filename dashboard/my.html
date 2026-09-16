@@ -33,7 +33,6 @@
   nav.tabs .tab-link[hidden] { display:none; }
   .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
              background:#dbeafe; color:var(--accent); padding:1px 6px; border-radius:99px; }
-  header .who { margin-left:auto; color:var(--muted); font-size:13px; }
   @media (max-width:640px) {
     header { gap:2px 10px; padding:8px 14px 0; }
     header h1 { font-size:16px; }
@@ -43,7 +42,6 @@
     nav.tabs .tab-link { flex: 1 1 auto; padding: 8px 8px; font-size: 13px; white-space: nowrap;
                          justify-content: center; text-align: center; }
     .tab-tag { display:none; }
-    header .who { order:2; }
   }
 
   .wrap { max-width:900px; margin:0 auto; padding:18px 18px 80px; }
@@ -75,6 +73,7 @@
   .box.bad { padding:11px 13px; border-radius:8px; font-size:13px; margin:0 0 12px;
              background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
 </style>
+<script src="/account-chip.js" defer></script>
 </head>
 <body>
 <header>
@@ -89,7 +88,7 @@
     <a class="tab-link" href="/submit/my" id="nav-my" aria-current="page">My requests</a>
     <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
-  <span class="who" id="who"></span>
+  <div class="account" id="account"></div>
 </header>
 
 <div class="wrap">
@@ -123,14 +122,8 @@
       map has a <b>Follow</b> button once you are signed in.</p>
   </div>
 
-  <div class="card">
-    <h2>Your account</h2>
-    <p class="hint" style="margin:0 0 10px">We hold an account id and this list: the requests
-      above, and any verdicts you gave. Deleting the account removes all of it, including any
-      score you chose to show. Your sign-in itself lives with the provider and is not touched.</p>
-    <button type="button" id="delete-account">Delete my account</button>
-    <span class="hint" id="delete-status"></span>
-  </div>
+  <p class="hint">Sign-in details, signing out everywhere, and deleting the account are on
+    <a href="/submit/account">your account page</a>.</p>
 </div>
 
 <script>
@@ -162,7 +155,6 @@ function row(l) {
 async function load() {
   const [who, my] = await Promise.all([api('/whoami'), api('/my')]);
   const me = who.user;
-  $('who').innerHTML = me ? `${esc(me.label || me.email)} · <a href="/submit/logout">Sign out</a>` : '';
   if (me && me.role === 'admin') $('nav-admin').hidden = false;
   const mine = my.links.filter(l => l.relation === 'mine');
   const following = my.links.filter(l => l.relation !== 'mine');
@@ -176,16 +168,6 @@ document.addEventListener('click', async e => {
   try { await api(`/follow/${encodeURIComponent(b.dataset.unlink)}`, {method: 'DELETE'}); await load(); }
   catch (err) { $('error').textContent = err.message; $('error').hidden = false; }
 });
-$('delete-account').addEventListener('click', async () => {
-  // two presses, and the second says what it does
-  const b = $('delete-account');
-  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Confirm: delete my account and my list'; return; }
-  try {
-    await api('/account', {method: 'DELETE'});
-    location.replace('/');
-  } catch (err) { $('delete-status').textContent = err.message; delete b.dataset.armed; b.textContent = 'Delete my account'; }
-});
-
 load().catch(err => { $('error').textContent = err.message; $('error').hidden = false; });
 </script>
 </body>

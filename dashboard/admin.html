@@ -35,7 +35,6 @@
                                             border-bottom-color:var(--accent); }
   .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
              background:#dbeafe; color:var(--accent); padding:1px 6px; border-radius:99px; }
-  header .who { margin-left:auto; color:var(--muted); font-size:13px; }
   @media (max-width:640px) {
     header { gap:2px 10px; padding:8px 14px 0; }
     header h1 { font-size:16px; }
@@ -45,7 +44,6 @@
     nav.tabs .tab-link { flex: 1 1 auto; padding: 8px 8px; font-size: 13px; white-space: nowrap;
                          justify-content: center; text-align: center; }
     .tab-tag { display:none; }
-    header .who { order:2; }
   }
 
   .wrap { max-width:920px; margin:0 auto; padding:18px 18px 80px; }
@@ -148,6 +146,7 @@
   }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 </style>
+<script src="/account-chip.js" defer></script>
 </head>
 <body>
 <header>
@@ -162,7 +161,7 @@
     <a class="tab-link" href="/submit/my" id="nav-my">My requests</a>
     <a class="tab-link" href="/submit/admin" aria-current="page">Admin</a>
   </nav>
-  <span class="who" id="who"></span>
+  <div class="account" id="account"></div>
 </header>
 
 <div class="wrap">
@@ -489,8 +488,6 @@ async function load() {
     api('/whoami'), api('/submission-queue'), api('/review-queue'), api('/users'),
     api('/instrument')]);
   me = who.user;
-  $('who').innerHTML = me
-    ? `${esc(me.label || me.email)} · ${esc(me.role)} · <a href="/submit/logout">Sign out</a>` : '';
   const rows = sub.queue || [];
   renderStats(metrics);
   renderInflight(rows.filter(r => IN_FLIGHT.includes(r.submit_state)));

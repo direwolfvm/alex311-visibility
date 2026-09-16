@@ -19,6 +19,7 @@ PAGES = {
     "admin": ROOT / "admin.html",
     "record": ROOT / "static/request.html",
     "my": ROOT / "my.html",
+    "account": ROOT / "account.html",
 }
 HTML = {name: path.read_text() for name, path in PAGES.items()}
 
@@ -122,3 +123,14 @@ def test_nothing_still_points_at_the_old_dashboard_address():
         assert 'href="/#analytics"' not in html, page
         assert 'href="/">Explore' not in html, page
         assert 'href="/">← All requests' not in html, page
+
+
+@pytest.mark.parametrize("page", sorted(PAGES))
+def test_every_page_carries_the_account_chip(page):
+    """One shared script draws the account chip — Sign in for a visitor, a
+    menu for a signed-in person — so no page draws its own 'name · Sign out'."""
+    html = HTML[page]
+    assert '<script src="/account-chip.js" defer></script>' in html
+    header = re.search(r"<header>.*?</header>", html, re.S).group(0)
+    assert '<div class="account" id="account"></div>' in header
+    assert 'Sign out</a>` :' not in html          # the old per-page text is gone

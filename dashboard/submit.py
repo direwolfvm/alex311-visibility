@@ -207,6 +207,7 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
     login_page = Path(__file__).parent / "login.html"
     admin_page = Path(__file__).parent / "admin.html"
     my_page = Path(__file__).parent / "my.html"
+    account_page = Path(__file__).parent / "account.html"
 
     @public.get("/login", response_class=HTMLResponse)
     def login_form(request: Request):
@@ -344,7 +345,10 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         except Unauthenticated:
             return {"user": None}
         return {"user": ({"user_id": user.user_id, "email": user.email, "role": user.role,
-                          "label": user.label, "firebase_uid": user.firebase_uid}
+                          "label": user.label, "firebase_uid": user.firebase_uid,
+                          "firebase_linked": user.firebase_uid is not None,
+                          "has_password": user.has_password,
+                          "policy_version": user.policy_version}
                          if user else None),
                 "firebase": fb.configured()}
 
@@ -371,6 +375,21 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         """Moderation and user management. The gate is here, not in the page:
         a hidden link is a courtesy, not a permission."""
         return admin_page.read_text()
+
+    @router.get("/account", response_class=HTMLResponse)
+    def account_ui(actor: str = Depends(gate)):
+        """Who you are here, what we hold, and the ways out."""
+        return account_page.read_text()
+
+    @router.post("/api/logout-all")
+    def logout_everywhere(request: Request, actor: str = Depends(gate)):
+        """Revoke every session of the signed-in account, this one included."""
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            pa.logout_all(conn, user_id)
+        resp = JSONResponse({"ok": True})
+        resp.delete_cookie(pa.SESSION_COOKIE, path="/submit")
+        return resp
 
     @router.get("/my", response_class=HTMLResponse)
     def my_ui(actor: str = Depends(gate)):

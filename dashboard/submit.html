@@ -44,7 +44,6 @@
     /* the badge beside a two-line label reads as clutter at this width, and the
        notice at the top of the page says the same thing in words */
     .tab-tag { display: none; }
-    .whoami { order: 2; }
   }
   .wrap { max-width:760px; margin:0 auto; padding:20px 18px 80px; }
   .notice { background:var(--infobg); border:1px solid #bfdbfe; color:#1e40af; border-radius:10px; padding:11px 14px; font-size:13px; margin-bottom:18px; }
@@ -68,9 +67,6 @@
   .rule.hard { color:var(--bad); } .rule.adv { color:var(--warn); } .rule.info { color:var(--muted); }
   .opt.hard { border-color:#fecaca; background:#fff7f7; }
   .hint { font-size:12px; color:var(--muted); margin-top:4px; }
-  .whoami { margin-left:auto; font-size:13px; color:var(--muted); display:flex;
-            gap:10px; align-items:center; }
-  .whoami a { color:var(--accent); }
   .composite { display:flex; gap:8px; } .composite input { flex:1; }
   .filing-head { font-size:14px; margin:22px 0 4px; padding-top:18px;
                  border-top:1px solid var(--border); }
@@ -142,6 +138,7 @@
   .foot { color:var(--muted); font-size:12px; margin-top:8px; }
   [hidden] { display:none !important; }
 </style>
+<script src="/account-chip.js" defer></script>
 </head>
 <body>
 <header>
@@ -159,7 +156,7 @@
     <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
     <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
-  <span class="whoami" id="whoami"></span>
+  <div class="account" id="account"></div>
 </header>
 
 <div class="wrap">
@@ -789,9 +786,6 @@ $('copy').addEventListener('click', async () => { await navigator.clipboard.writ
 (async () => {
   try {
     const {user} = await (await fetch('/submit/api/whoami')).json();
-    $('whoami').innerHTML = user
-      ? `${esc(user.label || user.email)} · <a href="/submit/logout">Sign out</a>`
-      : '<a href="/submit/login">Sign in</a>';
     // moderation and user management both live behind the Admin tab now
     if (user) $('nav-my').hidden = false;
   if (user && user.role === 'admin') $('nav-admin').hidden = false;
