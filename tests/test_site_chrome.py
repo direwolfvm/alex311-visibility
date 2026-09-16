@@ -20,6 +20,7 @@ PAGES = {
     "record": ROOT / "static/request.html",
     "my": ROOT / "my.html",
     "account": ROOT / "account.html",
+    "login": ROOT / "login.html",
 }
 HTML = {name: path.read_text() for name, path in PAGES.items()}
 
@@ -67,7 +68,9 @@ def test_the_admin_tab_starts_hidden(page):
     page in the bar is one anybody may open, so only this one hides."""
     item = re.search(r'<a class="tab-link" href="/submit/admin"[^>]*>', bar(HTML[page]))
     assert item and "hidden" in item.group(0)
-    assert "nav-admin" in HTML[page] and "role === 'admin'" in HTML[page]
+    assert "nav-admin" in HTML[page]
+    # the shared chip script reveals it for administrators; a page may also do so itself
+    assert 'src="/account-chip.js"' in HTML[page] or "role === 'admin'" in HTML[page]
     # `nav.tabs .tab-link { display: flex }` outranks the browser's own [hidden]
     # rule, so without this the attribute is decoration and the tab shows for
     # everyone. It did, until someone looked.
@@ -134,3 +137,16 @@ def test_every_page_carries_the_account_chip(page):
     header = re.search(r"<header>.*?</header>", html, re.S).group(0)
     assert '<div class="account" id="account"></div>' in header
     assert 'Sign out</a>` :' not in html          # the old per-page text is gone
+
+
+def test_the_bar_holds_nothing_but_the_bar():
+    """The dashboard's whole-history figures used to ride in its bar, so that
+    page's header was the odd one out. Every header now holds the same
+    things: mark, wordmark, tagline, the views, the account chip."""
+    for page, html in HTML.items():
+        header = re.search(r"<header>.*?</header>", html, re.S).group(0)
+        ids = set(re.findall(r'id="([^"]+)"', header))
+        assert ids <= {"nav-my", "nav-admin", "account", "tab-btn-explore", "tab-btn-analytics"}, (page, ids)
+    explore = HTML["dashboard"]
+    main = explore[explore.index('<main class="main"'):]
+    assert 'id="stat-total"' in main and 'id="stat-ingest"' in main

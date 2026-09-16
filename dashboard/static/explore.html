@@ -74,8 +74,11 @@
   .chart-box { padding: 10px 14px; height: 260px; }
   .chart-box.tall { height: 340px; }
   @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
-  .stats { margin-left: auto; display: flex; gap: 18px; font-size: 13px; }
-  .stats b { font-size: 16px; }
+  /* The whole-history figures used to sit in the site bar, which made this
+     page's bar the odd one out. They sit at the top of the page now. */
+  .stats { display: flex; gap: 6px 18px; flex-wrap: wrap; align-items: baseline;
+           font-size: 13px; color: var(--muted); padding: 0 2px; }
+  .stats b { font-size: 16px; color: var(--ink); }
   .wrap { display: grid; grid-template-columns: 250px 1fr; gap: 14px; padding: 14px 20px; }
   .filters { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
              padding: 14px; align-self: start; position: sticky; top: 14px; }
@@ -211,7 +214,7 @@
     /* the badge beside a two-line label reads as clutter at this width; the
        login page it leads to says BETA plainly enough */
     .tab-tag { display: none; }
-    .stats { margin-left: 0; order: 2; width: 100%; gap: 4px 12px; flex-wrap: wrap; font-size: 12px; }
+    .stats { gap: 4px 12px; font-size: 12px; }
     .stats b { font-size: 14px; }
     #stat-ingest { flex-basis: 100%; }
     .wrap { padding: 10px 12px; gap: 10px; }
@@ -272,12 +275,6 @@
          courtesy; the page behind it does its own checking. -->
     <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
-  <div class="stats">
-    <span>Total <b id="stat-total">–</b></span>
-    <span>Open <b id="stat-open">–</b></span>
-    <span>Shown <b id="stat-shown">–</b></span>
-    <span class="sub" id="stat-ingest"></span>
-  </div>
   <div class="account" id="account"></div>
 </header>
 
@@ -306,6 +303,12 @@
 
   <main class="main" id="main">
     <p class="sr-only" id="live-status" role="status" aria-live="polite"></p>
+    <div class="stats" aria-label="Whole-history figures">
+      <span>Total <b id="stat-total">–</b></span>
+      <span>Open <b id="stat-open">–</b></span>
+      <span>Shown <b id="stat-shown">–</b></span>
+      <span class="sub" id="stat-ingest"></span>
+    </div>
   <div id="tab-explore" role="tabpanel" aria-labelledby="tab-btn-explore" tabindex="0">
     <div class="card"><h2>Map
       <span id="map-count" style="text-transform:none;letter-spacing:0;margin-left:8px"></span>
