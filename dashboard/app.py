@@ -1,4 +1,4 @@
-"""Dashboard API + static frontend for the Alex311 visibility portal.
+"""Dashboard API + static frontend for Alex311 Reborn.
 
 Run locally:
   DATABASE_URL=postgresql://... MEDIA_DIR=./media_store uv run uvicorn dashboard.app:app --reload
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
     pool.close()
 
 
-app = FastAPI(title="Alex311 Visibility", lifespan=lifespan)
+app = FastAPI(title="Alex311 Reborn", lifespan=lifespan)
 
 
 def _parse_polygon(spec: str) -> str:

@@ -38,7 +38,7 @@ def test_every_account_surface_says_it_is_not_the_citys_account(page, text):
 def test_the_email_itself_says_so_and_carries_the_link_on_our_domain():
     link = "https://alex311visibility.me/submit/login?mode=signIn&oobCode=abc&apiKey=k"
     subject, text, html = fb.sign_in_email(link, "https://alex311visibility.me")
-    assert subject == "Your sign-in link for Alex311 Visibility"
+    assert subject == "Your sign-in link for Alex311 Reborn"
     for body in (text, html):
         assert link in body
         assert "separate from any\nAlex311 account" in body or "separate from any Alex311 account" in body
@@ -117,7 +117,7 @@ def test_nothing_configured_means_firebase_sends_its_own(monkeypatch):
 
 
 def test_mailgun_gets_sender_recipient_subject_and_both_bodies(monkeypatch):
-    monkeypatch.setenv("ALEX311_MAIL_FROM", "Alex311 Visibility <no-reply@alex311visibility.me>")
+    monkeypatch.setenv("ALEX311_MAIL_FROM", "Alex311 Reborn <no-reply@alex311visibility.me>")
     monkeypatch.setenv("MAILGUN_API_KEY", "key-1")
     monkeypatch.setenv("ALEX311_MAIL_DOMAIN", "alex311visibility.me")
     monkeypatch.delenv("SMTP_HOST", raising=False)
@@ -130,7 +130,7 @@ def test_mailgun_gets_sender_recipient_subject_and_both_bodies(monkeypatch):
     mail.send("r@example.org", "Subj", "plain", "<b>html</b>")
     assert seen["url"] == "https://api.mailgun.net/v3/alex311visibility.me/messages"
     assert seen["auth"] == ("api", "key-1")
-    assert seen["data"] == {"from": "Alex311 Visibility <no-reply@alex311visibility.me>",
+    assert seen["data"] == {"from": "Alex311 Reborn <no-reply@alex311visibility.me>",
                             "to": "r@example.org", "subject": "Subj", "text": "plain", "html": "<b>html</b>"}
 
 

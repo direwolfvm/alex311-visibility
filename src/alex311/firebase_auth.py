@@ -145,10 +145,10 @@ def sign_in_email(link: str, site_origin: str) -> tuple[str, str, str]:
     what the account is not: it is separate from any Alex311 account with
     the City, and nothing happens unless the link is used."""
     host = site_origin.split("//", 1)[-1]
-    subject = "Your sign-in link for Alex311 Visibility"
+    subject = "Your sign-in link for Alex311 Reborn"
     text = f"""Hello,
 
-Someone - most likely you - asked to sign in to Alex311 Visibility ({host})
+Someone - most likely you - asked to sign in to Alex311 Reborn ({host})
 with this email address. Open this link on the device where you asked for it:
 
 {link}
@@ -162,15 +162,15 @@ Alex311 account you have with the City of Alexandria and does not connect to
 it. This site is an unofficial mirror of the City's 311 service requests and
 is not run by the City.
 
-Alex311 Visibility
+Alex311 Reborn
 {site_origin}
 """
     html = f"""<div style="font:15px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;color:#1c2733;max-width:560px">
 <p>Hello,</p>
-<p>Someone &mdash; most likely you &mdash; asked to sign in to <b>Alex311 Visibility</b> ({host})
+<p>Someone &mdash; most likely you &mdash; asked to sign in to <b>Alex311 Reborn</b> ({host})
 with this email address. Open this link on the device where you asked for it:</p>
 <p style="margin:20px 0"><a href="{link}" style="background:#1d4ed8;color:#fff;text-decoration:none;
-padding:10px 18px;border-radius:8px;font-weight:600;display:inline-block">Sign in to Alex311 Visibility</a></p>
+padding:10px 18px;border-radius:8px;font-weight:600;display:inline-block">Sign in to Alex311 Reborn</a></p>
 <p style="font-size:13px;color:#5c6675">Or copy this address into your browser:<br>
 <a href="{link}" style="color:#1d4ed8;word-break:break-all">{link}</a></p>
 <p>The link works once and expires soon. If you did not ask for it, you can ignore this email;
@@ -180,6 +180,6 @@ nothing happens without the link.</p>
 here and the ratings you give them. It is separate from any Alex311 account you have with the City
 of Alexandria and does not connect to it. This site is an unofficial mirror of the City's 311
 service requests and is not run by the City.</p>
-<p style="font-size:13px;color:#5c6675">Alex311 Visibility &middot; <a href="{site_origin}" style="color:#1d4ed8">{host}</a></p>
+<p style="font-size:13px;color:#5c6675">Alex311 Reborn &middot; <a href="{site_origin}" style="color:#1d4ed8">{host}</a></p>
 </div>"""
     return subject, text, html
