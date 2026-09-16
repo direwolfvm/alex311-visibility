@@ -28,6 +28,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 import secrets
 import sys
 import uuid
@@ -86,13 +87,14 @@ class PortalUser:
     firebase_uid: str | None = None
     has_password: bool = False
     policy_version: str | None = None
+    display_name: str | None = None
 
     @property
     def label(self) -> str:
-        """Something a person can recognize: the email where we hold one, else
-        a short form of the uid. We do not fetch the email from Firebase to
-        show it — the uid is what we chose to keep."""
-        return self.email or f"account {self.user_id[-6:]}"
+        """Something a person can recognize: the name they chose, else the
+        email where we hold one, else a short form of the uid. We do not fetch
+        the email from Firebase to show it — the uid is what we chose to keep."""
+        return self.display_name or self.email or f"account {self.user_id[-6:]}"
 
     @property
     def is_admin(self) -> bool:
@@ -152,7 +154,7 @@ def list_users(conn) -> list[dict]:
     return conn.execute(
         """SELECT user_id, email, role, created_at, created_by, last_login_at, disabled_at,
                   firebase_uid IS NOT NULL AS firebase_linked, policy_version,
-                  password_hash IS NOT NULL AS has_password
+                  password_hash IS NOT NULL AS has_password, display_name
              FROM portal_users ORDER BY created_at""").fetchall()
 
 
@@ -242,7 +244,8 @@ def session_user(conn, token: str | None) -> PortalUser | None:
         return None
     row = conn.execute(
         """SELECT u.user_id, u.email, u.role, u.disabled_at, u.firebase_uid,
-                  u.password_hash IS NOT NULL AS has_password, u.policy_version
+                  u.password_hash IS NOT NULL AS has_password, u.policy_version,
+                  u.display_name
              FROM portal_sessions s JOIN portal_users u USING (user_id)
             WHERE s.token_hash = %s AND s.revoked_at IS NULL AND s.expires_at > now()""",
         (_token_hash(token),)).fetchone()
@@ -251,7 +254,36 @@ def session_user(conn, token: str | None) -> PortalUser | None:
     return PortalUser(row["user_id"], row["email"], row["role"],
                       firebase_uid=row.get("firebase_uid"),
                       has_password=bool(row.get("has_password")),
-                      policy_version=row.get("policy_version"))
+                      policy_version=row.get("policy_version"),
+                      display_name=row.get("display_name"))
+
+
+NAME_MAX = 40
+_NAME_OK = re.compile(r"^[\w .'’\-]+$", re.UNICODE)
+
+
+class BadName(ValueError):
+    pass
+
+
+def clean_display_name(raw: str | None) -> str | None:
+    """A name as a person would write it for themselves: trimmed, single
+    spaces, at most NAME_MAX characters of letters, digits, spaces and
+    period, apostrophe, hyphen. Empty means "no name". Anything else is
+    refused rather than quietly reshaped — it is their name."""
+    name = " ".join((raw or "").split())
+    if not name:
+        return None
+    if len(name) > NAME_MAX:
+        raise BadName(f"keep it to {NAME_MAX} characters")
+    if not _NAME_OK.match(name):
+        raise BadName("letters, digits, spaces, periods, apostrophes and hyphens only")
+    return name
+
+
+def set_display_name(conn, user_id: str, name: str | None) -> None:
+    conn.execute("UPDATE portal_users SET display_name = %s WHERE user_id = %s", (name, user_id))
+    conn.commit()
 
 
 def logout_all(conn, user_id: str) -> int:

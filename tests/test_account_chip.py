@@ -43,7 +43,7 @@ def test_the_account_page_is_gated_and_says_what_it_is_not():
     assert 'def account_ui(actor: str = Depends(gate))' in ROUTES
     assert 'account_page = Path(__file__).parent / "account.html"' in ROUTES
     assert "not your Alex311 account with the City, and does not connect to one" in ACCOUNT
-    assert "There is no name or profile to fill in, on purpose" in ACCOUNT
+    assert "The name shows only to you" in ACCOUNT and "never on the public site" in ACCOUNT
     assert 'href="/submit/my"' in ACCOUNT
     assert "await api('/whoami')" in ACCOUNT      # not window.alex311: deferred scripts run later
 
@@ -70,3 +70,27 @@ def test_whoami_says_how_the_person_signs_in():
 def test_deleting_moved_off_my_requests():
     assert "delete-account" not in MY
     assert 'id="delete-account"' in ACCOUNT
+
+
+def test_a_display_name_is_optional_private_and_kept_tidy():
+    """The one profile field. It changes what the chip and the account page
+    call the person, and nothing public: public_scores never carries a name."""
+    import pytest
+    from alex311 import portal_auth as pa
+    assert pa.clean_display_name(None) is None and pa.clean_display_name("   ") is None
+    assert pa.clean_display_name("  Jordan   E. ") == "Jordan E."
+    assert pa.clean_display_name("Mary-Jane O'Neil") == "Mary-Jane O'Neil"
+    with pytest.raises(pa.BadName):
+        pa.clean_display_name("x" * 41)
+    with pytest.raises(pa.BadName):
+        pa.clean_display_name("<script>")
+    assert pa.PortalUser("pu_abcdef123456", "a@b.co", "user", display_name="Jordan").label == "Jordan"
+    assert pa.PortalUser("pu_abcdef123456", "a@b.co", "user").label == "a@b.co"
+    assert pa.PortalUser("pu_abcdef123456", None, "user").label == "account 123456"
+    assert '@router.put("/api/profile")' in ROUTES
+    fn = ROUTES.split("def set_profile(")[1].split("\n    @router")[0]
+    assert "pa.clean_display_name(body.display_name)" in fn and "pa.set_display_name(conn, user_id, name)" in fn
+    assert "ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS display_name TEXT;" in (ROOT / "src/alex311/schema.sql").read_text()
+    assert 'id="display-name"' in ACCOUNT and "api('/profile', {method: 'PUT'" in ACCOUNT
+    db = (ROOT / "src/alex311/db.py").read_text()
+    assert "display_name" not in db.split("def public_scores(")[1].split("\ndef ")[0]
