@@ -549,6 +549,23 @@ def request_page(service_request_id: str):
 
 
 # note: bare /healthz is a reserved path on run.app domains (GFE intercepts it)
+STATIC = Path(__file__).parent / "static"
+
+
+@app.get("/", response_class=FileResponse)
+def home():
+    """The front door: what the site is, and the three things a resident can
+    do here. The dashboard used to answer here; it is /explore now, so a
+    first visit reads before it filters."""
+    return FileResponse(STATIC / "home.html", media_type="text/html")
+
+
+@app.get("/explore", response_class=FileResponse)
+def explore():
+    """The map, the list and the Analytics tab (#analytics)."""
+    return FileResponse(STATIC / "explore.html", media_type="text/html")
+
+
 @app.get("/api/healthz")
 def healthz():
     with pool.connection() as conn:

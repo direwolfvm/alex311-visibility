@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-HTML = (Path(__file__).resolve().parents[1] / "dashboard/static/index.html").read_text()
+HTML = (Path(__file__).resolve().parents[1] / "dashboard/static/explore.html").read_text()
 
 
 def contrast(fg: str, bg: str) -> float:

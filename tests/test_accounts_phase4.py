@@ -118,7 +118,7 @@ def test_the_page_says_whose_answer_it_is_asking_for():
 def test_american_spellings_in_what_residents_read():
     import re
     pages = "".join((ROOT / f).read_text() for f in
-                    ("dashboard/static/request.html", "dashboard/static/index.html",
+                    ("dashboard/static/request.html", "dashboard/static/explore.html", "dashboard/static/home.html",
                      "dashboard/submit.html", "dashboard/my.html", "dashboard/login.html",
                      "dashboard/admin.html"))
     # aria-labelledby is an HTML attribute, not a spelling

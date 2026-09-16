@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = (ROOT / "dashboard/static/request.html").read_text()
-INDEX = (ROOT / "dashboard/static/index.html").read_text()
+INDEX = (ROOT / "dashboard/static/explore.html").read_text()
 APP = (ROOT / "dashboard/app.py").read_text()
 
 
