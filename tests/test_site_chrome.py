@@ -13,7 +13,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1] / "dashboard"
 PAGES = {
-    "dashboard": ROOT / "static/index.html",
+    "home": ROOT / "static/home.html",
+    "dashboard": ROOT / "static/explore.html",
     "form": ROOT / "submit.html",
     "admin": ROOT / "admin.html",
     "record": ROOT / "static/request.html",
@@ -24,7 +25,7 @@ HTML = {name: path.read_text() for name, path in PAGES.items()}
 # What the bar offers, in order. Explore and Analytics are panels of the
 # dashboard, so they are buttons there and links everywhere else; the text and
 # the destination are what a reader actually compares.
-ITEMS = [("Explore", "/"), ("Analytics", "/#analytics"), ("Report an issue", "/submit"),
+ITEMS = [("Explore", "/explore"), ("Analytics", "/explore#analytics"), ("Report an issue", "/submit"),
          ("My requests", "/submit/my"), ("Admin", "/submit/admin")]
 
 TOKENS = ("--bg", "--panel", "--ink", "--muted", "--accent", "--border")
@@ -51,7 +52,7 @@ def test_every_page_carries_the_same_bar(page):
     assert [lab for lab, _ in ITEMS] == [lab for lab in labels if lab in dict(ITEMS)]
 
 
-@pytest.mark.parametrize("page", ["form", "admin", "record", "my"])
+@pytest.mark.parametrize("page", ["home", "form", "admin", "record", "my"])
 def test_the_other_pages_link_to_the_dashboard_views(page):
     """They cannot press a tab on a page they are not on, so they link to it —
     which is why the dashboard has to answer to the fragment."""
@@ -59,7 +60,7 @@ def test_the_other_pages_link_to_the_dashboard_views(page):
         assert f'href="{href}"' in bar(HTML[page]), f"{page} lost the link to {label}"
 
 
-@pytest.mark.parametrize("page", ["dashboard", "form", "record"])
+@pytest.mark.parametrize("page", ["home", "dashboard", "form", "record"])
 def test_the_admin_tab_starts_hidden(page):
     """It is revealed to administrators once they are signed in. Every other
     page in the bar is one anybody may open, so only this one hides."""
@@ -105,3 +106,19 @@ def test_the_sign_in_page_shares_the_background():
     on the way in gives the whole thing away."""
     login = (ROOT / "login.html").read_text()
     assert token(login, "--bg") == token(HTML["dashboard"], "--bg")
+
+
+@pytest.mark.parametrize("page", sorted(PAGES))
+def test_the_wordmark_is_the_way_home(page):
+    """The front door is /, and no tab points at it: the site's name does, on
+    every page, the way readers expect."""
+    assert '<h1><a href="/" class="home">Alex311 Visibility</a></h1>' in HTML[page]
+
+
+def test_nothing_still_points_at_the_old_dashboard_address():
+    """The dashboard answered at / for a year. Every link that meant "the map"
+    has to say /explore now, or it lands on the front door instead."""
+    for page, html in HTML.items():
+        assert 'href="/#analytics"' not in html, page
+        assert 'href="/">Explore' not in html, page
+        assert 'href="/">← All requests' not in html, page

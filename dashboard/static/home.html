@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alex311 Visibility</title>
+<meta name="description" content="Every Alexandria, VA service request on a searchable map, a way to send your own to the City through Alex311, and a place to say whether it was actually addressed.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#1d4ed8">
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2733; --muted:#5c6675;
+    --accent:#1d4ed8; --open:#b45309; --closed:#047857; --border:#e2e8f0;
+    --openbg:#fef3c7; --closedbg:#ecfdf5; --otherbg:#e2e8f0; --accentbg:#dbeafe;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  a { color:var(--accent); }
+  .skip-link { position:absolute; left:8px; top:-48px; z-index:3000; background:var(--panel);
+               color:var(--accent); padding:8px 14px; border:1px solid var(--accent);
+               border-radius:0 0 8px 8px; transition:top .12s; }
+  .skip-link:focus { top:0; }
+
+  /* The site bar, identical to the other pages. */
+  header { display:flex; align-items:baseline; gap:16px; padding:14px 20px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .mark { height:26px; width:26px; align-self:center; }
+  header h1 { font-size:18px; margin:0; }
+  header h1 .home { color: inherit; text-decoration: none; }
+  header h1 .home:hover { color: var(--accent); }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; margin-left:22px; align-self:stretch; }
+  nav.tabs .tab-link { display:flex; align-items:center; gap:6px; text-decoration:none;
+                       font-size:14px; padding:6px 16px 8px; color:var(--muted);
+                       border-bottom:2px solid transparent; }
+  nav.tabs .tab-link:hover { color:var(--ink); border-bottom-color:var(--border); }
+  nav.tabs .tab-link[aria-current="page"] { color:var(--accent); font-weight:600;
+                                            border-bottom-color:var(--accent); }
+  nav.tabs .tab-link[hidden] { display:none; }
+  .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+             background:var(--accentbg); color:var(--accent); padding:1px 6px; border-radius:99px; }
+  @media (max-width:640px) {
+    header { gap:2px 10px; padding:8px 14px 0; }
+    header h1 { font-size:16px; }
+    header .sub { flex-basis:100%; font-size:11px; }
+    nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
+    nav.tabs { flex-wrap: wrap; }
+    nav.tabs .tab-link { flex: 1 1 auto; padding: 8px 8px; font-size: 13px; white-space: nowrap;
+                         justify-content: center; text-align: center; }
+    .tab-tag { display:none; }
+  }
+
+  .wrap { max-width:1000px; margin:0 auto; padding:18px 18px 70px; }
+
+  /* ---- the opening: one sentence about what is here, then the numbers ---- */
+  .hero { padding:26px 0 10px; }
+  .eyebrow { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+             color:var(--muted); margin:0 0 10px; }
+  .hero h2 { font-size:32px; line-height:1.15; margin:0 0 12px; max-width:22ch; text-wrap:balance; }
+  .hero .lede { font-size:17px; color:var(--muted); margin:0 0 20px; max-width:58ch; }
+  .cta { display:flex; gap:10px; flex-wrap:wrap; }
+  .btn { display:inline-block; padding:10px 18px; border-radius:8px; font-size:15px; font-weight:600;
+         text-decoration:none; border:1px solid var(--accent); }
+  .btn.primary { background:var(--accent); color:#fff; }
+  .btn.primary:hover { background:#1e40af; border-color:#1e40af; }
+  .btn.quiet { background:var(--panel); color:var(--accent); }
+  .btn.quiet:hover { background:var(--accentbg); }
+
+  .figures { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;
+             margin:26px 0 8px; }
+  .figure { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+            padding:12px 16px; }
+  .figure .v { font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .figure .l { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;
+               margin-top:2px; }
+  .figures-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
+
+  /* ---- the three things, given equal room on purpose ---- */
+  .three { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; margin:30px 0 8px; }
+  .do { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+        padding:18px 18px 16px; display:flex; flex-direction:column; gap:8px; }
+  .do .n { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+           color:var(--accent); }
+  .do h3 { font-size:18px; margin:0; line-height:1.25; }
+  .do p { margin:0; font-size:14px; color:var(--muted); }
+  .do ul { margin:2px 0 0; padding-left:18px; font-size:14px; color:var(--muted); }
+  .do li { margin:2px 0; }
+  .do .go { margin-top:auto; padding-top:10px; font-size:14px; font-weight:600; }
+  .do .go a { text-decoration:none; }
+  .do .go a:hover { text-decoration:underline; }
+  .do .go .sep { color:var(--muted); font-weight:400; margin:0 6px; }
+
+  /* ---- the newest cases, so the front door shows the live thing ---- */
+  .latest { margin-top:30px; }
+  .latest h3 { font-size:13px; margin:0; padding:10px 14px; border-bottom:1px solid var(--border);
+               color:var(--muted); text-transform:uppercase; letter-spacing:.04em;
+               display:flex; align-items:center; gap:12px; }
+  .latest h3 a { margin-left:auto; font-weight:500; text-transform:none; letter-spacing:0;
+                 font-size:13px; text-decoration:none; }
+  .latest h3 a:hover { text-decoration:underline; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .rows { list-style:none; margin:0; padding:0; }
+  .rows li { display:grid; grid-template-columns:110px minmax(0, 1fr) auto; gap:4px 14px;
+             align-items:baseline; padding:9px 14px; border-top:1px solid var(--border); font-size:14px; }
+  .rows li:first-child { border-top:none; }
+  .rows .case { font-variant-numeric:tabular-nums; text-decoration:none; font-weight:600; }
+  .rows .case:hover { text-decoration:underline; }
+  .rows .what { min-width:0; }
+  .rows .type { display:block; }
+  .rows .where { display:block; color:var(--muted); font-size:13px; white-space:nowrap;
+                 overflow:hidden; text-overflow:ellipsis; }
+  .rows .when { color:var(--muted); font-size:12px; white-space:nowrap; }
+  .badge { display:inline-block; font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px;
+           background:var(--otherbg); color:var(--muted); margin-left:6px; vertical-align:1px; }
+  .badge.open { background:var(--openbg); color:var(--open); }
+  .badge.closed { background:var(--closedbg); color:var(--closed); }
+  .rows .empty { display:block; padding:14px; color:var(--muted); font-size:14px; }
+
+  /* ---- what this is, and is not ---- */
+  .about { margin-top:30px; display:grid; grid-template-columns:1fr 1fr; gap:14px 28px; }
+  .about h3 { font-size:14px; margin:0 0 4px; }
+  .about p { margin:0; font-size:14px; color:var(--muted); }
+  .foot { color:var(--muted); font-size:12px; margin:36px 0 0; padding-top:14px;
+          border-top:1px solid var(--border); }
+
+  @media (max-width:900px) { .three { grid-template-columns:1fr; } }
+  @media (max-width:640px) {
+    .wrap { padding:14px 14px 50px; }
+    .hero { padding:14px 0 6px; }
+    .hero h2 { font-size:25px; }
+    .hero .lede { font-size:15px; }
+    .rows li { grid-template-columns:1fr; gap:2px; }
+    .rows .when { grid-row:1; justify-self:end; }
+    .about { grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { .skip-link { transition:none; } }
+  @media (pointer: coarse) { .btn { min-height:44px; display:inline-flex; align-items:center; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header>
+  <img src="/favicon.svg" alt="" class="mark">
+  <h1><a href="/" class="home">Alex311 Visibility</a></h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs" aria-label="Views">
+    <a class="tab-link" href="/explore">Explore</a>
+    <a class="tab-link" href="/explore#analytics">Analytics</a>
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
+  </nav>
+</header>
+
+<main class="wrap" id="main">
+  <section class="hero">
+    <p class="eyebrow">Alexandria, Virginia · every 311 request, refreshed through the day</p>
+    <h2>What residents ask the City to fix — and what happens next.</h2>
+    <p class="lede">See every Alex311 service request on a map you can search. Send your own to the
+      City from here and keep it in one place. Then say whether it was actually addressed — the one
+      thing the City's own data cannot tell anyone.</p>
+    <div class="cta">
+      <a class="btn primary" href="/explore">Explore requests</a>
+      <a class="btn quiet" href="/submit">Report an issue</a>
+    </div>
+
+    <div class="figures" id="figures" aria-live="polite">
+      <div class="figure"><div class="v" id="f-total">–</div><div class="l">requests on record</div></div>
+      <div class="figure"><div class="v" id="f-open">–</div><div class="l">open right now</div></div>
+      <div class="figure"><div class="v" id="f-median">–</div><div class="l">median days to close</div></div>
+      <div class="figure"><div class="v" id="f-30d">–</div><div class="l">closed within 30 days</div></div>
+    </div>
+    <p class="figures-note" id="f-note">Counting every request the City has published.</p>
+  </section>
+
+  <section class="three" aria-label="What you can do here">
+    <article class="do">
+      <span class="n">See</span>
+      <h3>What has been reported, street by street</h3>
+      <p>Every request the City publishes, on a map and in a list you can search by address,
+        request type, status and date — or draw an area and see just what is inside it.</p>
+      <ul>
+        <li>A clean record page for each case, with the photos residents attached — including
+          the ones the City's own site cannot display.</li>
+        <li>How long things take to close, by type, and how open requests are aging.</li>
+      </ul>
+      <div class="go"><a href="/explore">Explore the map</a><span class="sep">·</span>
+        <a href="/explore#analytics">See the analytics</a></div>
+    </article>
+
+    <article class="do">
+      <span class="n">Report</span>
+      <h3>Send a request to the City from here</h3>
+      <p>Describe the issue, place it on the map and attach a photo. It goes to the City's own
+        Alex311 system and comes back with a real City case number — the same as if you had used
+        their form.</p>
+      <ul>
+        <li>We check the address against the City's list and suggest the spelling it will accept.</li>
+        <li>If something similar is already open nearby, we show you before you send.</li>
+        <li>Your request lands under <b>My requests</b>, so you can find it again.</li>
+      </ul>
+      <div class="go"><a href="/submit">Report an issue</a> <span class="tab-tag">beta</span></div>
+    </article>
+
+    <article class="do">
+      <span class="n">Rate</span>
+      <h3>Say whether it was actually addressed</h3>
+      <p>The City's data says <i>closed</i>. Only the person who reported it knows whether it was
+        fixed. Rate your own request from 1 to 5 — that is the outcome of record for it.</p>
+      <ul>
+        <li>Follow requests you did not send and add a community view, kept separate.</li>
+        <li>Private unless you choose to show your score. Names are never shown.</li>
+        <li>Together, the ratings answer a question on the Analytics tab that no other source can.</li>
+      </ul>
+      <div class="go" id="rate-go"><a href="/submit/my">Sign in to start</a></div>
+    </article>
+  </section>
+
+  <section class="latest card" aria-labelledby="latest-h">
+    <h3 id="latest-h">Newest requests <a href="/explore">All requests →</a></h3>
+    <ol class="rows" id="latest"><li class="empty">Loading…</li></ol>
+  </section>
+
+  <section class="about" aria-label="About this site">
+    <div>
+      <h3>Where the data comes from</h3>
+      <p>The City of Alexandria publishes its Alex311 service requests. This site copies them
+        several times a day, keeps the history, and links every case back to the official
+        record. Reports sent from here go into the same City system as everyone else's.</p>
+    </div>
+    <div>
+      <h3>What this site is not</h3>
+      <p>Not the City, and not a way to reach it in an emergency — for anything urgent, call 911;
+        for the City itself, call 311. For the official site, see
+        <a href="https://alex311.alexandriava.gov" rel="noopener">alex311.alexandriava.gov</a>.</p>
+    </div>
+  </section>
+
+  <p class="foot">Data ingested from the public Alex311 portal. Case links open a record page here,
+    which links to the official City record. This is not an official City of Alexandria service.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const ago = iso => {
+  if (!iso) return '';
+  const h = Math.max(0, (Date.now() - new Date(iso)) / 36e5);
+  if (h < 1) return 'just now';
+  if (h < 24) return `${Math.round(h)} h ago`;
+  const d = Math.round(h / 24);
+  return d === 1 ? 'yesterday' : `${d} days ago`;
+};
+const badge = st => {
+  const s = (st || '').toLowerCase();
+  const cls = s === 'open' ? 'open' : s === 'closed' ? 'closed' : '';
+  return `<span class="badge ${cls}">${esc(st || 'unknown')}</span>`;
+};
+
+// The figures: whole-history counts from /api/meta, and the two "how long" numbers
+// from the same aggregate the Analytics tab draws (unfiltered, so they match it).
+fetch('/api/meta').then(r => r.json()).then(m => {
+  $('f-total').textContent = (m.total ?? 0).toLocaleString();
+  $('f-open').textContent = (m.open ?? 0).toLocaleString();
+  if (m.last_ingest && m.last_ingest.finished_at)
+    $('f-note').textContent = `Counting every request the City has published · updated ${ago(m.last_ingest.finished_at)}.`;
+}).catch(() => {});
+fetch('/api/analytics').then(r => r.json()).then(d => {
+  const s = d.summary || {};
+  $('f-median').textContent = s.median_ttc == null ? '–' : (+s.median_ttc).toFixed(1);
+  $('f-30d').textContent = s.closed ? Math.round(100 * s.closed_within_30d / s.closed) + '%' : '–';
+}).catch(() => {});
+
+// The newest six, linked to their record pages here rather than the City's.
+fetch('/api/requests?sort=requested&dir=desc&limit=6').then(r => r.json()).then(({rows}) => {
+  const box = $('latest');
+  if (!rows || !rows.length) { box.innerHTML = '<li class="empty">Nothing on record yet.</li>'; return; }
+  box.innerHTML = rows.map(r => `<li>
+    <a class="case" href="/r/${encodeURIComponent(r.service_request_id)}">${esc(r.service_request_id)}</a>
+    <span class="what"><span class="type">${esc(r.service_name || 'Request')}${badge(r.status)}</span>
+      <span class="where">${esc(r.address || 'No address given')}</span></span>
+    <span class="when">${ago(r.requested_datetime)}</span></li>`).join('');
+}).catch(() => { $('latest').innerHTML = '<li class="empty">Could not load the newest requests.</li>'; });
+
+// Signed in: the account links appear, and the rating card points at the list.
+fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null})
+  .then(({user}) => {
+    if (user) { $('nav-my').hidden = false;
+                $('rate-go').innerHTML = '<a href="/submit/my">My requests</a>'; }
+    if (user && user.role === 'admin') $('nav-admin').hidden = false; })
+  .catch(() => {});
+</script>
+</body>
+</html>

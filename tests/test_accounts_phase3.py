@@ -17,7 +17,7 @@ APP = (ROOT / "dashboard/app.py").read_text()
 DB = (ROOT / "src/alex311/db.py").read_text()
 SCHEMA = (ROOT / "src/alex311/schema.sql").read_text()
 RECORD = (ROOT / "dashboard/static/request.html").read_text()
-INDEX = (ROOT / "dashboard/static/index.html").read_text()
+INDEX = (ROOT / "dashboard/static/explore.html").read_text()
 
 
 # --------------------------------------------------------------- the ask
