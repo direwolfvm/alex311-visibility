@@ -79,6 +79,11 @@
   .held { margin:0 0 10px; padding-left:18px; font-size:14px; }
   .held li { margin:4px 0; }
   .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .namerow { margin-top:14px; }
+  .namerow label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .namerow input { flex:1 1 220px; max-width:320px; padding:6px 9px; border:1px solid var(--border);
+                   border-radius:7px; font:inherit; font-size:14px; }
+  .namerow input:focus { outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
   .btn { display:inline-block; padding:5px 10px; border:1px solid var(--border); border-radius:7px;
          background:#fff; color:var(--ink); text-decoration:none; font-size:13px; }
   .btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -117,10 +122,21 @@
         <div class="hint" id="role"></div>
       </div>
     </div>
-    <p class="hint" style="margin:12px 0 0">There is no name or profile to fill in, on purpose: this
-      site keeps an account id and nothing about you, so a rating can be counted without a person
-      being identifiable. Your email, where we hold one, is only used to sign you in and to link a
-      password sign-in with a Google or email-link sign-in to the same account.</p>
+    <form class="namerow" id="name-form">
+      <label for="display-name">Display name <span class="hint">(optional)</span></label>
+      <div class="row">
+        <input type="text" id="display-name" maxlength="40" autocomplete="nickname"
+               placeholder="How you would like to be greeted">
+        <button type="submit" id="save-name">Save</button>
+        <span class="hint" id="name-status" role="status"></span>
+      </div>
+    </form>
+    <p class="hint" style="margin:12px 0 0">The name shows only to you — in the account chip and
+      here. It is never on the public site: a score you choose to show carries no name, and nothing
+      here reaches the City. Beyond that, this site keeps an account id and nothing about you, so a
+      rating can be counted without a person being identifiable. Your email, where we hold one, is
+      only used to sign you in and to link a password sign-in with a Google or email-link sign-in to
+      the same account.</p>
   </div>
 
   <div class="card">
@@ -177,6 +193,7 @@ async function api(path, opts = {}) {
   if (!user) { location.replace('/submit/login'); return; }
   const label = user.label || user.email || 'account';
   $('label').textContent = label;
+  $('display-name').value = user.display_name || '';
   const m = /[A-Za-z0-9]/.exec(label); $('avatar').textContent = m ? m[0].toUpperCase() : '?';
   const ways = [];
   if (user.firebase_linked) ways.push('Google or an emailed link');
@@ -187,6 +204,18 @@ async function api(path, opts = {}) {
   $('role').textContent = user.role === 'admin' ? 'Administrator of this site.' : '';
   $('policy').textContent = user.policy_version ? `version ${user.policy_version}` : 'not yet recorded';
 })().catch(err => { $('error').textContent = err.message; $('error').hidden = false; });
+
+$('name-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const st = $('name-status'); st.textContent = 'Saving…';
+  try {
+    const {display_name} = await api('/profile', {method: 'PUT',
+      body: JSON.stringify({display_name: $('display-name').value})});
+    st.textContent = display_name ? 'Saved.' : 'Cleared.';
+    // the chip in the bar was drawn at load with the old label; a reload redraws both
+    setTimeout(() => location.reload(), 400);
+  } catch (err) { st.textContent = err.message; }
+});
 
 $('logout-all').addEventListener('click', async () => {
   const b = $('logout-all');

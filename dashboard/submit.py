@@ -98,6 +98,10 @@ class EmailLinkBody(BaseModel):
     email: str
 
 
+class ProfileBody(BaseModel):
+    display_name: str | None = None
+
+
 class FirebaseSession(BaseModel):
     id_token: str
 
@@ -348,7 +352,8 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
                           "label": user.label, "firebase_uid": user.firebase_uid,
                           "firebase_linked": user.firebase_uid is not None,
                           "has_password": user.has_password,
-                          "policy_version": user.policy_version}
+                          "policy_version": user.policy_version,
+                          "display_name": user.display_name}
                          if user else None),
                 "firebase": fb.configured()}
 
@@ -380,6 +385,19 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
     def account_ui(actor: str = Depends(gate)):
         """Who you are here, what we hold, and the ways out."""
         return account_page.read_text()
+
+    @router.put("/api/profile")
+    def set_profile(body: ProfileBody, request: Request, actor: str = Depends(gate)):
+        """The one thing a person can set about themselves: a display name,
+        shown to them in the chip and on the account page and nowhere public."""
+        user_id = _account(request)
+        try:
+            name = pa.clean_display_name(body.display_name)
+        except pa.BadName as e:
+            raise HTTPException(400, str(e))
+        with pool_getter().connection() as conn:
+            pa.set_display_name(conn, user_id, name)
+        return {"display_name": name}
 
     @router.post("/api/logout-all")
     def logout_everywhere(request: Request, actor: str = Depends(gate)):

@@ -197,6 +197,10 @@ CREATE TABLE IF NOT EXISTS portal_users (
     last_login_at   TIMESTAMPTZ,
     disabled_at     TIMESTAMPTZ
 );
+-- A name the person chose to be shown to themselves — in the account chip
+-- and on the account page. Optional, never shown on the public site: a score
+-- someone chooses to show carries no name, and nothing here reaches the City.
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS display_name TEXT;
 -- Two ways in, one account. The password columns serve the testers already
 -- here; a Firebase sign-in carries only the uid, and for such an account we
 -- hold no email at all — Firebase does. An existing tester who signs in with
