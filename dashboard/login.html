@@ -71,7 +71,8 @@
     <p><b>Why it needs a sign-in.</b> It can send real requests to the City, which
       dispatches real staff. Access is limited while that is being evaluated with them.</p>
     <p><b>What it is not.</b> Not an official City of Alexandria service, and not
-      affiliated with or endorsed by the City. The official portal is always available at
+      affiliated with or endorsed by the City. <b>This sign-in is for this site only:</b> it is
+      not your Alex311 account with the City, and it does not connect to one. The official portal is always available at
       <a href="https://alex311.alexandriava.gov/customer/s/" target="_blank"
          rel="noopener">alex311.alexandriava.gov</a>, and nothing here is required to use it.</p>
   </div>
@@ -186,7 +187,12 @@ async function finish(user) {
     const email = $('link-email').value.trim();
     if (!email) { $('link-email').focus(); return; }
     try {
-      await auth.sendSignInLinkToEmail(email, {url: location.origin + '/submit/login', handleCodeInApp: true});
+      // Our own email when the server can send one; Firebase's otherwise.
+      const r = await fetch('/submit/api/email-link', {method: 'POST',
+        headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email})});
+      if (r.status === 503)
+        await auth.sendSignInLinkToEmail(email, {url: location.origin + '/submit/login', handleCodeInApp: true});
+      else if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || `could not send (${r.status})`);
       localStorage.setItem('alex311.signin.email', email);
       say('sent', `Sent. Open the link in the email we just sent to ${email}, on this device.`);
       $('error').hidden = true;

@@ -10,10 +10,12 @@ off to the official portal with a copyable summary.
 """
 from __future__ import annotations
 
+import logging
 import math
 import os
 import re
 import secrets
+import time
 from urllib.parse import parse_qs
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,10 +26,12 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
-from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner,
+from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner, mail,
                      portal_auth as pa)
 
 from . import registry as R
+
+log = logging.getLogger("alex311.submit")
 
 #: Basic auth is kept alongside the login page on purpose. People get a real
 #: page they can read, style and sign out of; scripts, the runbook's curl
@@ -88,6 +92,10 @@ def merge_candidates(rows: list[dict], key: str) -> list[dict]:
             merged[k]["address"] = r["address"]
         merged[k]["seen"] += r["seen"]
     return sorted(merged.values(), key=lambda c: (not c["exact"], -c["seen"]))
+
+
+class EmailLinkBody(BaseModel):
+    email: str
 
 
 class FirebaseSession(BaseModel):
@@ -249,6 +257,49 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         browser key is meant to be in the page, and it is scoped to Firebase
         APIs and does nothing without a signed-in user behind it."""
         return {"config": fb.client_config(), "policy_version": fb.POLICY_VERSION}
+
+    # A sign-in link is one email an hour per address, and a handful per
+    # caller, so a stranger cannot use this site to flood an inbox.
+    link_sends: dict[str, list[float]] = {}
+
+    def _allow(key: str, limit: int, window: float = 3600.0) -> bool:
+        now = time.monotonic()
+        recent = [t for t in link_sends.get(key, []) if now - t < window]
+        if len(recent) >= limit:
+            link_sends[key] = recent
+            return False
+        recent.append(now)
+        link_sends[key] = recent
+        return True
+
+    @public.post("/api/email-link")
+    def email_sign_in_link(body: EmailLinkBody, request: Request):
+        """Send a sign-in link in this site's own email.
+
+        Firebase mints the link; we put it on our domain and send it from our
+        sender with our words, because the project's own email — its name, its
+        address, its template — is shared with another application and is not
+        ours to change. 503 when no mail transport is configured, which the
+        sign-in page reads as "let Firebase send its own".
+        """
+        if not (fb.configured() and mail.configured()):
+            raise HTTPException(503, "this site does not send its own sign-in email")
+        email = body.email.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            raise HTTPException(400, "that does not look like an email address")
+        caller = request.headers.get("x-forwarded-for", "").split(",")[0].strip() \
+            or (request.client.host if request.client else "?")
+        if not (_allow(f"email:{email}", 2) and _allow(f"ip:{caller}", 10)):
+            raise HTTPException(429, "a link was sent recently; check that inbox first")
+        origin = os.environ.get("SITE_ORIGIN") or str(request.base_url).rstrip("/")
+        try:
+            link = fb.mint_sign_in_link(email, origin)
+            subject, text, html = fb.sign_in_email(link, origin)
+            mail.send(email, subject, text, html)
+        except Exception as e:                   # never echo the link or the address
+            log.warning("sign-in email failed: %s", type(e).__name__)
+            raise HTTPException(502, "could not send the email just now; try again shortly")
+        return {"sent": True}
 
     @public.post("/api/session")
     def session_from_firebase(body: FirebaseSession, request: Request):
