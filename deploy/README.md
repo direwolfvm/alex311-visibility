@@ -208,16 +208,33 @@ are. Instead the service mints the link (`accounts:sendOobCode` with
 itself — `POST /submit/api/email-link`. The page falls back to Firebase's own
 email when this is not configured (the endpoint answers 503).
 
+As wired on 2026-09-16: the domain `alex311visibility.me` is a Mailgun sending
+domain on the shared Mailgun account (Foundation plan — the free tier allows one
+custom domain and the other application holds it). Its SPF, DKIM
+(`smtp._domainkey`) and tracking (`email` CNAME) records live in DreamHost DNS,
+plus a monitor-only `_dmarc` record. The service holds a **domain-scoped
+sending key** for this domain only (Mailgun → Send → Domain settings → Sending
+keys), stored as the secret `alex311-mailgun-key`; it is not the account key,
+and rotating the account key does not touch it.
+
 Configure a sender and one transport on the **dashboard service** only:
 
 ```bash
 # Mailgun (the domain must be added and verified in Mailgun: SPF + DKIM records)
 gcloud run services update alex311-dashboard --region=$REGION \
-    --set-env-vars=ALEX311_MAIL_FROM="Alex311 Visibility <no-reply@alex311visibility.me>",ALEX311_MAIL_DOMAIN=alex311visibility.me,SITE_ORIGIN=https://alex311visibility.me \
-    --set-secrets=MAILGUN_API_KEY=MAILGUN_API_KEY:latest
+    --update-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Visibility <no-reply@alex311visibility.me>|ALEX311_MAIL_DOMAIN=alex311visibility.me|SITE_ORIGIN=https://alex311visibility.me' \
+    --update-secrets=MAILGUN_API_KEY=alex311-mailgun-key:latest
 # or any SMTP relay with STARTTLS instead of Mailgun:
-#   --set-env-vars=SMTP_HOST=...,SMTP_PORT=587,SMTP_USER=... --set-secrets=SMTP_PASSWORD=...
+#   --update-env-vars=SMTP_HOST=...,SMTP_PORT=587,SMTP_USER=... --update-secrets=SMTP_PASSWORD=...
 ```
+
+> **Use `--update-env-vars` / `--update-secrets`, never `--set-…`.** The `set`
+> forms replace the *whole* list: `--set-secrets` with one entry dropped
+> `DATABASE_URL` and the service failed to start; `--set-env-vars` dropped the
+> `FIREBASE_*` and `MEDIA_BUCKET` values and the site ran without sign-in for
+> a minute until they were put back from the previous revision
+> (`gcloud run revisions describe <rev> --format=json`). The `^|^` prefix
+> changes the separator so a value may contain a comma.
 
 `SITE_ORIGIN` is where the link lands; without it the service uses the
 request's own origin, which behind Cloud Run may be the `run.app` address.
