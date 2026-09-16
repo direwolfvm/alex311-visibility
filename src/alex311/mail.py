@@ -9,7 +9,7 @@ it in an email of its own — our sender, our words, our domain in the link.
 
 Two transports, chosen by what is configured:
 
-    ALEX311_MAIL_FROM      "Alex311 Visibility <no-reply@alex311visibility.me>" (required)
+    ALEX311_MAIL_FROM      "Alex311 Reborn <no-reply@alex311visibility.me>" (required)
     MAILGUN_API_KEY +      Mailgun's HTTP API; the domain must be verified there
     ALEX311_MAIL_DOMAIN    (e.g. alex311visibility.me)
     SMTP_HOST, SMTP_PORT,  any SMTP relay with STARTTLS (587) instead

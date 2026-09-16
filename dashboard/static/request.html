@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Service request · Alex311 Visibility</title>
+<title>Service request · Alex311 Reborn</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -182,7 +182,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <header>
   <img src="/favicon.svg" alt="" class="mark">
-  <h1><a href="/" class="home">Alex311 Visibility</a></h1>
+  <h1><a href="/" class="home">Alex311 Reborn</a></h1>
   <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
   <nav class="tabs" aria-label="Views">
     <a class="tab-link" href="/explore">Explore</a>
@@ -468,7 +468,7 @@ fetch(`/api/request/${encodeURIComponent(CASE)}`)
     return r.json();
   })
   .then(d => {
-    document.title = `${d.service_request_id} · ${d.service_name || 'Service request'} · Alex311`;
+    document.title = `${d.service_request_id} · ${d.service_name || 'Service request'} · Alex311 Reborn`;
     render(d);
   })
   .catch(e => {

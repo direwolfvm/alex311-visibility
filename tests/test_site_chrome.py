@@ -116,7 +116,7 @@ def test_the_sign_in_page_shares_the_background():
 def test_the_wordmark_is_the_way_home(page):
     """The front door is /, and no tab points at it: the site's name does, on
     every page, the way readers expect."""
-    assert '<h1><a href="/" class="home">Alex311 Visibility</a></h1>' in HTML[page]
+    assert '<h1><a href="/" class="home">Alex311 Reborn</a></h1>' in HTML[page]
 
 
 def test_nothing_still_points_at_the_old_dashboard_address():

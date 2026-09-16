@@ -1,6 +1,6 @@
-# Alex311 Visibility
+# Alex311 Reborn
 
-Unofficial data-visibility portal for Alexandria, VA's Alex311 service
+Unofficial portal for Alexandria, VA's Alex311 service
 requests. The city portal (Salesforce Experience Cloud) has no public API or
 bulk export; this project ingests records via the site's own guest-accessible
 Aura endpoint, stores them in Postgres (Cloud SQL), mirrors photos to GCS,

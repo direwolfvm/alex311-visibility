@@ -171,7 +171,7 @@ password form. Both come from Identity Platform in this project, which is
 | | value |
 |---|---|
 | tenant | `alex311-qfnem` — display name `alex311` |
-| web app | "Alex311 Visibility", `1:650621702399:web:b56cf6a8bd8d4868273cca` |
+| web app | `1:650621702399:web:b56cf6a8bd8d4868273cca` (named "Alex311 Visibility" in the Firebase console — a display label only, left as is) |
 | auth domain | `permitting-ai-helper.firebaseapp.com` |
 | browser key | the project's "Browser key (auto created by Firebase)" |
 
@@ -222,7 +222,7 @@ Configure a sender and one transport on the **dashboard service** only:
 ```bash
 # Mailgun (the domain must be added and verified in Mailgun: SPF + DKIM records)
 gcloud run services update alex311-dashboard --region=$REGION \
-    --update-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Visibility <no-reply@alex311visibility.me>|ALEX311_MAIL_DOMAIN=alex311visibility.me|SITE_ORIGIN=https://alex311visibility.me' \
+    --update-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Reborn <no-reply@alex311visibility.me>|ALEX311_MAIL_DOMAIN=alex311visibility.me|SITE_ORIGIN=https://alex311visibility.me' \
     --update-secrets=MAILGUN_API_KEY=alex311-mailgun-key:latest
 # or any SMTP relay with STARTTLS instead of Mailgun:
 #   --update-env-vars=SMTP_HOST=...,SMTP_PORT=587,SMTP_USER=... --update-secrets=SMTP_PASSWORD=...
