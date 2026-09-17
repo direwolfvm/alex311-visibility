@@ -148,3 +148,14 @@ def test_rls_bites_against_a_real_database():
     finally:
         with db.connect() as owner:
             owner.execute("DELETE FROM portal_users WHERE email LIKE 'p2-%@test'"); owner.commit()
+
+
+def test_every_row_on_my_requests_links_to_the_citys_record():
+    """A case number is enough for the City's own record page, mirrored here
+    or not — a request filed minutes ago is not in the mirror until the next
+    ingest, and the link is the one thing the person can already use."""
+    routes = (ROOT / "dashboard/submit.py").read_text()
+    fn = routes.split("def my_requests(")[1].split("\n    @router")[0]
+    assert 'link["report_url"] = Alex311Client.deep_link(link["service_request_id"])' in fn
+    assert 'href="${esc(l.report_url)}" target="_blank" rel="noopener"' in MY
+    assert "City record" in MY

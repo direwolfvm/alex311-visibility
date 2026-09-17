@@ -49,7 +49,7 @@
   .notice { background:var(--infobg); border:1px solid #bfdbfe; color:#1e40af; border-radius:10px; padding:11px 14px; font-size:13px; margin-bottom:18px; }
   .step { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
   .step h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 12px; display:flex; justify-content:space-between; }
-  input[type=text], input[type=search], input[type=date], input[type=time], textarea, select {
+  input[type=text], input[type=search], input[type=date], input[type=time], input[type=email], input[type=tel], textarea, select {
     width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:7px; font:inherit; background:#fff; }
   textarea { min-height:78px; resize:vertical; }
   .svc { padding:9px 11px; border:1px solid var(--border); border-radius:8px; margin-top:8px; cursor:pointer; }
@@ -134,6 +134,10 @@
   .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; align-items:center; }
   button.primary, a.primary { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:10px 16px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
   button.ghost { background:#fff; color:var(--accent); border:1px solid var(--border); border-radius:8px; padding:10px 16px; font:inherit; cursor:pointer; }
+  /* the armed send button: the same shape as .primary, in the color of a point of no return */
+  button.danger { background:#b91c1c; color:#fff; border:none; border-radius:8px; padding:10px 16px; font:inherit; font-weight:600; cursor:pointer; }
+  button.danger:hover { background:#991b1b; }
+  button.ghost:hover { border-color:var(--accent); }
   button:disabled, a.disabled { opacity:.5; pointer-events:none; }
   .foot { color:var(--muted); font-size:12px; margin-top:8px; }
   [hidden] { display:none !important; }
@@ -737,8 +741,8 @@ async function watch(attemptId) {
     if (st.submit_state === 'filed' || st.submit_state === 'failed') return;
     await new Promise(r => setTimeout(r, 2500));
   }
-  $('tr-filing').querySelector('span').textContent =
-    'still working. It will finish without this page open; check back or ask an administrator.';
+  $('tr-filing').querySelector('span').innerHTML =
+    'still working. It will finish without this page open — check <a href="/submit/my">My requests</a> later, or ask an administrator.';
 }
 
 $('queue-btn').addEventListener('click', async () => {
@@ -768,7 +772,10 @@ $('queue-btn').addEventListener('click', async () => {
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || `HTTP ${r.status}`);
     box.innerHTML = `<div class="box ok"><b>Sent as request ${state.attempt.attempt_id}.</b>
-      ${esc(d.message)}</div>`;
+      ${esc(d.message)}<br>
+      <b>You can leave this page.</b> The filing goes through on its own, with or without this
+      page open; it is already under <a href="/submit/my">My requests</a>, and the City's case
+      number will appear there and on the record page once they assign one.</div>`;
     btn.hidden = true;
     btn.nextElementSibling?.remove();
     $('policy-warning').innerHTML = '';
