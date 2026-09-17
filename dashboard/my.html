@@ -56,6 +56,8 @@
   th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border-top:none; white-space:nowrap; }
   td.num { font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap; }
   td.actions { text-align:right; white-space:nowrap; }
+  td.actions .city { font-size:12px; margin-right:10px; text-decoration:none; }
+  td.actions .city:hover { text-decoration:underline; }
   .case { font:600 13px ui-monospace,"SF Mono",Menlo,monospace; }
   .badge { display:inline-block; padding:1px 9px; border-radius:99px; font-size:11px; font-weight:700;
            text-transform:uppercase; letter-spacing:.04em; }
@@ -149,7 +151,9 @@ function row(l) {
     <td>${badge(l.status)}</td>
     <td class="num">${day(l.requested_datetime)}</td>
     <td class="num">${day(l.last_updated_datetime)}</td>
-    <td class="actions"><button data-unlink="${esc(l.service_request_id)}">${l.relation === 'mine' ? 'Remove from list' : 'Stop following'}</button></td>
+    <td class="actions"><a class="city" href="${esc(l.report_url)}" target="_blank" rel="noopener"
+        title="The City's own record of this case">City record ↗</a>
+      <button data-unlink="${esc(l.service_request_id)}">${l.relation === 'mine' ? 'Remove from list' : 'Stop following'}</button></td>
   </tr>`;
 }
 async function load() {

@@ -26,6 +26,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
+from alex311.client import Alex311Client
 from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner, mail,
                      portal_auth as pa)
 
@@ -433,6 +434,10 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         user_id = _account(request)
         with pool_getter().connection() as conn:
             links = adb.my_links(conn, user_id=user_id)
+        # The City's record exists the moment a case number does — before this
+        # mirror has read it — so the link goes on every row, not just the mirrored.
+        for link in links:
+            link["report_url"] = Alex311Client.deep_link(link["service_request_id"])
         return {"links": links}
 
     @router.get("/api/link/{case}")

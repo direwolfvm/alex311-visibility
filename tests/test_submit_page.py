@@ -292,3 +292,19 @@ def test_the_queue_views_are_still_not_open_to_every_tester():
     for endpoint in ("def submission_queue(", "def queue(limit", "def instrument("):
         line = src[src.index(endpoint):src.index(endpoint) + 160]
         assert "admin_only" in line, f"{endpoint} is not restricted"
+
+
+def test_the_contact_fields_and_the_armed_button_are_styled():
+    """Email and phone inputs fell through the input selector and rendered as
+    bare browser controls beside the styled name fields; the armed send button
+    switched to a class no rule defined."""
+    assert "input[type=email], input[type=tel]" in PAGE
+    assert "button.danger {" in PAGE and "btn.classList.add('danger')" in PAGE
+
+
+def test_after_sending_the_page_says_you_may_leave():
+    """The filing happens in a job, not in this tab. Once the send is accepted
+    the page says so and points at My requests, where the case number lands."""
+    assert "<b>You can leave this page.</b>" in PAGE
+    assert 'under <a href="/submit/my">My requests</a>' in PAGE
+    assert "It will finish without this page open" in PAGE
