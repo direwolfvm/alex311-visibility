@@ -1,4 +1,5 @@
-"""Phase 1 of the account system: sign in with Firebase, alongside the passwords.
+"""Phase 1 of the account system: sign in with Firebase. (The password door it
+once ran alongside was retired on 2026-09-18; see test_the_password_door_is_retired.)
 
 Two doors, one gate. The password form stays because testers are already on
 it; Firebase is how everyone else arrives. What is pinned here is the shape of
@@ -52,17 +53,21 @@ def test_the_client_config_is_only_ever_public_values(monkeypatch):
 
 # ---------------------------------------------------------- the two doors
 
-def test_the_password_door_is_still_open():
-    """Testers were given passwords and are mid-test. Retiring that path was
-    explicitly not wanted."""
-    assert '<form id="form" method="post" action="/submit/login">' in LOGIN
-    assert 'name="password"' in LOGIN
-    assert "def login(conn, email: str, password: str" in PA
+def test_the_password_door_is_retired():
+    """It served the first testers; the site has one door now. No form, no
+    login function, no hash columns, no reset route — and the schema drops
+    the columns on existing databases."""
+    assert 'action="/submit/login"' not in LOGIN and 'name="password"' not in LOGIN
+    assert "def login(conn" not in PA and "def hash_password" not in PA and "def set_password" not in PA
+    assert '@public.post("/login")' not in API and "/reset" not in API
+    schema = (ROOT / "src/alex311/schema.sql").read_text()
+    assert "password_hash   TEXT" not in schema
+    assert "DROP COLUMN IF EXISTS password_hash" in schema and "DROP COLUMN IF EXISTS salt" in schema
 
 
 def test_the_firebase_door_mints_the_same_cookie():
-    """One gate: the session a Firebase sign-in gets is the one a password
-    login gets, so every downstream check is unchanged."""
+    """One gate: a Firebase sign-in ends in the same session cookie every
+    downstream check already understands."""
     fn = API.split('@public.post("/api/session")')[1].split("@public.get")[0]
     assert "pa.sign_in_with_firebase(" in fn
     assert "resp.set_cookie(pa.SESSION_COOKIE" in fn
@@ -98,8 +103,9 @@ def test_the_login_page_shows_the_policy_beside_the_sign_in():
 
 
 def test_firebase_is_optional_at_runtime():
-    """An image with no FIREBASE_* set is the password-only site it was."""
-    assert "if (!cfg.config) return;" in LOGIN
+    """An image with no FIREBASE_* set has no door, and says so rather than
+    showing an empty page."""
+    assert "if (!cfg.config) { say('error', 'Sign-in is not set up on this copy of the site.'); return; }" in LOGIN
     assert '<div id="firebase-signin" hidden>' in LOGIN
 
 
@@ -137,7 +143,7 @@ def test_contact_details_are_purged_the_moment_a_request_is_filed():
 # --------------------------------------------------------- the users panel
 
 def test_the_users_panel_can_show_an_account_that_has_no_email():
-    assert "u.has_password" in ADMIN and "u.firebase_linked" in ADMIN
+    assert "u.firebase_linked" in ADMIN and "invited, not yet signed in" in ADMIN
     assert "firebase_uid IS NOT NULL AS firebase_linked" in PA
 
 
@@ -158,8 +164,8 @@ def test_linking_rules_against_postgres():
                      "(SELECT user_id FROM portal_users WHERE email LIKE 'p1-%@test' OR firebase_uid LIKE 'p1-%')")
         conn.execute("DELETE FROM portal_users WHERE email LIKE 'p1-%@test' OR firebase_uid LIKE 'p1-%'")
         conn.commit()
-        # a tester with a password, no firebase yet
-        tester, _pw = pa.create_user(conn, "p1-tester@test", "user", created_by="test")
+        # an invited tester, no firebase yet
+        tester = pa.create_user(conn, "p1-tester@test", "user", created_by="test")
         # 1. unverified email must NOT claim the tester's account
         tok = pa.sign_in_with_firebase(conn, uid="p1-uid-a", email="p1-tester@test",
                                        email_verified=False, policy_version="t")

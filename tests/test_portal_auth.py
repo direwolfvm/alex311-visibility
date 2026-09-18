@@ -1,9 +1,10 @@
-"""The front door: who may open the gated prototype.
+"""The front door: who may open the gated pages.
 
-Not `alex311.identity`, which answers which *resident* filed a request. This is
-the gate, and its job is keeping out passers-by. The bar is modest on purpose,
-but two things are not negotiable and are tested here: passwords are never
-stored in the clear, and the last administrator cannot be locked out.
+One door now — Firebase sign-in, linked to an account row here — and the
+session that follows. The password door was retired on 2026-09-18; what stays
+non-negotiable is tested here: session tokens are never stored in the clear,
+a disabled account loses its sessions at once, an invitation links to the
+sign-in that claims it, and the last administrator cannot be locked out.
 """
 import os
 
@@ -17,51 +18,38 @@ pytestmark_db = pytest.mark.skipif(not os.environ.get("DATABASE_URL"),
 
 # --------------------------------------------------------- pure, always run
 
-def test_a_password_never_matches_its_own_hash():
-    digest, salt = pa.hash_password("hunter2")
-    assert "hunter2" not in digest and len(digest) == 64
+def test_the_password_machinery_is_gone():
+    for name in ("hash_password", "verify_password", "new_password", "login", "set_password"):
+        assert not hasattr(pa, name), name
 
 
-def test_the_same_password_hashes_differently_for_two_people():
-    """Per-user salt, so one cracked hash does not unlock the other account."""
-    a, _ = pa.hash_password("same password")
-    b, _ = pa.hash_password("same password")
-    assert a != b
-
-
-def test_verify_accepts_the_right_password_and_nothing_else():
-    digest, salt = pa.hash_password("correct horse")
-    assert pa.verify_password("correct horse", digest, salt) is True
-    assert pa.verify_password("correct hors", digest, salt) is False
-    assert pa.verify_password("", digest, salt) is False
-
-
-def test_generated_passwords_are_unguessable_enough_and_readable():
-    passwords = {pa.new_password() for _ in range(200)}
-    assert len(passwords) == 200, "generated passwords must not repeat"
-    one = passwords.pop()
-    assert one.count("-") == 3 and len(one) == 23
-    assert not set("l1o0") & set(one), "characters that look alike are excluded"
-
-
-@pytest.mark.parametrize("raw,clean", [
-    ("  Person@Example.COM ", "person@example.com"),
-    ("A@B.co", "a@b.co"),
+@pytest.mark.parametrize("raw, clean", [
+    ("A@Example.com", "a@example.com"),
+    ("  b@example.com  ", "b@example.com"),
 ])
-def test_emails_are_normalised(raw, clean):
+def test_emails_are_normalized(raw, clean):
     assert pa.normalize_email(raw) == clean
 
 
 def test_roles_are_limited():
-    assert pa.ROLES == ("admin", "user")
+    assert set(pa.ROLES) == {"admin", "user"}
+
+
+def test_the_label_prefers_what_the_person_chose():
+    assert pa.PortalUser("pu_abcdef123456", "a@b.co", "user", display_name="Jo").label == "Jo"
+    assert pa.PortalUser("pu_abcdef123456", "a@b.co", "user").label == "a@b.co"
+    assert pa.PortalUser("pu_abcdef123456", None, "user").label == "account 123456"
 
 
 # ------------------------------------------------------- flows, need a database
 
 @pytest.fixture()
 def conn():
-    if not os.environ.get("DATABASE_URL"):
+    url = os.environ.get("DATABASE_URL", "")
+    if not url:
         pytest.skip("needs DATABASE_URL")
+    if "localhost" not in url and "127.0.0.1" not in url:
+        pytest.skip("this fixture wipes every account; it only runs against a local database")
     from alex311 import db
     c = db.connect()
     c.execute("DELETE FROM portal_sessions")
@@ -74,106 +62,95 @@ def conn():
     c.close()
 
 
+def arrive(conn, uid, email, verified=True):
+    return pa.sign_in_with_firebase(conn, uid=uid, email=email, email_verified=verified,
+                                    policy_version="t")
+
+
 @pytestmark_db
-def test_a_new_user_can_sign_in_and_is_recognised(conn):
-    user, password = pa.create_user(conn, "a@example.com", "user")
-    token = pa.login(conn, "a@example.com", password)
+def test_a_first_sign_in_makes_an_account_and_a_session(conn):
+    token = arrive(conn, "uid-a", "a@example.com")
     assert token
     seen = pa.session_user(conn, token)
-    assert seen.email == "a@example.com" and seen.is_admin is False
+    assert seen.firebase_uid == "uid-a" and seen.is_admin is False
 
 
 @pytestmark_db
-def test_the_password_is_not_in_the_table(conn):
-    _user, password = pa.create_user(conn, "a@example.com")
-    row = conn.execute("SELECT password_hash, salt FROM portal_users").fetchone()
-    assert password not in row["password_hash"] and password not in row["salt"]
+def test_an_invitation_is_claimed_by_the_matching_verified_sign_in(conn):
+    invited = pa.create_user(conn, "a@example.com", "admin", created_by="test")
+    token = arrive(conn, "uid-a", "A@Example.com")
+    seen = pa.session_user(conn, token)
+    assert seen.user_id == invited.user_id and seen.is_admin
+    assert conn.execute("SELECT count(*) AS n FROM portal_users").fetchone()["n"] == 1
 
 
 @pytestmark_db
-def test_the_wrong_password_opens_nothing(conn):
-    pa.create_user(conn, "a@example.com", password="right")
-    assert pa.login(conn, "a@example.com", "wrong") is None
+def test_an_unverified_address_cannot_claim_an_invitation(conn):
+    invited = pa.create_user(conn, "a@example.com", "admin", created_by="test")
+    token = arrive(conn, "uid-x", "a@example.com", verified=False)
+    seen = pa.session_user(conn, token)
+    assert seen.user_id != invited.user_id and not seen.is_admin
 
 
 @pytestmark_db
-def test_an_unknown_address_is_refused_without_saying_so(conn):
-    """Same answer as a wrong password, so this cannot be used to find accounts."""
-    assert pa.login(conn, "nobody@example.com", "anything") is None
-
-
-@pytestmark_db
-def test_signing_in_is_case_and_space_insensitive(conn):
-    _user, password = pa.create_user(conn, "Person@Example.com")
-    assert pa.login(conn, "  person@EXAMPLE.com ", password)
-
-
-@pytestmark_db
-def test_a_disabled_user_cannot_sign_in_and_loses_their_session(conn):
-    user, password = pa.create_user(conn, "a@example.com")
-    token = pa.login(conn, "a@example.com", password)
+def test_a_disabled_user_loses_their_session_at_once(conn):
+    token = arrive(conn, "uid-a", "a@example.com")
+    user = pa.session_user(conn, token)
     pa.set_disabled(conn, user.user_id, True)
     assert pa.session_user(conn, token) is None, "an open session must end at once"
-    assert pa.login(conn, "a@example.com", password) is None
-
-
-@pytestmark_db
-def test_changing_a_password_ends_the_old_sessions(conn):
-    user, password = pa.create_user(conn, "a@example.com")
-    token = pa.login(conn, "a@example.com", password)
-    fresh = pa.set_password(conn, user.user_id)
-    assert pa.session_user(conn, token) is None
-    assert pa.login(conn, "a@example.com", fresh)
+    assert arrive(conn, "uid-a", "a@example.com") is None
 
 
 @pytestmark_db
 def test_signing_out_ends_that_session_only(conn):
-    _user, password = pa.create_user(conn, "a@example.com")
-    one = pa.login(conn, "a@example.com", password)
-    two = pa.login(conn, "a@example.com", password)
+    one = arrive(conn, "uid-a", "a@example.com")
+    two = arrive(conn, "uid-a", "a@example.com")
     pa.logout(conn, one)
     assert pa.session_user(conn, one) is None
     assert pa.session_user(conn, two) is not None
 
 
 @pytestmark_db
+def test_signing_out_everywhere_ends_every_session(conn):
+    one = arrive(conn, "uid-a", "a@example.com")
+    two = arrive(conn, "uid-a", "a@example.com")
+    user = pa.session_user(conn, one)
+    assert pa.logout_all(conn, user.user_id) == 2
+    assert pa.session_user(conn, one) is None and pa.session_user(conn, two) is None
+
+
+@pytestmark_db
 def test_an_unknown_token_is_nobody(conn):
-    assert pa.session_user(conn, "not-a-token") is None
+    assert pa.session_user(conn, "nope") is None
     assert pa.session_user(conn, None) is None
 
 
 @pytestmark_db
 def test_the_session_token_is_not_stored_in_the_clear(conn):
-    _user, password = pa.create_user(conn, "a@example.com")
-    token = pa.login(conn, "a@example.com", password)
-    row = conn.execute("SELECT token_hash FROM portal_sessions").fetchone()
-    assert token not in row["token_hash"]
+    token = arrive(conn, "uid-a", "a@example.com")
+    rows = conn.execute("SELECT token_hash FROM portal_sessions").fetchall()
+    assert rows and all(token not in r["token_hash"] for r in rows)
 
 
 @pytestmark_db
 def test_the_last_admin_is_countable_so_the_ui_can_refuse(conn):
-    """Disabling the only admin would leave nobody who could let anyone back in."""
-    admin, _ = pa.create_user(conn, "admin@example.com", "admin")
-    pa.create_user(conn, "user@example.com", "user")
+    a = pa.create_user(conn, "a@example.com", "admin")
     assert pa.count_admins(conn) == 1
-    assert pa.count_admins(conn, excluding=admin.user_id) == 0
-
-    second, _ = pa.create_user(conn, "admin2@example.com", "admin")
-    assert pa.count_admins(conn, excluding=admin.user_id) == 1
-    pa.set_disabled(conn, second.user_id, True)
-    assert pa.count_admins(conn, excluding=admin.user_id) == 0
+    assert pa.count_admins(conn, excluding=a.user_id) == 0
+    pa.create_user(conn, "b@example.com", "admin")
+    assert pa.count_admins(conn, excluding=a.user_id) == 1
 
 
 @pytestmark_db
 def test_two_people_cannot_share_an_address(conn):
     pa.create_user(conn, "a@example.com")
     with pytest.raises(Exception):
-        pa.create_user(conn, "A@Example.com")
-    conn.rollback()          # the failed insert leaves the transaction unusable
+        pa.create_user(conn, "A@example.com")
+    conn.rollback()                                  # the refused insert aborted the transaction
 
 
 @pytestmark_db
-@pytest.mark.parametrize("bad", ["", "   ", "not-an-email"])
+@pytest.mark.parametrize("bad", ["", "nope", "   "])
 def test_rubbish_addresses_are_refused(conn, bad):
     with pytest.raises(ValueError):
         pa.create_user(conn, bad)
@@ -182,4 +159,4 @@ def test_rubbish_addresses_are_refused(conn, bad):
 @pytestmark_db
 def test_an_unknown_role_is_refused(conn):
     with pytest.raises(ValueError):
-        pa.create_user(conn, "a@example.com", "superuser")
+        pa.create_user(conn, "a@example.com", "owner")

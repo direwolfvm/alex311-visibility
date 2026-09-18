@@ -116,8 +116,8 @@ def test_rls_bites_against_a_real_database():
     checked = 0
     with db.connect() as owner:
         owner.execute("DELETE FROM portal_users WHERE email LIKE 'p2-%@test'"); owner.commit()
-        a, _ = pa.create_user(owner, "p2-a@test", "user", created_by="t")
-        b, _ = pa.create_user(owner, "p2-b@test", "user", created_by="t")
+        a = pa.create_user(owner, "p2-a@test", "user", created_by="t")
+        b = pa.create_user(owner, "p2-b@test", "user", created_by="t")
         db.link_request(owner, user_id=a.user_id, service_request_id="26-00000001", relation="following")
         db.link_request(owner, user_id=b.user_id, service_request_id="26-00000002", relation="following")
     try:

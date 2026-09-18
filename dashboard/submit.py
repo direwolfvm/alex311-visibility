@@ -16,7 +16,6 @@ import os
 import re
 import secrets
 import time
-from urllib.parse import parse_qs
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -222,29 +221,6 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
                     return RedirectResponse("/submit", status_code=303)
         return HTMLResponse(login_page.read_text())
 
-    @public.post("/login")
-    async def do_login(request: Request):
-        # Parsed by hand rather than with fastapi's Form(), which would pull in
-        # python-multipart. A urlencoded body needs no such thing, and the
-        # dependency would ship in every image for one endpoint.
-        fields = parse_qs((await request.body()).decode("utf-8", "replace"))
-        email = (fields.get("email") or [""])[0]
-        password = (fields.get("password") or [""])[0]
-        with pool_getter().connection() as conn:
-            token = pa.login(conn, email, password,
-                             user_agent=request.headers.get("user-agent"))
-        if not token:
-            return RedirectResponse("/submit/login?error=1", status_code=303)
-        with pool_getter().connection() as conn:
-            conn.execute("UPDATE portal_users SET policy_version = %s WHERE user_id = "
-                         "(SELECT user_id FROM portal_sessions WHERE token_hash = %s)",
-                         (fb.POLICY_VERSION, pa._token_hash(token)))
-            conn.commit()
-        resp = RedirectResponse("/submit", status_code=303)
-        resp.set_cookie(pa.SESSION_COOKIE, token, httponly=True, samesite="lax",
-                        secure=request.url.scheme == "https", path="/submit",
-                        max_age=int(pa.SESSION_TTL.total_seconds()))
-        return resp
 
     @public.post("/logout")
     @public.get("/logout")
@@ -313,8 +289,7 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
 
         The browser has just signed in with Firebase and holds a token that
         says so. We check it is genuine and for this project, and from there
-        the account and the cookie are the same ones a password login gets —
-        one gate, two doors.
+        the account and the cookie follow — one gate, one door.
         """
         try:
             who = fb.verify_id_token(body.id_token)
@@ -352,7 +327,6 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         return {"user": ({"user_id": user.user_id, "email": user.email, "role": user.role,
                           "label": user.label, "firebase_uid": user.firebase_uid,
                           "firebase_linked": user.firebase_uid is not None,
-                          "has_password": user.has_password,
                           "policy_version": user.policy_version,
                           "display_name": user.display_name}
                          if user else None),
@@ -555,23 +529,14 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
     def users_create(body: NewUser, actor: str = Depends(admin_only)):
         with pool_getter().connection() as conn:
             try:
-                user, password = pa.create_user(conn, body.email, body.role, created_by=actor)
+                user = pa.create_user(conn, body.email, body.role, created_by=actor)
             except ValueError as e:
                 raise HTTPException(400, str(e))
             except Exception:
                 raise HTTPException(409, "that email already has an account")
-        return {"user_id": user.user_id, "email": user.email, "role": user.role,
-                "password": password}
+        # an invitation: the person signs in with this address and is linked to it
+        return {"user_id": user.user_id, "email": user.email, "role": user.role}
 
-    @router.post("/api/users/{user_id}/reset")
-    def users_reset(user_id: str, actor: str = Depends(admin_only)):
-        with pool_getter().connection() as conn:
-            row = conn.execute("SELECT email FROM portal_users WHERE user_id = %s",
-                               (user_id,)).fetchone()
-            if not row:
-                raise HTTPException(404, "no such user")
-            password = pa.set_password(conn, user_id)
-        return {"user_id": user_id, "email": row["email"], "password": password}
 
     @router.post("/api/users/{user_id}/disable")
     def users_disable(user_id: str, actor: str = Depends(admin_only)):

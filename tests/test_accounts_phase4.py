@@ -79,8 +79,8 @@ def test_sharing_and_deletion_against_a_real_database():
     dsn_app = os.environ.get("APP_DATABASE_URL")
     with db.connect() as owner:
         owner.execute("DELETE FROM portal_users WHERE email LIKE 'p4-%@test'"); owner.commit()
-        a, _ = pa.create_user(owner, "p4-a@test", "user", created_by="t")
-        b, _ = pa.create_user(owner, "p4-b@test", "user", created_by="t")
+        a = pa.create_user(owner, "p4-a@test", "user", created_by="t")
+        b = pa.create_user(owner, "p4-b@test", "user", created_by="t")
         db.save_feedback(owner, user_id=a.user_id, service_request_id="26-00000044", score=2, note="a private", share_score=True)
         db.save_feedback(owner, user_id=b.user_id, service_request_id="26-00000044", score=4, note="b private", share_score=False)
     try:

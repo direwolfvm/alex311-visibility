@@ -186,7 +186,7 @@ FIREBASE_API_KEY=$(gcloud services api-keys get-key-string \
     projects/$PROJECT/locations/global/keys/550aa1df-b4b4-4c1b-8e6e-7fda4d325e38 --format='value(keyString)')
 ```
 
-Without them the page is the password-only site it was. The token check refuses
+Without them there is no way to sign in, and the page says so. The token check refuses
 a token from any pool but this tenant, so a mistake in `FIREBASE_TENANT_ID`
 fails closed.
 
@@ -468,19 +468,20 @@ first thing to check when an alert fires.
 
 The gate on `/submit` is a login page, not the browser's Basic-auth popup: that
 popup cannot be styled, cannot say what the site is, and cannot be signed out
-of. Accounts live in `portal_users`; passwords are scrypt hashes with a
-per-user salt.
+of. Accounts live in `portal_users`. Sign-in is Firebase's (§5a): Google, or
+an emailed link. The password door that served the first testers was retired
+on 2026-09-18; `init-db` drops the hash columns.
 
-Seed the first admin once, against the production database:
+Invite the first admin once, against the production database:
 
 ```bash
 DATABASE_URL=... python -m alex311.portal_auth seed --email you@example.com
 ```
 
-It prints a generated password once and does nothing if an admin already
-exists. After that, administrators add people at **`/submit/users`** — a
-password is generated and shown once, and there is no email sending here, so it
-has to be passed on by hand.
+It creates the row with the admin role and does nothing if an admin already
+exists; the person signs in with Google or an emailed link using that address
+and the account links itself. After that, administrators invite people from
+the **Admin** page the same way. Nothing is emailed from here.
 
 **HTTP Basic still works alongside it**, with the shared `SUBMIT_PASSWORD`.
 That is deliberate: scripts, the `curl` examples in the demo guide and the CLI
@@ -488,8 +489,8 @@ keep one credential, while people get a page. The shared credential also counts
 as an administrator, which is how a locked-out admin gets back in.
 
 The last remaining administrator cannot be disabled — there would be nobody left
-who could let anyone back in. Disabling someone, or changing their password,
-ends their open sessions immediately rather than at expiry.
+who could let anyone back in. Disabling someone ends their open sessions
+immediately rather than at expiry.
 
 ## When the portal redeploys
 

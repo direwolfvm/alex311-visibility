@@ -106,7 +106,7 @@
   </div>
   <p class="sub">Keep the requests you send from here in one place, follow others, and say whether
     they were addressed. New here? Continue with Google or ask for an emailed link — an account
-    is created for you. Passwords are only for the test group.</p>
+    is created for you.</p>
 
   <div class="explain">
     <p><b>What this is.</b> An unofficial mirror of the City's Alex311 requests, with a way to
@@ -136,47 +136,22 @@
       about a request may be used in aggregate on this site — for example, to report how often
       residents say a closed request was actually fixed. We keep an account id and nothing else;
       your email stays with the sign-in provider.</p>
-    <div class="or">or, if you were given a password</div>
   </div>
-
-  <form id="form" method="post" action="/submit/login">
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" autocomplete="username" required>
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" autocomplete="current-password" required>
-    <button type="submit" id="go">Sign in</button>
-  </form>
 
   <div class="box" id="error" hidden role="alert"></div>
   <div class="box ok" id="sent" hidden role="status"></div>
 
   <p class="foot">Google or an emailed link creates your account the first time you use it —
-    there is no separate registration form. Passwords are only for the test group; ask whoever
-    invited you. <a href="/">Back to the site</a></p>
+    there is no separate registration form. If an administrator invited you, sign in with the
+    address they invited and the account is already yours. <a href="/">Back to the site</a></p>
 </main>
 </div>
 
 <script>
-const params = new URLSearchParams(location.search);
-if (params.get('error')) {
-  const box = document.getElementById('error');
-  // One message for a wrong password, an unknown address and a disabled
-  // account: saying which would tell someone whether an address has an account.
-  box.textContent = params.get('error') === 'disabled'
-    ? 'That account cannot sign in. Ask an administrator.'
-    : 'That email and password did not match.';
-  box.hidden = false;
-}
-document.getElementById('form').addEventListener('submit', () => {
-  const b = document.getElementById('go');
-  b.disabled = true; b.textContent = 'Signing in…';
-});
-
 // ---------------------------------------------------------- Firebase sign-in
-// Two doors, one gate. The password form above serves the testers who were
-// given one; this is how everyone else comes in, and how a tester links the
-// two by signing in with the same address. Either way the server mints the
-// same cookie. If Firebase is not configured here, none of this shows.
+// One door. Google, or an emailed link; the server mints the session cookie
+// from the ID token either way. If Firebase is not configured on this copy of
+// the site there is no way in, and the page says so.
 const $ = id => document.getElementById(id);
 function say(id, text) { const el = $(id); el.textContent = text; el.hidden = false; }
 
@@ -195,7 +170,7 @@ async function finish(user) {
 (async () => {
   let cfg;
   try { cfg = await (await fetch('/submit/api/firebase-config')).json(); } catch { return; }
-  if (!cfg.config) return;
+  if (!cfg.config) { say('error', 'Sign-in is not set up on this copy of the site.'); return; }
   await new Promise(res => {
     const s1 = document.createElement('script');
     s1.src = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js';

@@ -1,31 +1,24 @@
-"""Who may open the gated prototype at all.
+"""Who may open the gated pages, and the session that says so.
 
-Two ways in, one account. The password path serves the testers already here;
-`sign_in_with_firebase` is how everyone else arrives, and how an existing
-tester links the two. (An earlier `alex311.identity` module answered "which *resident* is
-submitting this request". This answers "is this person allowed in the building",
-and it exists because the browser's HTTP Basic popup is a poor front door: it
-cannot be styled, cannot say what the site is, cannot be logged out of, and
-offers one shared password for everybody.
+One door: Firebase sign-in (Google, or an emailed link) in this site's own
+tenant. The browser brings back an ID token, `firebase_auth` checks it, and
+`sign_in_with_firebase` here turns it into an account row and a session
+cookie. An administrator can invite someone ahead of time — the row exists
+with a role, and the person's first sign-in with that address links to it.
 
-The bar here is deliberately modest — keeping out passers-by, not defeating a
-determined attacker. What it does not do is store passwords in the clear, which
-would be a real liability for no saving: people reuse passwords, and these are
-real email addresses.
+The password door that served the first testers is retired (2026-09-18):
+there is nothing to hand over, nothing to reset, and no hash to protect.
+HTTP Basic still works alongside it, with the shared `SUBMIT_PASSWORD`, for
+scripts and for a locked-out administrator to get back in.
 
-    scrypt, per-user salt, stdlib only, no new dependency.
-
-HTTP Basic still works alongside it, with the shared `SUBMIT_PASSWORD`. Scripts,
-`curl` in the runbook and the CLI all use that path; people use the login page.
-
-    python -m alex311.portal_auth seed --email you@example.com   # first admin
-    python -m alex311.portal_auth add --email them@example.com --role user
+Sessions are random tokens; only a hash of the token is stored. The last
+administrator cannot be disabled or deleted.
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import hmac
+import hashlib
 import logging
 import os
 import re
@@ -43,31 +36,6 @@ SESSION_TTL = timedelta(days=14)
 SESSION_COOKIE = "alex311_portal"
 ROLES = ("admin", "user")
 
-#: scrypt parameters. Comfortably slow for a login form, nowhere near the cost
-#: of a password-cracking-resistant setting, which is the right trade for a
-#: gate whose job is keeping out passers-by.
-_N, _R, _P = 2 ** 14, 8, 1
-
-
-def hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
-    """Returns (hash, salt). Never store or log the password itself."""
-    salt = salt or secrets.token_hex(16)
-    digest = hashlib.scrypt(password.encode(), salt=salt.encode(),
-                            n=_N, r=_R, p=_P, dklen=32)
-    return digest.hex(), salt
-
-
-def verify_password(password: str, stored_hash: str, salt: str) -> bool:
-    candidate, _ = hash_password(password, salt)
-    return hmac.compare_digest(candidate, stored_hash)
-
-
-def new_password(words: int = 4) -> str:
-    """A password a person can read out loud once and then paste."""
-    # no l/1 and no o/0: these get read aloud and typed by hand
-    alphabet = "abcdefghijkmnpqrstuvwxyz23456789"
-    return "-".join("".join(secrets.choice(alphabet) for _ in range(5))
-                    for _ in range(words))
 
 
 def _token_hash(token: str) -> str:
@@ -85,7 +53,6 @@ class PortalUser:
     role: str
     disabled: bool = False
     firebase_uid: str | None = None
-    has_password: bool = False
     policy_version: str | None = None
     display_name: str | None = None
 
@@ -103,35 +70,27 @@ class PortalUser:
 
 # ------------------------------------------------------------------- users
 
-def create_user(conn, email: str, role: str = "user", *, password: str | None = None,
-                created_by: str | None = None) -> tuple[PortalUser, str]:
-    """Add a user. Returns the user and their password, shown once."""
+def create_user(conn, email: str, role: str = "user", *,
+                created_by: str | None = None) -> PortalUser:
+    """Invite someone: the account exists with a role before they arrive.
+
+    There is no password to hand over. The person signs in with Google or an
+    emailed link using this address, and `sign_in_with_firebase` links that
+    sign-in to this row (a verified email is the match) instead of making a
+    second account. Until then the row is an invitation, nothing more."""
     email = normalize_email(email)
     if not email or "@" not in email:
         raise ValueError("that does not look like an email address")
     if role not in ROLES:
         raise ValueError(f"role must be one of {ROLES}")
-    password = password or new_password()
-    digest, salt = hash_password(password)
     user_id = f"pu_{uuid.uuid4().hex[:16]}"
     conn.execute(
-        """INSERT INTO portal_users (user_id, email, password_hash, salt, role, created_by)
-           VALUES (%s, %s, %s, %s, %s, %s)""",
-        (user_id, email, digest, salt, role, created_by))
+        """INSERT INTO portal_users (user_id, email, role, created_by)
+           VALUES (%s, %s, %s, %s)""",
+        (user_id, email, role, created_by))
     conn.commit()
-    return PortalUser(user_id, email, role), password
+    return PortalUser(user_id, email, role)
 
-
-def set_password(conn, user_id: str, password: str | None = None) -> str:
-    password = password or new_password()
-    digest, salt = hash_password(password)
-    conn.execute("UPDATE portal_users SET password_hash = %s, salt = %s WHERE user_id = %s",
-                 (digest, salt, user_id))
-    # a new password ends every session that used the old one
-    conn.execute("UPDATE portal_sessions SET revoked_at = now() "
-                 "WHERE user_id = %s AND revoked_at IS NULL", (user_id,))
-    conn.commit()
-    return password
 
 
 def set_disabled(conn, user_id: str, disabled: bool) -> None:
@@ -153,8 +112,7 @@ def set_role(conn, user_id: str, role: str) -> None:
 def list_users(conn) -> list[dict]:
     return conn.execute(
         """SELECT user_id, email, role, created_at, created_by, last_login_at, disabled_at,
-                  firebase_uid IS NOT NULL AS firebase_linked, policy_version,
-                  password_hash IS NOT NULL AS has_password, display_name
+                  firebase_uid IS NOT NULL AS firebase_linked, policy_version, display_name
              FROM portal_users ORDER BY created_at""").fetchall()
 
 
@@ -166,31 +124,6 @@ def count_admins(conn, *, excluding: str | None = None) -> int:
 
 
 # ---------------------------------------------------------------- sessions
-
-def login(conn, email: str, password: str, *, user_agent: str | None = None) -> str | None:
-    """Check a password and open a session. Returns the token, or None."""
-    row = conn.execute(
-        "SELECT user_id, password_hash, salt, disabled_at FROM portal_users WHERE email = %s",
-        (normalize_email(email),)).fetchone()
-    if row is None:
-        # spend the time anyway, so a missing account is not faster than a wrong password
-        hash_password(password)
-        return None
-    if row["disabled_at"] is not None:
-        return None
-    if not verify_password(password, row["password_hash"], row["salt"]):
-        return None
-
-    token = secrets.token_urlsafe(32)
-    conn.execute(
-        """INSERT INTO portal_sessions (token_hash, user_id, expires_at, user_agent)
-           VALUES (%s, %s, %s, %s)""",
-        (_token_hash(token), row["user_id"],
-         datetime.now(timezone.utc) + SESSION_TTL, (user_agent or "")[:200]))
-    conn.execute("UPDATE portal_users SET last_login_at = now() WHERE user_id = %s",
-                 (row["user_id"],))
-    conn.commit()
-    return token
 
 
 def sign_in_with_firebase(conn, *, uid: str, email: str | None, email_verified: bool,
@@ -244,8 +177,7 @@ def session_user(conn, token: str | None) -> PortalUser | None:
         return None
     row = conn.execute(
         """SELECT u.user_id, u.email, u.role, u.disabled_at, u.firebase_uid,
-                  u.password_hash IS NOT NULL AS has_password, u.policy_version,
-                  u.display_name
+                  u.policy_version, u.display_name
              FROM portal_sessions s JOIN portal_users u USING (user_id)
             WHERE s.token_hash = %s AND s.revoked_at IS NULL AND s.expires_at > now()""",
         (_token_hash(token),)).fetchone()
@@ -253,7 +185,6 @@ def session_user(conn, token: str | None) -> PortalUser | None:
         return None
     return PortalUser(row["user_id"], row["email"], row["role"],
                       firebase_uid=row.get("firebase_uid"),
-                      has_password=bool(row.get("has_password")),
                       policy_version=row.get("policy_version"),
                       display_name=row.get("display_name"))
 
@@ -309,15 +240,12 @@ def main(argv: list[str] | None = None) -> int:
                                 description="Manage who can open the gated prototype.")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    seed = sub.add_parser("seed", help="create the first admin if there is none")
+    seed = sub.add_parser("seed", help="invite the first admin if there is none")
     seed.add_argument("--email", required=True)
 
-    add = sub.add_parser("add", help="add a user")
+    add = sub.add_parser("add", help="invite a user by email")
     add.add_argument("--email", required=True)
     add.add_argument("--role", default="user", choices=ROLES)
-
-    reset = sub.add_parser("reset", help="give a user a new password")
-    reset.add_argument("--email", required=True)
 
     sub.add_parser("list", help="list users")
     a = p.parse_args(argv)
@@ -334,25 +262,15 @@ def main(argv: list[str] | None = None) -> int:
         if count_admins(conn):
             print("an admin already exists; nothing to do")
             return 0
-        user, password = create_user(conn, a.email, "admin", created_by="seed")
-        print(f"created admin {user.email}")
-        print(f"password: {password}")
-        print("This is shown once. Store it somewhere safe.")
+        user = create_user(conn, a.email, "admin", created_by="seed")
+        print(f"invited admin {user.email}: they sign in with Google or an emailed link "
+              "using that address, and the account links itself")
         return 0
 
     if a.cmd == "add":
-        user, password = create_user(conn, a.email, a.role, created_by="cli")
-        print(f"created {a.role} {user.email}")
-        print(f"password: {password}")
-        return 0
-
-    if a.cmd == "reset":
-        row = conn.execute("SELECT user_id FROM portal_users WHERE email = %s",
-                           (normalize_email(a.email),)).fetchone()
-        if not row:
-            print("no such user")
-            return 1
-        print(f"password: {set_password(conn, row['user_id'])}")
+        user = create_user(conn, a.email, a.role, created_by="cli")
+        print(f"invited {a.role} {user.email}: they sign in with Google or an emailed link "
+              "using that address")
         return 0
     return 1
 
