@@ -27,7 +27,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from alex311.client import Alex311Client
-from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner, mail,
+from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner, mail, refresh,
                      portal_auth as pa)
 
 from . import registry as R
@@ -439,6 +439,32 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         for link in links:
             link["report_url"] = Alex311Client.deep_link(link["service_request_id"])
         return {"links": links}
+
+    # One refresh per account every two minutes: the City's endpoint is shared
+    # with the ingest job and every other resident, and a stale list is not an
+    # emergency.
+    REFRESH_COOLDOWN = 120.0
+
+    @router.post("/api/my/refresh")
+    def refresh_my_requests(request: Request, actor: str = Depends(gate)):
+        """Ask the City about the cases on this account's list, right now.
+
+        The mirror reads the City four times a day; this reads the few cases
+        on one person's list on demand, newest first, capped and paced (see
+        alex311.refresh), and folds the answers into the mirror for everyone.
+        """
+        user_id = _account(request)
+        if not _allow(f"refresh:{user_id}", 1, REFRESH_COOLDOWN):
+            raise HTTPException(429, "refreshed a moment ago; give the City a couple of minutes")
+        with pool_getter().connection() as conn:
+            links = adb.my_links(conn, user_id=user_id)
+            conn.rollback()                      # drop the RLS setting before writing the mirror
+            cases = [l["service_request_id"] for l in links][:refresh.MAX_PER_PRESS]
+            if not cases:
+                return {"results": [], "skipped": 0}
+            with Alex311Client() as client:
+                results = refresh.refresh_cases(conn, client, cases)
+        return {"results": results, "skipped": max(0, len(links) - len(cases))}
 
     @router.get("/api/link/{case}")
     def link_state(case: str, request: Request, actor: str = Depends(gate)):
