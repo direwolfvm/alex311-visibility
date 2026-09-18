@@ -49,7 +49,12 @@
   .lede { color:var(--muted); font-size:13px; margin:0 0 16px; }
   .card { background:var(--panel); border:1px solid var(--border); border-radius:10px;
           padding:16px 18px; margin-bottom:16px; }
-  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 10px; }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 10px;
+             display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .card h2 .refresh { margin-left:auto; display:flex; align-items:center; gap:10px; text-transform:none;
+                      letter-spacing:0; font-weight:400; }
+  .card h2 .refresh button { font-size:12px; }
+  .card h2 .refresh button[disabled] { opacity:.6; cursor:default; }
   .table-wrap { overflow-x:auto; }
   table { width:100%; border-collapse:collapse; font-size:14px; }
   th, td { text-align:left; padding:9px 12px; border-top:1px solid var(--border); vertical-align:top; }
@@ -105,7 +110,9 @@
   <div class="box bad" id="error" hidden role="alert"></div>
 
   <div class="card">
-    <h2>Sent from here</h2>
+    <h2>Sent from here
+      <span class="refresh"><span class="hint" id="refresh-status" role="status" aria-live="polite"></span>
+        <button type="button" id="refresh">Refresh status</button></span></h2>
     <div class="table-wrap"><table>
       <thead><tr><th>Case</th><th>Request</th><th>Where</th><th>Status</th><th>Reported</th><th>Updated</th><th></th></tr></thead>
       <tbody id="mine"></tbody>
@@ -172,6 +179,28 @@ document.addEventListener('click', async e => {
   try { await api(`/follow/${encodeURIComponent(b.dataset.unlink)}`, {method: 'DELETE'}); await load(); }
   catch (err) { $('error').textContent = err.message; $('error').hidden = false; }
 });
+// Ask the City about the cases on this list now, rather than waiting for the
+// next ingest — the way a request sent minutes ago gets its status, and a
+// closed one shows as closed.
+$('refresh').addEventListener('click', async () => {
+  const b = $('refresh'), st = $('refresh-status');
+  b.disabled = true; st.textContent = 'Checking with the City…';
+  try {
+    const {results, skipped} = await api('/my/refresh', {method: 'POST'});
+    const found = results.filter(r => r.found).length;
+    const missing = results.filter(r => !r.found && !r.error).length;
+    const failed = results.filter(r => r.error).length;
+    const bits = [];
+    if (found) bits.push(`${found} updated`);
+    if (missing) bits.push(`${missing} not at the City yet`);
+    if (failed) bits.push(`${failed} could not be checked`);
+    if (skipped) bits.push(`${skipped} more next time`);
+    st.textContent = bits.length ? bits.join(' · ') : 'Nothing on the list to check.';
+    await load();
+  } catch (err) { st.textContent = err.message; }
+  finally { b.disabled = false; }
+});
+
 load().catch(err => { $('error').textContent = err.message; $('error').hidden = false; });
 </script>
 </body>
