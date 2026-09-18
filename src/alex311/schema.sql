@@ -182,15 +182,13 @@ CREATE INDEX IF NOT EXISTS sa_state_idx ON submission_attempts (submit_state, ap
 -- Who may open the gated prototype at all. Separate from `submitters`, which
 -- records which *resident* filed a request: this is the front door, and its job
 -- is keeping out passers-by while the authorization question with the City is
--- open. Passwords are scrypt hashes with a per-user salt; the plaintext exists
+-- open. Sign-in is Firebase's; this table holds the account, its role and its links. The plaintext of nothing exists
 -- only in the browser and in whatever the admin wrote down.
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS portal_users (
     user_id         TEXT PRIMARY KEY,
-    email           TEXT,                           -- only where a password login needs it
-    password_hash   TEXT,
-    salt            TEXT,
+    email           TEXT,                           -- an invitation, or a linked sign-in
     role            TEXT NOT NULL DEFAULT 'user',   -- admin | user
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      TEXT,
@@ -201,13 +199,14 @@ CREATE TABLE IF NOT EXISTS portal_users (
 -- and on the account page. Optional, never shown on the public site: a score
 -- someone chooses to show carries no name, and nothing here reaches the City.
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS display_name TEXT;
--- Two ways in, one account. The password columns serve the testers already
--- here; a Firebase sign-in carries only the uid, and for such an account we
--- hold no email at all — Firebase does. An existing tester who signs in with
--- Firebase using the same address is linked, not duplicated.
+-- One door, Firebase's. A sign-in carries the uid, and for an account that
+-- arrived that way we hold no email at all — Firebase does. An invited
+-- address (email set by an administrator, no uid yet) is linked by the first
+-- verified sign-in with that address, not duplicated.
 ALTER TABLE portal_users ALTER COLUMN email DROP NOT NULL;
-ALTER TABLE portal_users ALTER COLUMN password_hash DROP NOT NULL;
-ALTER TABLE portal_users ALTER COLUMN salt DROP NOT NULL;
+-- The password door is retired (2026-09-18); the hashes go with it.
+ALTER TABLE portal_users DROP COLUMN IF EXISTS password_hash;
+ALTER TABLE portal_users DROP COLUMN IF EXISTS salt;
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS firebase_uid   TEXT;
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS policy_version TEXT;   -- the data policy accepted
 CREATE UNIQUE INDEX IF NOT EXISTS pu_firebase_uid_idx ON portal_users (firebase_uid) WHERE firebase_uid IS NOT NULL;

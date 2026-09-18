@@ -60,11 +60,10 @@ def test_sign_out_everywhere_revokes_every_session():
 
 def test_whoami_says_how_the_person_signs_in():
     fn = ROUTES.split("def whoami_portal(")[1].split("@app.exception_handler")[0]
-    for key in ('"firebase_linked"', '"has_password"', '"policy_version"'):
+    for key in ('"firebase_linked"', '"policy_version"'):
         assert key in fn
-    assert "u.password_hash IS NOT NULL AS has_password, u.policy_version" in AUTH
-    assert "has_password: bool = False" in AUTH and "policy_version: str | None = None" in AUTH
-    assert "Google or an emailed link" in ACCOUNT and "a password" in ACCOUNT
+    assert "policy_version: str | None = None" in AUTH
+    assert "Google or an emailed link" in ACCOUNT
 
 
 def test_deleting_moved_off_my_requests():

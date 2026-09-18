@@ -232,9 +232,9 @@
         </div>
         <button class="primary" type="submit">Create</button>
       </form>
-      <p class="hint">A password is generated and shown once. There is no email sending
-        here, so pass it on yourself. Only administrators can release requests or see
-        this page; a user can prepare and queue their own.</p>
+      <p class="hint">An invitation: the person signs in with Google or an emailed link using
+        this address and the account, with this role, is already theirs. Nothing is emailed from
+        here, so tell them yourself. Only administrators see this page.</p>
       <div class="box ok" id="created" hidden></div>
     </div>
 
@@ -434,16 +434,14 @@ function renderUsers(users) {
     // An account that only ever signed in through Firebase has no email here,
     // on purpose. The uid is what an admin grants a role against.
     const who = u.email ? esc(u.email) : `<span class="hint">account</span> <code>${esc(u.user_id)}</code>`;
-    const how = [u.has_password ? 'password' : null, u.firebase_linked ? 'Firebase' : null]
-      .filter(Boolean).join(' + ');
+    const how = u.firebase_linked ? 'signed in with Google or an emailed link' : 'invited, not yet signed in';
     return `<tr>
       <td>${who}${self ? ' <span class="hint">(you)</span>' : ''}
-          <div class="hint">${how || 'no sign-in method'}</div></td>
+          <div class="hint">${how}</div></td>
       <td><span class="pill ${off ? 'off' : u.role}">${off ? 'disabled' : esc(u.role)}</span></td>
       <td class="num">${day(u.created_at)}</td>
       <td class="num">${day(u.last_login_at)}</td>
       <td class="actions">
-        ${u.has_password ? `<button data-act="reset" data-id="${u.user_id}">Reset password</button>` : ''}
         ${self || lastAdmin ? '' :
           `<button class="danger" data-act="${off ? 'enable' : 'disable'}"
                    data-id="${u.user_id}">${off ? 'Enable' : 'Disable'}</button>`}
@@ -456,13 +454,7 @@ $('rows').addEventListener('click', async e => {
   if (!b) return;
   $('error').hidden = true; $('created').hidden = true;
   try {
-    if (b.dataset.act === 'reset') {
-      const r = await api(`/users/${b.dataset.id}/reset`, {method: 'POST'});
-      $('created').textContent = `New password for ${r.email}: ${r.password} — shown once.`;
-      $('created').hidden = false;
-    } else {
-      await api(`/users/${b.dataset.id}/${b.dataset.act}`, {method: 'POST'});
-    }
+    await api(`/users/${b.dataset.id}/${b.dataset.act}`, {method: 'POST'});
     await load();
   } catch (err) { fail(err); }
 });
@@ -473,7 +465,7 @@ $('add').addEventListener('submit', async e => {
   try {
     const r = await api('/users', {method: 'POST', body: JSON.stringify(
       {email: $('email').value.trim(), role: $('role').value})});
-    $('created').textContent = `Created ${r.email}. Password: ${r.password} — shown once, pass it on.`;
+    $('created').textContent = `Invited ${r.email} as ${r.role}. They sign in with Google or an emailed link using that address.`;
     $('created').hidden = false;
     $('email').value = '';
     await load();

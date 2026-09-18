@@ -107,7 +107,7 @@ def test_feedback_rls_and_suppression_against_a_real_database():
     dsn_app = os.environ.get("APP_DATABASE_URL")
     with db.connect() as owner:
         owner.execute("DELETE FROM portal_users WHERE email LIKE 'p3-%@test'"); owner.commit()
-        users = [pa.create_user(owner, f"p3-{i}@test", "user", created_by="t")[0] for i in range(6)]
+        users = [pa.create_user(owner, f"p3-{i}@test", "user", created_by="t") for i in range(6)]
         for i, u in enumerate(users):
             db.save_feedback(owner, user_id=u.user_id, service_request_id="26-00000009",
                              score=(None if i == 5 else 1 + i % 5), note=f"private note {i}")

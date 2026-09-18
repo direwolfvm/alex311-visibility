@@ -135,8 +135,8 @@
       here. It is never on the public site: a score you choose to show carries no name, and nothing
       here reaches the City. Beyond that, this site keeps an account id and nothing about you, so a
       rating can be counted without a person being identifiable. Your email, where we hold one, is
-      only used to sign you in and to link a password sign-in with a Google or email-link sign-in to
-      the same account.</p>
+      only used to sign you in and to link an administrator's invitation to the account you sign
+      in with.</p>
   </div>
 
   <div class="card">
@@ -197,7 +197,6 @@ async function api(path, opts = {}) {
   const m = /[A-Za-z0-9]/.exec(label); $('avatar').textContent = m ? m[0].toUpperCase() : '?';
   const ways = [];
   if (user.firebase_linked) ways.push('Google or an emailed link');
-  if (user.has_password) ways.push('a password');
   $('signin-how').textContent = ways.length
     ? `You sign in with ${ways.join(', and with ')}${user.email ? `, as ${user.email}` : ''}.`
     : 'Signed in through the shared prototype credential.';

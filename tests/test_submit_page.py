@@ -222,12 +222,12 @@ def test_the_login_page_disclaims_the_City_and_points_at_the_real_portal():
 
 
 def test_the_login_page_says_how_an_account_comes_to_be():
-    """Google or an emailed link creates one; passwords are for the test group.
-    It used to say there was no public sign-up, which stopped being true when
-    Firebase sign-in opened the door."""
+    """Google or an emailed link creates one; an invited address is already
+    an account. It used to say there was no public sign-up, which stopped
+    being true when Firebase sign-in opened the door."""
     assert "an account\n    is created for you" in LOGIN or "an account is created for you" in LOGIN
-    assert "Passwords are only for the test group" in LOGIN
-    assert "no public" not in LOGIN.lower()
+    assert "sign in with the\n    address they invited" in LOGIN
+    assert "no public" not in LOGIN.lower() and "password" not in LOGIN.lower()
 
 
 def test_you_can_get_back_to_the_dashboard_from_both_pages():
