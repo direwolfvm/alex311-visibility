@@ -84,6 +84,9 @@
   .namerow input { flex:1 1 220px; max-width:320px; padding:6px 9px; border:1px solid var(--border);
                    border-radius:7px; font:inherit; font-size:14px; }
   .namerow input:focus { outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+  input.wide { flex:1 1 220px; max-width:320px; padding:6px 9px; border:1px solid var(--border);
+               border-radius:7px; font:inherit; font-size:14px; }
+  input.wide:focus { outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
   .btn { display:inline-block; padding:5px 10px; border:1px solid var(--border); border-radius:7px;
          background:#fff; color:var(--ink); text-decoration:none; font-size:13px; }
   .btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -155,6 +158,22 @@
       site once the City has filed the request.</p>
   </div>
 
+  <div class="card" id="digest-card">
+    <h2>Daily email digest</h2>
+    <p class="hint" style="margin:0 0 10px">Once a day, if there is something new for the request
+      types, addresses and areas you watch, one email with the list — and nothing on days there
+      isn't. Every email has a link to stop it. The address is used for this and nothing else.</p>
+    <p id="digest-state" style="margin:0 0 10px"></p>
+    <form id="digest-form">
+      <div class="row">
+        <input type="email" id="digest-email" class="wide" autocomplete="email" placeholder="you@example.com">
+        <button type="submit" id="digest-on">Turn on</button>
+        <button type="button" id="digest-off" hidden>Turn off</button>
+        <span class="hint" id="digest-status" role="status"></span>
+      </div>
+    </form>
+  </div>
+
   <div class="card">
     <h2>Signed-in devices</h2>
     <p class="hint" style="margin:0 0 10px">A sign-in lasts a while on each device. Sign out here, or
@@ -199,7 +218,7 @@ async function api(path, opts = {}) {
   if (user.firebase_linked) ways.push('Google or an emailed link');
   $('signin-how').textContent = ways.length
     ? `You sign in with ${ways.join(', and with ')}${user.email ? `, as ${user.email}` : ''}.`
-    : 'Signed in through the shared prototype credential.';
+    : 'Invited by an administrator; signing in with Google or an emailed link at this address links it.';
   $('role').textContent = user.role === 'admin' ? 'Administrator of this site.' : '';
   $('policy').textContent = user.policy_version ? `version ${user.policy_version}` : 'not yet recorded';
 })().catch(err => { $('error').textContent = err.message; $('error').hidden = false; });
@@ -215,6 +234,36 @@ $('name-form').addEventListener('submit', async e => {
     setTimeout(() => location.reload(), 400);
   } catch (err) { st.textContent = err.message; }
 });
+
+// ---------------------------------------------------------- daily digest
+async function drawDigest() {
+  const d = await api('/digest');
+  const st = $('digest-state'), form = $('digest-form');
+  if (!d.available) { st.textContent = 'This copy of the site cannot send email, so the digest is not available here.'; form.hidden = true; return; }
+  form.hidden = false;
+  $('digest-off').hidden = d.status === 'off';
+  $('digest-on').textContent = d.status === 'off' ? 'Turn on' : 'Change address';
+  if (d.status === 'on') st.innerHTML = `<b>On</b>, to ${esc(d.email)}` + (d.last_sent_at ? ` — last sent ${String(d.last_sent_at).slice(0, 10)}.` : ' — nothing sent yet.');
+  else if (d.status === 'pending') st.innerHTML = `<b>Waiting for you to confirm</b> ${esc(d.email)} — open the link in the email we sent there. Not there? Check spam, or send it again below.`;
+  else st.innerHTML = 'Off.' + (d.account_email ? ` Your sign-in address ${esc(d.account_email)} needs no confirmation.` : '');
+  if (!$('digest-email').value) $('digest-email').value = d.email || d.account_email || '';
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+$('digest-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const st = $('digest-status'); st.textContent = 'Saving\u2026';
+  try {
+    const r = await api('/digest', {method: 'PUT', body: JSON.stringify({email: $('digest-email').value})});
+    st.textContent = r.status === 'on' ? 'On.' : `Confirmation sent to ${r.email}.`;
+    await drawDigest();
+  } catch (err) { st.textContent = err.message; }
+});
+$('digest-off').addEventListener('click', async () => {
+  const st = $('digest-status');
+  try { await api('/digest', {method: 'DELETE'}); st.textContent = 'Off.'; $('digest-email').value = ''; await drawDigest(); }
+  catch (err) { st.textContent = err.message; }
+});
+drawDigest().catch(() => {});
 
 $('logout-all').addEventListener('click', async () => {
   const b = $('logout-all');
