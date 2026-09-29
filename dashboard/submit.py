@@ -26,7 +26,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from alex311.client import Alex311Client
-from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner, mail, refresh, watches,
+from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, refresh, watches,
                      portal_auth as pa)
 
 from . import registry as R
@@ -123,6 +123,10 @@ class WatchBody(BaseModel):
     kind: str
     spec: dict = {}
     label: str | None = None
+
+
+class DigestBody(BaseModel):
+    email: str
 
 
 class ValidateBody(BaseModel):
@@ -316,6 +320,37 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
                         max_age=int(pa.SESSION_TTL.total_seconds()))
         return resp
 
+    # The two links in a digest email work without a sign-in: the person may
+    # be on a phone, in a mail app, and should not have to prove who they are
+    # to stop an email. The token proves the link came from us for that inbox.
+    def _plain_page(title: str, body: str) -> HTMLResponse:
+        return HTMLResponse(f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} · Alex311 Reborn</title>
+<style>body{{margin:0;background:#f6f7f9;color:#1c2733;font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif}}
+main{{max-width:520px;margin:48px auto;padding:24px 28px;background:#fff;border:1px solid #e2e8f0;border-radius:12px}}
+h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
+<body><main><h1>{title}</h1><p>{body}</p><p><a href="/">Alex311 Reborn</a> · <a href="/submit/account">Your account</a></p></main></body></html>""")
+
+    @public.get("/digest/confirm", response_class=HTMLResponse)
+    def digest_confirm(t: str = ""):
+        try:
+            with pool_getter().connection() as conn:
+                email = digest.confirm(conn, t)
+        except (digest.BadToken, digest.NotConfigured) as e:
+            return _plain_page("That link did not work", str(e))
+        return _plain_page("Digest on", f"Each morning there is something new for what you watch, "
+                           f"one email goes to <b>{email}</b>. Every one has a link to stop it.")
+
+    @public.get("/digest/unsubscribe", response_class=HTMLResponse)
+    def digest_unsubscribe(t: str = ""):
+        try:
+            with pool_getter().connection() as conn:
+                email = digest.unsubscribe(conn, t)
+        except (digest.BadToken, digest.NotConfigured) as e:
+            return _plain_page("That link did not work", str(e))
+        return _plain_page("Digest off", f"No more digests will go to <b>{email}</b>. Your watches "
+                           f"are still on My requests; turn the email back on from your account page any time.")
+
     @public.get("/api/whoami")
     def whoami_portal(request: Request,
                       creds: HTTPBasicCredentials | None = Depends(_security)):
@@ -497,6 +532,39 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         with pool_getter().connection() as conn:
             removed = watches.remove_watch(conn, user_id=user_id, watch_id=watch_id)
         return {"watch_id": watch_id, "removed": removed}
+
+    @router.get("/api/digest")
+    def digest_state(request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            st = digest.state(conn, user_id=user_id)
+        st["available"] = mail.configured()
+        return st
+
+    @router.put("/api/digest")
+    def digest_set(body: DigestBody, request: Request, actor: str = Depends(gate)):
+        """Turn the daily digest on for an address — at once if it is the
+        verified address the account signs in with, otherwise after the
+        person opens a confirmation link we send there."""
+        user_id = _account(request)
+        origin = os.environ.get("SITE_ORIGIN") or str(request.base_url).rstrip("/")
+        with pool_getter().connection() as conn:
+            try:
+                return digest.request(conn, user_id=user_id, email=body.email, site_origin=origin)
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+            except digest.NotConfigured:
+                raise HTTPException(503, "this site cannot send email just now")
+            except Exception as e:
+                log.warning("digest confirmation email failed: %s", type(e).__name__)
+                raise HTTPException(502, "could not send the confirmation just now; try again shortly")
+
+    @router.delete("/api/digest")
+    def digest_off(request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            digest.turn_off(conn, user_id=user_id)
+        return {"status": "off"}
 
     @router.get("/api/feed")
     def feed_get(request: Request, actor: str = Depends(gate)):

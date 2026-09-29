@@ -358,3 +358,11 @@ ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS feed_seen_at TIMESTAMPTZ;
 -- the feed's time filter
 CREATE INDEX IF NOT EXISTS sr_first_seen_idx ON service_requests (first_seen_at DESC);
 CREATE INDEX IF NOT EXISTS sr_last_updated_idx ON service_requests (last_updated_datetime DESC);
+
+-- The daily digest (alex311.digest): an address the person confirmed, the
+-- last time a digest went out (its own mark, apart from feed_seen_at), and a
+-- failure count so a dead address switches itself off.
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_email        TEXT;
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_confirmed_at TIMESTAMPTZ;
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_sent_at      TIMESTAMPTZ;
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_failures     INTEGER NOT NULL DEFAULT 0;

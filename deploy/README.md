@@ -280,6 +280,33 @@ SELECT set_config('app.role', 'admin', false);   -- for this psql session
 A handler that forgets to name the account gets no rows, not everyone's. There
 is a test that proves it against a real database (`tests/test_accounts_phase2.py`).
 
+## 5c. Daily digest job
+
+Opt-in email of what's new for an account's watches (`alex311.digest`), one
+run a day after the overnight ingest. Same image as the dashboard; it needs
+the owner database URL, the mail sender (§5a½) and the secret that signs the
+confirm/unsubscribe links (`DIGEST_SECRET`, or the dashboard's `SUBMIT_SECRET`
+— the two must match, since the service mints confirmation links and the
+job mints unsubscribe links).
+
+```bash
+gcloud run jobs create alex311-digest --image=$IMAGE --region=$REGION \
+    --set-cloudsql-instances=$SQL_INSTANCE \
+    --set-secrets=DATABASE_URL=alex311-database-url:latest,MAILGUN_API_KEY=alex311-mailgun-key:latest,SUBMIT_SECRET=alex311-submit-secret:latest \
+    --set-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Reborn <no-reply@alex311visibility.me>|ALEX311_MAIL_DOMAIN=alex311visibility.me|SITE_ORIGIN=https://alex311visibility.me' \
+    --task-timeout=900 --max-retries=0 \
+    --command=python --args="-m,alex311.digest"
+
+gcloud scheduler jobs create http alex311-digest-schedule \
+    --location=$REGION --schedule="0 7 * * *" --time-zone="America/New_York" \
+    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-digest:run" \
+    --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
+```
+
+`--max-retries=0` on purpose: a retried run would send the same digest twice.
+Three failed sends in a row switch an address off. Nothing is sent on a day
+with nothing new.
+
 ## 6. Registry drift check (weekly)
 
 `docs/data/form-registry.json` describes a form the City controls. This job asks
