@@ -56,6 +56,11 @@
   .wrap { max-width:1000px; margin:0 auto; padding:18px 18px 70px; }
   .crumb { font-size:13px; margin:0 0 12px; }
   .crumb a { text-decoration:none; }
+  .watch-btns { display:flex; gap:8px; flex-wrap:wrap; }
+  .wbtn { border:1px solid var(--border); background:#fff; border-radius:99px; padding:5px 12px; font:inherit;
+          font-size:13px; cursor:pointer; color:var(--accent); }
+  .wbtn:hover { border-color:var(--accent); }
+  .wbtn[disabled] { opacity:.7; cursor:default; }
 
   /* the record's own heading: case number first, because that is what people
      arrive holding */
@@ -330,6 +335,7 @@ function render(d) {
     </section>` : '';
 
   const coords = d.lat && d.long;
+  window.__record = d;                       // the watch card needs the address and type
 
   $('record').innerHTML = `
     <div class="head"><h2 class="case">${esc(d.service_request_id)}</h2>${badge(d.status)}
@@ -350,6 +356,16 @@ function render(d) {
             <small>alex311.alexandriava.gov — the authoritative copy</small></a>
           <p style="margin:10px 0 0"><a class="official" href="/submit">Report something similar
             <small>our prototype form, for a new request</small></a></p>
+        </section>
+        <section class="card" id="watch-card" hidden>
+          <h2>Watch</h2>
+          <p class="map-note" style="margin:0 0 8px">Follow more than this one case: everything the
+            mirror sees here or of this kind shows up under What's new on My requests.</p>
+          <div class="watch-btns">
+            ${d.address ? `<button type="button" class="wbtn" data-watch="address">This address</button>` : ''}
+            ${d.service_name ? `<button type="button" class="wbtn" data-watch="category">${esc(d.service_name)}</button>` : ''}
+          </div>
+          <p class="map-note" id="watch-status" role="status" style="margin:6px 0 0"></p>
         </section>
       </aside>
       <div>
@@ -482,6 +498,25 @@ fetch(`/api/request/${encodeURIComponent(CASE)}`)
 // ---------------------------------------------------------------- follow
 // A pointer from an account to this case: "following" is anyone who cares,
 // "mine" only ever comes from the worker when the City hands back a number.
+function drawWatch(user, d) {
+  const card = document.getElementById('watch-card');
+  if (!user || !card) return;
+  card.hidden = false;
+  card.querySelectorAll('.wbtn').forEach(b => b.addEventListener('click', async () => {
+    const st = document.getElementById('watch-status');
+    b.disabled = true; st.textContent = 'Saving\u2026';
+    const spec = b.dataset.watch === 'address' ? {addresses: [d.address]} : {service_name: d.service_name};
+    try {
+      const r = await fetch('/submit/api/watches', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({kind: b.dataset.watch, spec})});
+      const w = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(w.detail || `could not save (${r.status})`);
+      b.textContent = (b.dataset.watch === 'address' ? 'This address' : d.service_name) + ' ✓';
+      st.innerHTML = `${w.existing ? 'Already watching' : 'Now watching'}: ${esc(w.label)} — on <a href="/submit/my">My requests</a>`;
+    } catch (e) { b.disabled = false; st.textContent = e.message; }
+  }));
+}
+
 async function drawFollow(user) {
   const box = document.getElementById('follow');
   if (!user || !box) return;
@@ -563,7 +598,7 @@ fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null})
   .then(({user}) => {
     // the record renders first; the follow box waits for it
     const tick = () => document.getElementById('follow')
-      ? (drawFollow(user), drawVerdict(user)) : setTimeout(tick, 200);
+      ? (drawFollow(user), drawVerdict(user), drawWatch(user, window.__record || {})) : setTimeout(tick, 200);
     tick(); if (user) $('nav-my').hidden = false;
   if (user && user.role === 'admin') $('nav-admin').hidden = false; })
   .catch(() => {});

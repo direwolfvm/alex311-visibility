@@ -319,7 +319,9 @@
           <option value="age">age</option>
         </select></label>
       <span id="area-state" style="text-transform:none;letter-spacing:0">
-        draw a shape (⬠ / ▭ tools, top-left) to filter by area</span></h2>
+        draw a shape (⬠ / ▭ tools, top-left) to filter by area</span>
+      <button type="button" class="btn-sm" id="watch-area" hidden
+              title="Every request inside this shape shows up under What's new on My requests">Watch this area</button></h2>
       <div id="map" role="application"
            aria-label="Map of service request locations. The table below lists the same requests."></div>
       <div id="map-legend"></div></div>
@@ -960,6 +962,7 @@ map.addControl(new L.Control.Draw({
   edit: { featureGroup: drawnItems, edit: false },
 }));
 
+let signedIn = false;
 function setPolygon(layerDrawn) {
   drawnItems.clearLayers();
   if (layerDrawn) {
@@ -972,8 +975,31 @@ function setPolygon(layerDrawn) {
     $('area-state').textContent =
       'draw a shape (⬠ / ▭ tools, top-left) to filter by area';
   }
+  // a drawn shape can be watched — by someone signed in
+  $('watch-area').hidden = !(layerDrawn && signedIn);
+  $('watch-area').textContent = 'Watch this area';
+  $('watch-area').disabled = false;
   refresh();
 }
+$('watch-area').addEventListener('click', async () => {
+  const b = $('watch-area');
+  if (!state.polygon) return;
+  b.disabled = true; b.textContent = 'Saving…';
+  try {
+    const r = await fetch('/submit/api/watches', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({kind: 'area', spec: {polygon: state.polygon}})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || `could not save (${r.status})`);
+    b.textContent = d.existing ? 'Already watching ✓' : 'Watching ✓';
+    $('area-state').innerHTML = `${esc(d.label)} — on <a href="/submit/my">My requests</a>`;
+  } catch (e) { b.disabled = false; b.textContent = 'Watch this area'; $('area-state').textContent = e.message; }
+});
+document.addEventListener('DOMContentLoaded', () => {
+  (window.alex311 && window.alex311.whoami || Promise.resolve({user: null})).then(({user}) => {
+    signedIn = !!user;
+    if (state.polygon) $('watch-area').hidden = !signedIn;
+  });
+});
 
 map.on(L.Draw.Event.CREATED, e => setPolygon(e.layer));
 map.on(L.Draw.Event.DELETED, () => setPolygon(null));

@@ -77,6 +77,30 @@
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   .empty { color:var(--muted); font-size:14px; margin:0; }
   .hint { color:var(--muted); font-size:12px; }
+  .watches { list-style:none; margin:0 0 12px; padding:0; }
+  .watches li { display:flex; gap:10px; align-items:baseline; padding:7px 0; border-top:1px solid var(--border);
+                font-size:14px; flex-wrap:wrap; }
+  .watches li:first-child { border-top:none; }
+  .watches .kind { font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+                   color:var(--muted); min-width:92px; }
+  .watches .label { flex:1 1 200px; min-width:0; }
+  .watches .detail { color:var(--muted); font-size:12px; flex-basis:100%; padding-left:102px; }
+  .addwatch { border-top:1px solid var(--border); padding-top:12px; }
+  .addwatch .tabs { display:flex; gap:4px; margin-bottom:10px; }
+  .addwatch .tabs button { border:1px solid var(--border); background:#fff; border-radius:99px; padding:4px 12px;
+                           font:inherit; font-size:13px; cursor:pointer; color:var(--muted); }
+  .addwatch .tabs button[aria-selected="true"] { border-color:var(--accent); color:var(--accent); font-weight:600; }
+  .addwatch label { display:block; font-size:12px; color:var(--muted); margin:6px 0 4px; }
+  .addwatch label.check { display:flex; gap:8px; align-items:flex-start; margin:8px 0; color:var(--ink); font-size:13px; }
+  .addwatch .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .addwatch input[type=text], .addwatch select { flex:1 1 240px; max-width:420px; padding:6px 9px; border:1px solid var(--border);
+                                                 border-radius:7px; font:inherit; font-size:14px; background:#fff; }
+  .addrs { list-style:none; margin:6px 0; padding:0; font-size:13px; }
+  .addrs li { display:flex; gap:8px; align-items:center; padding:3px 0; }
+  .addrs li button { font-size:11px; padding:2px 7px; }
+  .feed .new { color:var(--closed); font-weight:600; }
+  .tag { display:inline-block; font-size:11px; background:var(--otherbg); color:var(--muted); border-radius:99px;
+         padding:1px 8px; margin:1px 3px 1px 0; }
   .box.bad { padding:11px 13px; border-radius:8px; font-size:13px; margin:0 0 12px;
              background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
 </style>
@@ -109,6 +133,19 @@
     City. This list and your ratings live here only.</p>
   <div class="box bad" id="error" hidden role="alert"></div>
 
+  <div class="card" id="feed-card" hidden>
+    <h2>What's new for you
+      <span class="refresh"><span class="hint" id="feed-since"></span>
+        <button type="button" id="feed-seen">Mark all seen</button></span></h2>
+    <p class="hint" id="feed-lede">Requests the mirror has seen or seen change since you last
+      looked, matching what you watch below.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Case</th><th>Request</th><th>Where</th><th>Status</th><th>Reported</th><th>Matched</th></tr></thead>
+      <tbody id="feed"></tbody>
+    </table></div>
+    <p class="empty" id="feed-empty" hidden>Nothing new since you last looked.</p>
+  </div>
+
   <div class="card">
     <h2>Sent from here
       <span class="refresh"><span class="hint" id="refresh-status" role="status" aria-live="polite"></span>
@@ -129,6 +166,45 @@
     </table></div>
     <p class="empty" id="following-empty" hidden>Not following anything. Any record on the
       map has a <b>Follow</b> button once you are signed in.</p>
+  </div>
+
+  <div class="card" id="watch-card">
+    <h2>Watching</h2>
+    <p class="hint" style="margin:0 0 10px">A watch follows a kind of thing rather than one case:
+      every request of a type, at an address or several, or inside an area you drew. What matches
+      shows up in <b>What's new for you</b> above. Watches are yours alone — an address is often
+      a home — and go with the account if you delete it.</p>
+    <ul class="watches" id="watches"></ul>
+    <p class="empty" id="watches-empty" hidden>Not watching anything yet.</p>
+
+    <div class="addwatch" id="addwatch">
+      <div class="tabs" role="tablist" aria-label="Kind of watch">
+        <button type="button" role="tab" data-kind="category" aria-selected="true">Request type</button>
+        <button type="button" role="tab" data-kind="address" aria-selected="false">Address</button>
+        <button type="button" role="tab" data-kind="area" aria-selected="false">Area</button>
+      </div>
+      <form id="w-category" data-kind="category">
+        <label for="w-cat">Request type</label>
+        <div class="row"><select id="w-cat"></select><button type="submit">Watch this type</button></div>
+      </form>
+      <form id="w-address" data-kind="address" hidden>
+        <label for="w-addr">Address</label>
+        <div class="row">
+          <input type="text" id="w-addr" placeholder="e.g. 500 N Pitt St" autocomplete="street-address">
+          <button type="button" id="w-addr-add">Add</button>
+        </div>
+        <p class="hint" id="w-addr-hint"></p>
+        <ul class="addrs" id="w-addrs"></ul>
+        <label class="check"><input type="checkbox" id="w-nearby"> Also anything nearby — within
+          about a block, using the City's coordinates for the address</label>
+        <div class="row"><button type="submit">Watch these addresses</button></div>
+      </form>
+      <div id="w-area" data-kind="area" hidden>
+        <p class="hint">Draw a shape on the <a href="/explore">map</a> — the ⬠ and ▭ tools at its
+          top left — and press <b>Watch this area</b> beside it. It appears here.</p>
+      </div>
+      <p class="hint" id="w-status" role="status"></p>
+    </div>
   </div>
 
   <p class="hint">Sign-in details, signing out everywhere, and deleting the account are on
@@ -163,7 +239,109 @@ function row(l) {
       <button data-unlink="${esc(l.service_request_id)}">${l.relation === 'mine' ? 'Remove from list' : 'Stop following'}</button></td>
   </tr>`;
 }
+// ---------------------------------------------------------------- watches
+const KIND = {category: 'Request type', address: 'Address', area: 'Area'};
+let watchIndex = {};
+function watchDetail(w) {
+  const s = w.spec || {};
+  if (w.kind === 'address') {
+    const list = (s.addresses || []).map(a => a.text + (a.known ? '' : ' (not on record yet)')).join(' · ');
+    return list + (s.nearby ? ' — and nearby' : '');
+  }
+  if (w.kind === 'area') return `${(s.polygon || []).length} corners`;
+  return '';
+}
+async function loadWatches() {
+  const {watches} = await api('/watches');
+  watchIndex = Object.fromEntries(watches.map(w => [w.watch_id, w]));
+  $('watches').innerHTML = watches.map(w => `<li>
+    <span class="kind">${KIND[w.kind] || esc(w.kind)}</span>
+    <span class="label">${esc(w.label)}</span>
+    <button data-unwatch="${w.watch_id}">Stop watching</button>
+    ${watchDetail(w) ? `<span class="detail">${esc(watchDetail(w))}</span>` : ''}
+  </li>`).join('');
+  $('watches-empty').hidden = watches.length > 0;
+  return watches;
+}
+async function loadFeed() {
+  const f = await api('/feed');
+  const card = $('feed-card');
+  if (!f.watches.length) { card.hidden = true; return; }
+  card.hidden = false;
+  $('feed-since').textContent = f.since && String(f.since).slice(0, 4) > '2000'
+    ? `since ${String(f.since).slice(0, 10)}` : 'everything on record';
+  $('feed').innerHTML = f.items.map(r => `<tr class="feed">
+    <td><a class="case" href="/r/${encodeURIComponent(r.service_request_id)}">${esc(r.service_request_id)}</a>
+        ${r.is_new ? '<div class="new">new</div>' : '<div class="hint">changed</div>'}</td>
+    <td>${esc(r.service_name || '—')}</td>
+    <td>${esc(r.address || '—')}</td>
+    <td>${badge(r.status)}</td>
+    <td class="num">${day(r.requested_datetime)}</td>
+    <td>${(r.watch_ids || []).map(id => `<span class="tag">${esc((watchIndex[id] || {}).label || 'watch')}</span>`).join('')}</td>
+  </tr>`).join('');
+  $('feed-empty').hidden = f.items.length > 0;
+}
+$('feed-seen').addEventListener('click', async () => {
+  try { await api('/feed/seen', {method: 'POST'}); await loadFeed(); } catch (err) { $('error').textContent = err.message; $('error').hidden = false; }
+});
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-unwatch]');
+  if (!b) return;
+  try { await api(`/watches/${b.dataset.unwatch}`, {method: 'DELETE'}); await loadWatches(); await loadFeed(); }
+  catch (err) { $('error').textContent = err.message; $('error').hidden = false; }
+});
+// the add form: one kind at a time
+document.querySelectorAll('#addwatch [role=tab]').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('#addwatch [role=tab]').forEach(x => x.setAttribute('aria-selected', String(x === t)));
+  document.querySelectorAll('#addwatch [data-kind]').forEach(f => { if (f.getAttribute('role') !== 'tab') f.hidden = f.dataset.kind !== t.dataset.kind; });
+  $('w-status').textContent = '';
+}));
+async function addWatch(kind, spec) {
+  $('w-status').textContent = 'Saving\u2026';
+  const w = await api('/watches', {method: 'POST', body: JSON.stringify({kind, spec})});
+  $('w-status').textContent = w.existing ? `Already watching: ${w.label}.` : `Now watching: ${w.label}.`;
+  await loadWatches(); await loadFeed();
+}
+$('w-category').addEventListener('submit', async e => {
+  e.preventDefault();
+  try { await addWatch('category', {service_name: $('w-cat').value}); } catch (err) { $('w-status').textContent = err.message; }
+});
+const addrs = [];
+function drawAddrs() {
+  $('w-addrs').innerHTML = addrs.map((a, i) => `<li>${esc(a)} <button type="button" data-drop="${i}">remove</button></li>`).join('');
+}
+$('w-addrs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-drop]'); if (!b) return;
+  addrs.splice(+b.dataset.drop, 1); drawAddrs();
+});
+$('w-addr-add').addEventListener('click', async () => {
+  const q = $('w-addr').value.trim(); if (!q) return;
+  if (addrs.length >= 10) { $('w-addr-hint').textContent = 'Ten addresses in one watch is the limit.'; return; }
+  // the City's spelling, where it has one, so the watch matches its records
+  let text = q;
+  try {
+    const r = await api(`/geocode?q=${encodeURIComponent(q)}&limit=3`);
+    if (r.suggestion) { text = r.suggestion.address; $('w-addr-hint').textContent = r.suggestion.differs ? `The City files this as ${text}.` : ''; }
+    else $('w-addr-hint').textContent = 'Not in the City\u2019s records yet; kept as typed. It will match once the City uses it.';
+  } catch { $('w-addr-hint').textContent = ''; }
+  addrs.push(text); drawAddrs(); $('w-addr').value = ''; $('w-addr').focus();
+});
+$('w-address').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!addrs.length) { $('w-addr-hint').textContent = 'Add at least one address first.'; return; }
+  try {
+    await addWatch('address', {addresses: addrs.slice(), nearby: $('w-nearby').checked});
+    addrs.length = 0; drawAddrs(); $('w-nearby').checked = false;
+  } catch (err) { $('w-status').textContent = err.message; }
+});
+async function loadCategories() {
+  const m = await (await fetch('/api/meta')).json();
+  $('w-cat').innerHTML = (m.categories || []).map(c => `<option value="${esc(c.service_name)}">${esc(c.service_name)} (${c.n})</option>`).join('');
+}
+
 async function load() {
+  loadCategories().catch(() => {});
+  await loadWatches(); await loadFeed();
   const [who, my] = await Promise.all([api('/whoami'), api('/my')]);
   const me = who.user;
   if (me && me.role === 'admin') $('nav-admin').hidden = false;
