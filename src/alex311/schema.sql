@@ -319,3 +319,42 @@ END $$;
 -- there are no public notes, so there is nothing to moderate.
 DROP POLICY IF EXISTS shared ON feedback;
 CREATE POLICY shared ON feedback FOR SELECT USING (share_score);
+
+-- ---------------------------------------------------------------------------
+-- Watches: follow a request type, an address or several, or a drawn area.
+-- A request link follows one case; a watch follows a kind of thing, and the
+-- feed on My requests shows what the mirror has seen since the person last
+-- looked that matches any of them. `spec` is JSON, shaped per kind (see
+-- alex311.watches). An address is often a home and a polygon a block, so the
+-- rows are personal: forced RLS like the other account tables, and they go
+-- with the account (ON DELETE CASCADE).
+CREATE TABLE IF NOT EXISTS watches (
+    watch_id    BIGSERIAL PRIMARY KEY,
+    user_id     TEXT NOT NULL REFERENCES portal_users (user_id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL CHECK (kind IN ('category', 'address', 'area')),
+    label       TEXT NOT NULL,
+    spec        JSONB NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS watches_user_idx ON watches (user_id, created_at DESC);
+
+ALTER TABLE watches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE watches FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own   ON watches;
+DROP POLICY IF EXISTS admin ON watches;
+CREATE POLICY own   ON watches USING (user_id = current_setting('app.user_id', true));
+CREATE POLICY admin ON watches USING (current_setting('app.role', true) = 'admin');
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON watches TO alex311_app;
+    GRANT USAGE, SELECT ON SEQUENCE watches_watch_id_seq TO alex311_app;
+  END IF;
+END $$;
+
+-- When the person last looked at their feed; everything the mirror has seen
+-- or changed since then is "new" to them.
+ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS feed_seen_at TIMESTAMPTZ;
+-- the feed's time filter
+CREATE INDEX IF NOT EXISTS sr_first_seen_idx ON service_requests (first_seen_at DESC);
+CREATE INDEX IF NOT EXISTS sr_last_updated_idx ON service_requests (last_updated_datetime DESC);

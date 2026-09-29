@@ -26,7 +26,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from alex311.client import Alex311Client
-from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner, mail, refresh,
+from alex311 import (abuse, db as adb, firebase_auth as fb, job_runner, mail, refresh, watches,
                      portal_auth as pa)
 
 from . import registry as R
@@ -117,6 +117,12 @@ class FeedbackBody(BaseModel):
 class NewUser(BaseModel):
     email: str
     role: str = "user"
+
+
+class WatchBody(BaseModel):
+    kind: str
+    spec: dict = {}
+    label: str | None = None
 
 
 class ValidateBody(BaseModel):
@@ -464,6 +470,50 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         with pool_getter().connection() as conn:
             removed = adb.unlink_request(conn, user_id=user_id, service_request_id=case)
         return {"case": case, "relation": None, "removed": removed}
+
+    # ----------------------------------------------------------- watches
+    # Follow a request type, an address or several, or a drawn area; the feed
+    # is what the mirror has seen since the person last looked that matches.
+
+    @router.get("/api/watches")
+    def watches_list(request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            return {"watches": watches.list_watches(conn, user_id=user_id)}
+
+    @router.post("/api/watches")
+    def watches_add(body: WatchBody, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            try:
+                return watches.add_watch(conn, user_id=user_id, kind=body.kind,
+                                         payload=body.spec, label=body.label)
+            except watches.BadWatch as e:
+                raise HTTPException(400, str(e))
+
+    @router.delete("/api/watches/{watch_id}")
+    def watches_remove(watch_id: int, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            removed = watches.remove_watch(conn, user_id=user_id, watch_id=watch_id)
+        return {"watch_id": watch_id, "removed": removed}
+
+    @router.get("/api/feed")
+    def feed_get(request: Request, actor: str = Depends(gate)):
+        """What matched your watches since you last looked. Reading does not
+        mark it seen; the person does that, so a glance on a phone does not
+        lose the list."""
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            since = watches.seen_at(conn, user_id=user_id)
+            return watches.feed(conn, user_id=user_id, since=since)
+
+    @router.post("/api/feed/seen")
+    def feed_seen(request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            at = watches.mark_seen(conn, user_id=user_id)
+        return {"seen_at": at}
 
     # ---------------------------------------------------------- feedback
     # "Was this issue actually addressed?" — the resident's own verdict, one
