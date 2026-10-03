@@ -191,3 +191,56 @@ def test_a_name_goes_to_the_city_in_the_form_its_contact_step_allows():
     assert city_safe_name("  Asa ") == "Asa"
     assert city_safe_name("Zoë") == "Zoë"
     assert city_safe_name("") == ""
+
+
+# ----------------------------------------------- which question is on the screen
+
+def _service(code):
+    import json
+    from pathlib import Path
+    reg = json.loads((Path(__file__).resolve().parents[1] / "docs/data/form-registry.json").read_text())
+    return next(x for x in reg["services"] if x["service_code"] == code)
+
+
+def test_an_order_is_not_a_question():
+    """Eight services have several questions sharing an order. The worker
+    took the first, so on any other branch it looked the resident's answer up
+    under the wrong key and stopped as 'needs an answer'."""
+    import json
+    from pathlib import Path
+    reg = json.loads((Path(__file__).resolve().parents[1] / "docs/data/form-registry.json").read_text())
+    clashing = {s["service_code"] for s in reg["services"]
+                if len({q["order"] for q in s["questions"]}) < len(s["questions"])}
+    assert {"TESCONTN", "TESTSGNL", "TESSEWER", "ALXCABI"} <= clashing
+
+
+def test_the_wording_on_the_screen_picks_the_question():
+    from alex311.submit_browser import match_question
+    svc = _service("TESCONTN")
+    # order 2: the registry lists the data-only size question first; the wizard shows the type
+    q = match_question(svc, {"k": 2, "text": "What type of container?"}, {"01PL-CONTYPE": "Trash"})
+    assert q["code"] == "01PL-CONTYPE"
+    # order 3 on the move-in branch, and on the damage branch
+    assert match_question(svc, {"k": 3, "text": "Date of move in?"}, {})["code"] == "01DT-MOVEIN"
+    assert match_question(svc, {"k": 3, "text": "What is the damage to your container?"}, {})["code"] == "01IN-DAMAGECON"
+    # a different service, where the walked question has no code at all
+    cab = _service("ALXCABI")
+    scooter = next(q for q in cab["questions"] if q["code"] == "01TX-SCOOTERID")
+    assert match_question(cab, {"k": 2, "text": scooter["text"]}, {})["code"] == "01TX-SCOOTERID"
+    station = next(q for q in cab["questions"] if q["order"] == 2 and q["source"] != "data-only")
+    assert match_question(cab, {"k": 2, "text": station["text"]}, {}) is station
+
+
+def test_when_the_wording_ties_the_options_and_then_the_walked_one_decide():
+    from alex311.submit_browser import match_question
+    rec = _service("TESRECYCTRS")          # two questions, identical wording, order 2
+    walked = next(q for q in rec["questions"] if q["order"] == 2 and q["source"] != "data-only")
+    opts = [o["value"] if isinstance(o, dict) else o for o in walked["options"]]
+    assert match_question(rec, {"k": 2, "text": "Which location is this regarding?"}, {}, opts)["code"] == walked["code"]
+    assert match_question(rec, {"k": 2, "text": "Which location is this regarding?"}, {})["source"] != "data-only"
+    # nothing readable on screen: a question the resident answered beats one they did not
+    svc = _service("TESCONTN")
+    assert match_question(svc, {"k": 3, "text": ""}, {"01IN-REMOVECON": "x"})["code"] == "01IN-REMOVECON"
+    # and a unique order is simply that question
+    assert match_question(svc, {"k": 1, "text": "anything"}, {})["code"] == "01PL-CONTAINTYP"
+    assert match_question(svc, {"k": 99, "text": "x"}, {}) is None
