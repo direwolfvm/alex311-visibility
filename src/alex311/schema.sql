@@ -366,3 +366,26 @@ ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_email        TEXT;
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_confirmed_at TIMESTAMPTZ;
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_sent_at      TIMESTAMPTZ;
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS digest_failures     INTEGER NOT NULL DEFAULT 0;
+
+-- Photos on a report (alex311.photos): up to three per request, re-encoded
+-- (EXIF and GPS dropped), held as bytes here until the City has filed the
+-- request, then purged the way the contact details are. `photo_note` says
+-- what happened to them at the City's File Upload step.
+CREATE TABLE IF NOT EXISTS attempt_photos (
+    photo_id    BIGSERIAL PRIMARY KEY,
+    attempt_id  BIGINT NOT NULL REFERENCES submission_attempts (attempt_id) ON DELETE CASCADE,
+    file_name   TEXT NOT NULL,
+    bytes       INTEGER NOT NULL,
+    data        BYTEA,                              -- NULL once purged
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    purged_at   TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS attempt_photos_attempt_idx ON attempt_photos (attempt_id);
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS photo_note TEXT;
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON attempt_photos TO alex311_app;
+    GRANT USAGE, SELECT ON SEQUENCE attempt_photos_photo_id_seq TO alex311_app;
+  END IF;
+END $$;

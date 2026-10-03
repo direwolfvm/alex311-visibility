@@ -26,7 +26,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from alex311.client import Alex311Client
-from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, refresh, watches,
+from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, photos, refresh, watches,
                      portal_auth as pa)
 
 from . import registry as R
@@ -758,6 +758,59 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
                 "history_considered": len(history),
                 "identity_enforced": submitter_id is not None}
 
+    # ------------------------------------------------------------- photos
+    # Up to three photos on a request being prepared. The body is the file
+    # itself (no multipart), so a phone can PUT what the camera made and a
+    # browser can send a File as-is. Re-encoded on the way in — see
+    # alex311.photos — and attached by the worker on the City's own form.
+
+    def _own_open_attempt(conn, attempt_id: int, request: Request) -> dict:
+        row = conn.execute(
+            "SELECT attempt_id, submitter_id, submit_state FROM submission_attempts "
+            "WHERE attempt_id = %s", (attempt_id,)).fetchone()
+        if row is None:
+            raise HTTPException(404, "no such request")
+        if row["submitter_id"] and row["submitter_id"] != _submitter(request):
+            raise HTTPException(403, "that request was prepared by someone else")
+        return row
+
+    @router.get("/api/attempt/{attempt_id}/photos")
+    def photos_list(attempt_id: int, request: Request, actor: str = Depends(gate)):
+        with pool_getter().connection() as conn:
+            _own_open_attempt(conn, attempt_id, request)
+            return {"photos": photos.listing(conn, attempt_id=attempt_id),
+                    "max": photos.MAX_PHOTOS}
+
+    @router.post("/api/attempt/{attempt_id}/photos")
+    async def photos_add(attempt_id: int, request: Request, name: str = "",
+                         actor: str = Depends(gate)):
+        """Add one photo. The request body is the image bytes."""
+        declared = int(request.headers.get("content-length") or 0)
+        if declared > photos.MAX_UPLOAD_BYTES:
+            raise HTTPException(413, "that photo is too large; 15 MB is the limit")
+        data = await request.body()
+
+        def store():
+            with pool_getter().connection() as conn:
+                row = _own_open_attempt(conn, attempt_id, request)
+                if row["submit_state"] not in photos.OPEN_STATES:
+                    raise HTTPException(409, "that request has already been sent")
+                try:
+                    return photos.add(conn, attempt_id=attempt_id, data=data, name=name)
+                except photos.BadPhoto as e:
+                    raise HTTPException(400, str(e))
+        from starlette.concurrency import run_in_threadpool
+        return await run_in_threadpool(store)        # decoding a photo is not event-loop work
+
+    @router.delete("/api/attempt/{attempt_id}/photos/{photo_id}")
+    def photos_remove(attempt_id: int, photo_id: int, request: Request,
+                      actor: str = Depends(gate)):
+        with pool_getter().connection() as conn:
+            row = _own_open_attempt(conn, attempt_id, request)
+            if row["submit_state"] not in photos.OPEN_STATES:
+                raise HTTPException(409, "that request has already been sent")
+            return {"removed": photos.remove(conn, attempt_id=attempt_id, photo_id=photo_id)}
+
     @router.post("/api/queue")
     def queue(body: QueueBody, request: Request, background: BackgroundTasks,
               actor: str = Depends(gate)):
@@ -842,6 +895,8 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
                 "city_case_number": row["city_case_number"],
                 "error": row["submit_error"], "tries": row["tries"],
                 "sent_at": row["approved_at"] or row["queued_at"],
+                # how many photos rode along, and what the City's form did with them
+                "photos": row.get("photos") or 0, "photo_note": row.get("photo_note"),
                 "filed_at": row["relayed_at"],
                 "service_name": row["service_name"], "address": row["address"]}
 
