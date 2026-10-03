@@ -119,50 +119,58 @@ needs_db = pytest.mark.skipif(not DB or ("localhost" not in DB and "127.0.0.1" n
 
 
 @needs_db
-def test_a_change_is_told_once_per_device_and_a_dead_token_is_switched_off():
+def test_received_then_a_change_told_once_and_a_dead_token_switched_off():
     from alex311 import db, portal_auth as pa
     owner = db.connect()
     owner.execute("DELETE FROM service_requests WHERE service_request_id LIKE 'PU-%'")
     owner.execute("DELETE FROM portal_users WHERE email LIKE 'pu-%@test.io'"); owner.commit()
     a = pa.create_user(owner, "pu-a@test.io", "user", created_by="t")
     b = pa.create_user(owner, "pu-b@test.io", "user", created_by="t")
+    c = pa.create_user(owner, "pu-c@test.io", "user", created_by="t")
     owner.execute("""INSERT INTO service_requests (service_request_id, service_name, address, status, requested_datetime)
-                     VALUES ('PU-1', 'Noise Issues', '500 N PITT ST', 'Open', now())"""); owner.commit()
+                     VALUES ('PU-1', 'Noise Issues', '500 N PITT ST', 'Open', now()),
+                            ('PU-2', 'Pothole', '9 KING ST', 'Open', now() - interval '60 days')"""); owner.commit()
     app = db.connect(os.environ.get("APP_DATABASE_URL") or DB)
     try:
-        db.link_request(app, user_id=a.user_id, service_request_id="PU-1", relation="mine")
+        db.link_request(app, user_id=a.user_id, service_request_id="PU-1", relation="mine")       # just sent
         db.link_request(app, user_id=b.user_id, service_request_id="PU-1", relation="following")
+        db.link_request(app, user_id=c.user_id, service_request_id="PU-2", relation="mine")       # sent long ago
+        owner.execute("SELECT set_config('app.role', 'admin', false)")
+        owner.execute("UPDATE request_links SET created_at = now() - interval '60 days' WHERE service_request_id = 'PU-2'")
+        owner.commit(); owner.execute("SELECT set_config('app.role', '', false)")
         good, dead = "aa" * 32, "bb" * 32
         P.register(app, user_id=a.user_id, token=good, environment="production")
         P.register(app, user_id=a.user_id, token=dead, environment="sandbox")
         P.register(app, user_id=b.user_id, token="cc" * 32, environment="production")
+        P.register(app, user_id=c.user_id, token="dd" * 32, environment="production")
         sent = []
         def fake(token, env, payload):
-            sent.append((token, env, payload["aps"]["alert"]["body"]))
+            sent.append((token, payload["aps"]["alert"]["title"], payload["aps"]["alert"]["body"]))
             return (410, "Unregistered") if token == dead else (200, "")
-        only = lambda c: {k: v for k, v in c.items()}
-        # first sighting: a baseline, not news
-        c = P.notify(owner, send_fn=fake)
-        assert c["baselined"] >= 2 and not sent
+        # First sighting. The person who just sent it hears the City has it; a follower does
+        # not; and a request sent two months ago is not announced as newly received.
+        r = P.notify(owner, send_fn=fake)
+        assert r["received"] == 1 and r["baselined"] >= 2 and r["devices_off"] == 1
+        assert sorted(t for t, _, _ in sent) == [good, dead]
+        assert [(ti, bo) for t, ti, bo in sent if t == good] == [
+            ("Noise Issues: received by the City", "The City has your request PU-1 at 500 N PITT ST. It is open.")]
         # nothing changed: nothing said
-        assert P.notify(owner, send_fn=fake)["changed"] == 0 and not sent
-        # the City closes it
-        owner.execute("SELECT set_config('app.role', '', false)")
-        owner.execute("UPDATE service_requests SET status = 'Closed' WHERE service_request_id = 'PU-1'"); owner.commit()
-        c = P.notify(owner, send_fn=fake)
-        assert c["sent"] == 2 and c["devices_off"] == 1
-        assert sorted(t for t, _, _ in sent) == [good, dead, "cc" * 32]
-        assert [b_ for t, _, b_ in sent if t == good] == ["Your request PU-1 at 500 N PITT ST is now closed."]
-        assert [b_ for t, _, b_ in sent if t == "cc" * 32][0].startswith("A request you follow PU-1")
-        # told once: a second pass is silent, and the dead token stays off
         sent.clear()
         assert P.notify(owner, send_fn=fake)["changed"] == 0 and not sent
-        owner.execute("SELECT set_config('app.role', 'admin', false)")
-        assert owner.execute("SELECT disabled_at IS NOT NULL AS off FROM push_devices WHERE token = %s",
-                             (dead,)).fetchone()["off"] is True
+        # the City closes it: the sender and the follower are told, once; the dead token stays off
+        owner.execute("SELECT set_config('app.role', '', false)")
+        owner.execute("UPDATE service_requests SET status = 'Closed' WHERE service_request_id = 'PU-1'"); owner.commit()
+        r = P.notify(owner, send_fn=fake)
+        assert r["sent"] == 2 and r["received"] == 0
+        assert sorted(t for t, _, _ in sent) == [good, "cc" * 32]
+        assert [bo for t, _, bo in sent if t == good] == ["Your request PU-1 at 500 N PITT ST is now closed."]
+        assert [bo for t, _, bo in sent if t == "cc" * 32][0].startswith("A request you follow PU-1")
+        sent.clear()
+        assert P.notify(owner, send_fn=fake)["changed"] == 0 and not sent
         # private: b cannot remove a's device; signing in on a's phone as b moves the token
         assert P.unregister(app, user_id=b.user_id, token=good) is False
         P.register(app, user_id=b.user_id, token=good, environment="production")
+        owner.execute("SELECT set_config('app.role', 'admin', false)")
         assert owner.execute("SELECT user_id FROM push_devices WHERE token = %s", (good,)).fetchone()["user_id"] == b.user_id
         assert P.unregister(app, user_id=b.user_id, token=good) is True
     finally:
@@ -170,3 +178,36 @@ def test_a_change_is_told_once_per_device_and_a_dead_token_is_switched_off():
         owner.rollback()
         owner.execute("DELETE FROM service_requests WHERE service_request_id LIKE 'PU-%'")
         owner.execute("DELETE FROM portal_users WHERE email LIKE 'pu-%@test.io'"); owner.commit(); owner.close()
+
+
+@needs_db
+def test_two_passes_cannot_both_send_the_same_change():
+    """The ingest and the fast refresh both run this pass. A change is claimed on
+    the link before it is sent; the pass that read a stale status sends nothing."""
+    from alex311 import db, portal_auth as pa
+    owner = db.connect()
+    owner.execute("DELETE FROM service_requests WHERE service_request_id LIKE 'PR-%'")
+    owner.execute("DELETE FROM portal_users WHERE email LIKE 'pr-%@test.io'"); owner.commit()
+    a = pa.create_user(owner, "pr-a@test.io", "user", created_by="t")
+    owner.execute("INSERT INTO service_requests (service_request_id, service_name, status, requested_datetime) "
+                  "VALUES ('PR-1', 'Pothole', 'Open', now())"); owner.commit()
+    other = db.connect()
+    try:
+        db.link_request(owner, user_id=a.user_id, service_request_id="PR-1", relation="following")
+        P.register(owner, user_id=a.user_id, token="ee" * 32, environment="production")
+        assert P.notify(owner, send_fn=lambda *x: (200, ""))["baselined"] == 1
+        owner.execute("SELECT set_config('app.role', '', false)")
+        owner.execute("UPDATE service_requests SET status = 'Closed' WHERE service_request_id = 'PR-1'"); owner.commit()
+        sent = []
+        def racing(token, env, payload):
+            # while the first pass is mid-send, a second pass runs to completion
+            sent.append("first")
+            inner = P.notify(other, send_fn=lambda *x: (sent.append("second"), (200, ""))[1])
+            assert inner["sent"] == 0
+            return 200, ""
+        r = P.notify(owner, send_fn=racing)
+        assert r["sent"] == 1 and sent == ["first"]
+    finally:
+        other.rollback(); other.close(); owner.rollback()
+        owner.execute("DELETE FROM service_requests WHERE service_request_id LIKE 'PR-%'")
+        owner.execute("DELETE FROM portal_users WHERE email LIKE 'pr-%@test.io'"); owner.commit(); owner.close()
