@@ -329,8 +329,9 @@ def attempt_status(conn: psycopg.Connection, attempt_id: int) -> dict | None:
     return conn.execute(
         """SELECT attempt_id, submitter_id, approved_by, submit_state, submit_error,
                   tries, queued_at, approved_at, relayed_at, city_case_number,
-                  service_name, address
-             FROM submission_attempts WHERE attempt_id = %s""",
+                  service_name, address, photo_note,
+                  (SELECT count(*) FROM attempt_photos p WHERE p.attempt_id = a.attempt_id) AS photos
+             FROM submission_attempts a WHERE attempt_id = %s""",
         (attempt_id,)).fetchone()
 
 

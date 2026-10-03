@@ -490,7 +490,8 @@ async def set_location(pg, address: str, *, choose_index: int = 0) -> str | None
     return None
 
 
-async def open_category(pg, name, code, groups, address: str | None = None):
+async def open_category(pg, name, code, groups, address: str | None = None,
+                        on_file_upload=None):
     await pg.goto("about:blank")                    # a same-URL goto does not reset the SPA
     await pg.goto(BASE, wait_until="networkidle", timeout=60000)
     await pg.wait_for_timeout(2500)
@@ -522,6 +523,10 @@ async def open_category(pg, name, code, groups, address: str | None = None):
     if not await press(pg, "Request This Service"):
         raise RuntimeError("no 'Request This Service' button (view-only service?)")
     await pg.wait_for_timeout(3000)
+    if on_file_upload is not None:
+        # Step 1 is the City's File Upload step; the caller attaches here,
+        # before Continue leaves it
+        await on_file_upload(pg)
     await press(pg, "Continue")                                    # step 1 -> 2
     fr = pg.locator("iframe.map-loc-mobile").first
     try:

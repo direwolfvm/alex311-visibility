@@ -201,8 +201,10 @@
     <div id="dupes"></div>
     <label class="hint" style="display:block;margin-top:10px">Additional information</label>
     <textarea id="desc" placeholder="Anything else the City should know"></textarea>
-    <label class="hint" style="display:block;margin-top:10px">Photos (optional — kept on your device in this prototype)</label>
-    <input type="file" id="photos" accept="image/*" multiple>
+    <label class="hint" for="photos" style="display:block;margin-top:10px">Photos (optional — up to 3; sent to the
+      City with your request, then deleted here)</label>
+    <input type="file" id="photos" accept="image/*,.heic,.heif" multiple>
+    <div id="photo-list" class="hint" role="status" aria-live="polite"></div>
   </div>
 
   <div class="step" id="check" hidden>
@@ -638,6 +640,7 @@ async function precheck() {
         lat: state.lat, long: state.long,
         description: $('desc').value.trim(), answers: state.answers})});
     state.attempt = await r.json();
+    state.photosFor = null; syncPhotos();
     showPolicy();
   } catch { state.attempt = null; }
 }
@@ -716,6 +719,7 @@ function drawTrack(st) {
     filed.querySelector('span').innerHTML = st.city_case_number
       ? `the City's case number is <span class="case">${esc(st.city_case_number)}</span>`
       : 'the City has it';
+    if (st.photo_note) filed.querySelector('span').innerHTML += ` <span class="hint">· ${esc(st.photo_note)}</span>`;
   } else if (st.submit_state === 'failed') {
     filing.className = 'bad';
     filing.querySelector('span').textContent = st.error
@@ -745,6 +749,34 @@ async function watch(attemptId) {
     'still working. It will finish without this page open — check <a href="/submit/my">My requests</a> later, or ask an administrator.';
 }
 
+// ----------------------------------------------------------------- photos
+// Held on the device until there is a request to hang them on (the check
+// creates it), then uploaded one by one. The server re-encodes each: no
+// location data rides along, and HEIC becomes something the City can show.
+async function syncPhotos() {
+  const box = $('photo-list');
+  const files = [...$('photos').files].slice(0, 3);
+  if (!files.length) { box.textContent = ''; return true; }
+  if (!state.attempt?.attempt_id) { box.textContent = `${files.length} photo${files.length === 1 ? '' : 's'} chosen — added when you check your answers.`; return true; }
+  const id = state.attempt.attempt_id;
+  if (state.photosFor === id) return true;                 // already uploaded for this request
+  box.textContent = 'Adding photos\u2026';
+  const had = await (await fetch(`/submit/api/attempt/${id}/photos`)).json().catch(() => ({photos: []}));
+  for (const p of had.photos || []) await fetch(`/submit/api/attempt/${id}/photos/${p.photo_id}`, {method: 'DELETE'});
+  const done = [], failed = [];
+  for (const f of files) {
+    const r = await fetch(`/submit/api/attempt/${id}/photos?name=${encodeURIComponent(f.name)}`,
+                          {method: 'POST', headers: {'Content-Type': f.type || 'application/octet-stream'}, body: f});
+    const d = await r.json().catch(() => ({}));
+    (r.ok ? done : failed).push(r.ok ? d.file_name : `${f.name}: ${d.detail || r.status}`);
+  }
+  state.photosFor = failed.length ? null : id;
+  box.innerHTML = (done.length ? `${done.length} photo${done.length === 1 ? '' : 's'} will go to the City with this request.` : '')
+    + (failed.length ? ` <span style="color:var(--bad, #b91c1c)">Not added — ${failed.map(esc).join('; ')}</span>` : '');
+  return !failed.length;
+}
+$('photos').addEventListener('change', () => { state.photosFor = null; syncPhotos(); });
+
 $('queue-btn').addEventListener('click', async () => {
   const box = $('queue-result');
   const btn = $('queue-btn');
@@ -762,6 +794,10 @@ $('queue-btn').addEventListener('click', async () => {
     return;
   }
   if (!btn.dataset.armed) { armSend(btn); return; }
+  if (!(await syncPhotos())) {
+    box.innerHTML = '<div class="box warn">A photo could not be added. Remove it or pick another, then send again.</div>';
+    resetSend(btn, btn.nextElementSibling); return;
+  }
 
   btn.disabled = true; btn.textContent = 'Sending…';
   try {

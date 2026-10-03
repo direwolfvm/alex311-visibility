@@ -95,6 +95,9 @@ class SubmitResult:
     # read can still be verified by a person
     confirmation_text: str = ""
     note: str = ""
+    # photos: how many the City's form took, and what it said if not all
+    photos_attached: int = 0
+    photo_note: str = ""
 
     @property
     def submitted(self) -> bool:
@@ -158,6 +161,49 @@ def match_question(service: dict, head: dict, answers: dict,
     same = answered_ or same
     walked = [q for q in same if q.get("source") != "data-only"]
     return (walked or same)[0]
+
+UPLOAD_INPUT = "c-web-file-upload-new input[type=file]"     # Step 1's own component
+
+
+async def attach_photos(pg, paths: list[str], result: "SubmitResult") -> None:
+    """Give the City's File Upload step the resident's photos.
+
+    The step is a custom component with a real file input inside it (seen
+    2026-10-03: accepts images, several at once, 10 MB each). Selecting a
+    file may upload it to the City there and then, which is a write — so
+    this runs only on a live filing, never on a rehearsal.
+
+    A photo that will not attach does not stop the request: the report is
+    the point, and the note says what happened so the person can be told.
+    """
+    from pathlib import Path
+    box = pg.locator(UPLOAD_INPUT).first
+    try:
+        if not await box.count():
+            result.photo_note = "the City's form showed no upload box; filed without photos"
+            return
+        await box.set_input_files(paths)
+        names = [Path(p).name for p in paths]
+        host = pg.locator("c-web-file-upload-new").first
+        seen = 0
+        for _ in range(30):                                  # the component lists what it took
+            await pg.wait_for_timeout(1000)
+            seen = 0
+            for n in names:
+                if await host.get_by_text(n, exact=False).count():
+                    seen += 1
+            if seen == len(names):
+                break
+        await wizard.settle(pg)
+        alerts = [a for a in await wizard.msgs(pg) if a]
+        result.photos_attached = seen
+        if seen < len(names):
+            result.photo_note = (f"the City's form took {seen} of {len(names)} photos"
+                                 + (f": {alerts[0][:160]}" if alerts else ""))
+        else:
+            result.photo_note = f"{seen} photo{'s' if seen != 1 else ''} attached"
+    except Exception as e:                                   # never let a photo sink the filing
+        result.photo_note = f"photos could not be attached ({type(e).__name__}); filed without them"
 
 
 async def _fill_from_registry(pg, service: dict, answers: dict, description: str,
@@ -330,7 +376,8 @@ async def fill_contact(pg, contact: dict) -> list[str]:
 async def _run(*, service_code: str, address: str, description: str, answers: dict,
                contact: dict, lat: float | None, long: float | None, live: bool,
                headless: bool, screenshot: str | None,
-               attempt_id: int | None = None) -> SubmitResult:
+               attempt_id: int | None = None,
+               photos: list[tuple[str, bytes]] | None = None) -> SubmitResult:
     from . import registry_drift as rd            # reuse the registry loader
 
     reg = rd.load_registry()
@@ -343,13 +390,32 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
     result = SubmitResult(True, allowed, "starting", service_code, service["service_name"],
                           note=why)
 
+    import tempfile
+    from pathlib import Path
+    photos = photos or []
+    hook = None
+    tmp = tempfile.TemporaryDirectory(prefix="alex311-photos-") if photos else None
+    if photos and allowed:
+        paths = []
+        for name, data in photos:
+            path = Path(tmp.name) / name
+            path.write_bytes(data)
+            paths.append(str(path))
+
+        async def hook(page):
+            await attach_photos(page, paths, result)
+    elif photos:
+        result.photo_note = (f"{len(photos)} photo{'s' if len(photos) != 1 else ''} would be "
+                             "attached on a live run (a rehearsal uploads nothing)")
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=headless)
         pg = await browser.new_page(viewport={"width": 1100, "height": 1600})
         try:
             try:
                 await wizard.open_category(pg, service["service_name"], service_code,
-                                           service.get("groups") or [], address=address or None)
+                                           service.get("groups") or [], address=address or None,
+                                           on_file_upload=hook)
             except wizard.LocationRejected as e:
                 result.stage = "address_not_serviceable"
                 result.note = f"the City does not recognize that address: {e}"
@@ -456,6 +522,8 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
             return result
         finally:
             await browser.close()
+            if tmp is not None:
+                tmp.cleanup()
 
 
 def _record(result: SubmitResult, *, address: str, description: str, live: bool,
@@ -535,12 +603,13 @@ def prepare_submission(*, service_code: str, address: str = "", description: str
                        lat: float | None = None, long: float | None = None,
                        live: bool = False, headless: bool = True,
                        screenshot: str | None = None,
-                       attempt_id: int | None = None) -> SubmitResult:
+                       attempt_id: int | None = None,
+                       photos: list[tuple[str, bytes]] | None = None) -> SubmitResult:
     """Drive one request. Dry run unless both gates are open."""
     return asyncio.run(_run(service_code=service_code, address=address, description=description,
                             answers=answers or {}, contact=contact or {}, lat=lat, long=long,
                             live=live, headless=headless, screenshot=screenshot,
-                            attempt_id=attempt_id))
+                            attempt_id=attempt_id, photos=photos))
 
 
 def main(argv: list[str] | None = None) -> int:

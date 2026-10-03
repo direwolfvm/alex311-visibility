@@ -33,7 +33,7 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from . import db
+from . import db, photos
 from .submit_browser import ENV_GATE, gates_open, prepare_submission
 
 log = logging.getLogger("alex311.submit_worker")
@@ -90,7 +90,7 @@ def claim_next(conn) -> dict | None:
 
 
 def finish(conn, attempt_id: int, *, state: str, case_number: str | None = None,
-           error: str | None = None) -> None:
+           error: str | None = None, photo_note: str | None = None) -> None:
     """Record how a claim ended.
 
     A filed request loses its contact details here. They were needed to type
@@ -105,10 +105,14 @@ def finish(conn, attempt_id: int, *, state: str, case_number: str | None = None,
                   city_case_number = COALESCE(%s, city_case_number),
                   relayed_at = CASE WHEN %s = 'filed' THEN now() ELSE relayed_at END,
                   contact = CASE WHEN %s = 'filed' THEN NULL ELSE contact END,
-                  submit_error = %s
+                  submit_error = %s,
+                  photo_note = COALESCE(%s, photo_note)
             WHERE attempt_id = %s""",
-        (state, case_number, state, state, error, attempt_id))
+        (state, case_number, state, state, error, photo_note, attempt_id))
     conn.commit()
+    if state == "filed":
+        # the City has the photos now, under the case number; ours go, like the contact
+        photos.purge(conn, attempt_id=attempt_id)
 
 
 def release(conn, attempt_id: int, error: str) -> None:
@@ -123,7 +127,8 @@ def release(conn, attempt_id: int, error: str) -> None:
     finish(conn, attempt_id, state=state, error=error[:800])
 
 
-def file_one(row: dict, *, live: bool, screenshot: str | None = None) -> dict:
+def file_one(row: dict, *, live: bool, screenshot: str | None = None,
+             pictures: list[tuple[str, bytes]] | None = None) -> dict:
     """Drive one queued request. Returns a summary for the log."""
     contact = row.get("contact") or {}
     answers = row.get("answers") or {}
@@ -136,7 +141,8 @@ def file_one(row: dict, *, live: bool, screenshot: str | None = None) -> dict:
         answers=answers if isinstance(answers, dict) else {},
         contact=contact if isinstance(contact, dict) else {},
         live=live, headless=True, screenshot=screenshot,
-        attempt_id=row["attempt_id"])          # record against this row, not a new one
+        attempt_id=row["attempt_id"],          # record against this row, not a new one
+        photos=pictures)
     return result
 
 
@@ -168,6 +174,11 @@ def main(argv: list[str] | None = None) -> int:
         # the one holding the floor re-checks the queue before it lets go.
         log.info("another worker holds the floor; nothing to do")
         return 0
+    # photos on requests nobody sent are not kept forever
+    try:
+        photos.sweep(conn)
+    except Exception as e:                       # housekeeping never blocks a filing
+        log.warning("photo sweep failed: %s", type(e).__name__)
 
     handled = []
     rechecked = False
@@ -193,7 +204,8 @@ def main(argv: list[str] | None = None) -> int:
         shot = (f"{a.screenshot_dir.rstrip('/')}/attempt-{attempt_id}.png"
                 if a.screenshot_dir else None)
         try:
-            result = file_one(row, live=allowed, screenshot=shot)
+            pictures = photos.for_filing(conn, attempt_id=attempt_id)
+            result = file_one(row, live=allowed, screenshot=shot, pictures=pictures)
         except Exception as e:                       # a crash must not strand the row
             log.exception("attempt %s crashed", attempt_id)
             release(conn, attempt_id, f"{type(e).__name__}: {e}")
@@ -201,7 +213,8 @@ def main(argv: list[str] | None = None) -> int:
             continue
 
         if result.stage == "submitted" and result.case_number:
-            finish(conn, attempt_id, state="filed", case_number=result.case_number)
+            finish(conn, attempt_id, state="filed", case_number=result.case_number,
+                   photo_note=result.photo_note or None)
             log.warning("attempt %s FILED as %s", attempt_id, result.case_number)
             # The one moment "mine" can be vouched for: this account sent it,
             # and the City has just said what it is called. Bookkeeping only —
