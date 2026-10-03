@@ -26,7 +26,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from alex311.client import Alex311Client
-from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, photos, refresh, watches,
+from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, photos, push, refresh, watches,
                      portal_auth as pa)
 
 from . import registry as R
@@ -127,6 +127,11 @@ class WatchBody(BaseModel):
 
 class DigestBody(BaseModel):
     email: str
+
+
+class DeviceBody(BaseModel):
+    token: str
+    environment: str = "production"
 
 
 class ValidateBody(BaseModel):
@@ -532,6 +537,28 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
         with pool_getter().connection() as conn:
             removed = watches.remove_watch(conn, user_id=user_id, watch_id=watch_id)
         return {"watch_id": watch_id, "removed": removed}
+
+    # ------------------------------------------------------- push devices
+    # The iOS app registers its APNs token here once the person allows
+    # notifications, and again whenever it launches (tokens change).
+
+    @router.post("/api/devices")
+    def device_register(body: DeviceBody, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            try:
+                out = push.register(conn, user_id=user_id, token=body.token,
+                                    environment=body.environment)
+            except push.BadDevice as e:
+                raise HTTPException(400, str(e))
+        out["push_available"] = push.configured()
+        return out
+
+    @router.delete("/api/devices/{token}")
+    def device_unregister(token: str, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            return {"removed": push.unregister(conn, user_id=user_id, token=token)}
 
     @router.get("/api/digest")
     def digest_state(request: Request, actor: str = Depends(gate)):

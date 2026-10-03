@@ -389,3 +389,34 @@ DO $$ BEGIN
     GRANT USAGE, SELECT ON SEQUENCE attempt_photos_photo_id_seq TO alex311_app;
   END IF;
 END $$;
+
+-- Push notifications (alex311.push): the devices an account has the iOS app
+-- on, and, per link, the status the person was last told about — a push goes
+-- out when the mirror's status differs from it. A device token is personal
+-- (it reaches one phone): forced RLS, gone with the account.
+CREATE TABLE IF NOT EXISTS push_devices (
+    device_id     BIGSERIAL PRIMARY KEY,
+    user_id       TEXT NOT NULL REFERENCES portal_users (user_id) ON DELETE CASCADE,
+    token         TEXT NOT NULL UNIQUE,              -- APNs device token, hex
+    environment   TEXT NOT NULL CHECK (environment IN ('production', 'sandbox')),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    disabled_at   TIMESTAMPTZ                        -- Apple said the token is gone
+);
+CREATE INDEX IF NOT EXISTS push_devices_user_idx ON push_devices (user_id);
+
+ALTER TABLE push_devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_devices FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own   ON push_devices;
+DROP POLICY IF EXISTS admin ON push_devices;
+CREATE POLICY own   ON push_devices USING (user_id = current_setting('app.user_id', true));
+CREATE POLICY admin ON push_devices USING (current_setting('app.role', true) = 'admin');
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON push_devices TO alex311_app;
+    GRANT USAGE, SELECT ON SEQUENCE push_devices_device_id_seq TO alex311_app;
+  END IF;
+END $$;
+
+ALTER TABLE request_links ADD COLUMN IF NOT EXISTS notified_status TEXT;
