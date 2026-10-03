@@ -261,6 +261,28 @@ Unset, the path is a 404 and links open in Safari as before. Apple caches the
 file for a day or more; after a change, reinstall the app (or use the
 `?mode=developer` associated-domain form on a development build) to see it.
 
+## 5a⅞. The public pages: /privacy and /support
+
+App Review and the public open these without signing in; the App Store listing
+points at them. Server-rendered, with three settings on the dashboard service:
+
+```bash
+gcloud run services update alex311-dashboard --region=$REGION \
+    --update-env-vars='^|^SITE_CONTACT_EMAIL=support@alex311visibility.me|SITE_OPERATOR=Herbert Industries'
+# SITE_PRIVACY_EMAIL, if privacy questions should go somewhere else
+```
+
+`support@` and `privacy@` are real: a Mailgun route forwards both to the
+operator's inbox (`match_recipient("(support|privacy)@alex311visibility.me")`),
+and the domain's MX records point at Mailgun (`mxa.mailgun.org`,
+`mxb.mailgun.org`, priority 10). DreamHost's API cannot write MX records;
+they are set in its panel under Mail → Custom MX.
+
+Deleting an account (website or app) removes the person's sign-in record as
+well — from this site's own Identity Platform tenant only
+(`firebase_auth.delete_tenant_user`), never the project's default pool, which
+belongs to another application. It refuses to run with no tenant configured.
+
 ## 5b. The application database role (row-level security)
 
 The account tables (`request_links`, and `feedback` when it lands) carry

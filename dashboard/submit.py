@@ -722,15 +722,28 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
         """Remove the account and everything hanging off it.
 
         The last administrator cannot delete themselves: there would be
-        nobody left who could let anyone in. Firebase is never touched — see
-        db.delete_account for why.
+        nobody left who could let anyone in.
+
+        The sign-in record goes too — from this site's own tenant only (see
+        firebase_auth.delete_tenant_user). If Firebase cannot be reached the
+        account here is still gone, and the answer says the sign-in is not.
         """
         user_id = _account(request)
         with pool_getter().connection() as conn:
             if not pa.count_admins(conn, excluding=user_id):
                 raise HTTPException(409, "that is the last administrator")
+            row = conn.execute("SELECT firebase_uid FROM portal_users WHERE user_id = %s",
+                               (user_id,)).fetchone()
+            uid = row["firebase_uid"] if row else None
             removed = adb.delete_account(conn, user_id=user_id)
-        resp = JSONResponse({"removed": removed})
+        sign_in_removed = None                      # None: there was no sign-in record to remove
+        if removed and uid:
+            try:
+                sign_in_removed = fb.delete_tenant_user(uid)
+            except Exception as e:
+                log.warning("sign-in record not removed: %s", type(e).__name__)
+                sign_in_removed = False
+        resp = JSONResponse({"removed": removed, "sign_in_removed": sign_in_removed})
         resp.delete_cookie(pa.SESSION_COOKIE, path="/submit")
         return resp
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alex311 Reborn</title>
-<meta name="description" content="Every Alexandria, VA service request on a searchable map, a way to send your own to the City through Alex311, and a place to say whether it was actually addressed.">
+<title>Privacy · Alex311 Reborn</title>
+<meta name="description" content="What Alex311 Reborn — the website and the iPhone app — keeps about you, what it sends to the City, and how to delete it.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -146,6 +146,21 @@
   }
   @media (prefers-reduced-motion: reduce) { .skip-link { transition:none; } }
   @media (pointer: coarse) { .btn { min-height:44px; display:inline-flex; align-items:center; } }
+
+  /* ---- a plain document page ---- */
+  .doc { max-width:760px; }
+  .doc h2 { font-size:26px; line-height:1.2; margin:18px 0 6px; }
+  .doc .dated { color:var(--muted); font-size:13px; margin:0 0 18px; }
+  .doc h3 { font-size:17px; margin:26px 0 6px; }
+  .doc p, .doc li { font-size:15px; }
+  .doc ul { padding-left:20px; }
+  .doc li { margin:4px 0; }
+  .doc .short { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 18px; }
+  .doc .short p { margin:6px 0; }
+  .doc table { border-collapse:collapse; width:100%; font-size:14px; margin:8px 0; }
+  .doc th, .doc td { text-align:left; vertical-align:top; padding:8px 10px; border-top:1px solid var(--border); }
+  .doc th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-top:none; }
+  .doc .tbl { overflow-x:auto; }
 </style>
 <script src="/account-chip.js" defer></script>
 </head>
@@ -166,168 +181,118 @@
   <div class="account" id="account"></div>
 </header>
 
-<main class="wrap" id="main">
-  <section class="hero">
-    <p class="eyebrow">Alexandria, Virginia · every 311 request, refreshed through the day</p>
-    <h2>What residents ask the City to fix — and what happens next.</h2>
-    <p class="lede">See every Alex311 service request on a map you can search. Send your own to the
-      City from here and keep it in one place. Then say whether it was actually addressed — the one
-      thing the City's own data cannot tell anyone.</p>
-    <div class="cta">
-      <a class="btn primary" href="/explore">Explore requests</a>
-      <a class="btn quiet" href="/submit">Report an issue</a>
-    </div>
+<main class="wrap doc" id="main">
+  <h2>Privacy</h2>
+  <p class="dated">For the Alex311 Reborn website (alex311visibility.me) and the Alex311 Reborn iPhone app.
+    Effective October 3, 2026.</p>
 
-    <div class="figures" id="figures" aria-live="polite">
-      <div class="figure"><div class="v" id="f-total">–</div><div class="l">requests on record</div></div>
-      <div class="figure"><div class="v" id="f-open">–</div><div class="l">open right now</div></div>
-      <div class="figure"><div class="v" id="f-median">–</div><div class="l">median days to close</div></div>
-      <div class="figure"><div class="v" id="f-30d">–</div><div class="l">closed within 30 days</div></div>
-    </div>
-    <p class="figures-note" id="f-note">Counting every request the City has published.</p>
+  <div class="short">
+    <p><b>The short version.</b> You can browse without an account and nothing about you is kept.
+      An account holds an id, not a profile. When you send a report, the City of Alexandria gets
+      your contact details and photos because it requires them — and this site deletes its copies
+      once the City has filed the request. There is no advertising, no tracking and no selling of
+      anything. You can delete your account, and everything with it, at any time.</p>
+    <p><b>Who runs this.</b> {{OPERATOR}}, independently. It is not run by, affiliated with, or
+      endorsed by the City of Alexandria.</p>
+  </div>
 
-    <div class="callout" id="account-callout" aria-live="polite">
-      <div class="text">
-        <h3 id="callout-h">Sign in or create an account</h3>
-        <p id="callout-p">With Google or an emailed link — no password to remember. Keep the requests
-          you send from here in one place, follow others, and say whether they were addressed.
-          An account here is separate from any Alex311 account with the City.</p>
-      </div>
-      <div class="btns" id="callout-btns">
-        <a class="btn primary" href="/submit/login">Sign in or register</a>
-      </div>
-    </div>
-  </section>
+  <h3>Browsing</h3>
+  <p>The map, the list, the record pages and the analytics show service requests the City of
+    Alexandria publishes through its Alex311 portal — what was reported, where, when, its status,
+    and any photos the City makes public. This site copies that public record; it does not add to it.</p>
+  <p>No account is needed, no cookies are set, and there is no analytics or advertising code. Like
+    any website, the servers that host this one (Google Cloud) log each request's IP address and
+    browser for a short time, for security and troubleshooting. Pages load map tiles from
+    OpenStreetMap and a few open-source libraries from public content networks (unpkg, jsDelivr);
+    those services see your IP address when your browser fetches from them.</p>
 
-  <section class="three" aria-label="What you can do here">
-    <article class="do">
-      <span class="n">See</span>
-      <h3>What has been reported, street by street</h3>
-      <p>Every request the City publishes, on a map and in a list you can search by address,
-        request type, status and date — or draw an area and see just what is inside it.</p>
-      <ul>
-        <li>A clean record page for each case, with the photos residents attached — including
-          the ones the City's own site cannot display.</li>
-        <li>How long things take to close, by type, and how open requests are aging.</li>
-      </ul>
-      <div class="go"><a href="/explore">Explore the map</a><span class="sep">·</span>
-        <a href="/explore#analytics">See the analytics</a></div>
-    </article>
+  <h3>An account</h3>
+  <p>You sign in with Apple, Google, or a link or code emailed to you. Sign-in is handled by
+    Google's Identity Platform, which keeps the email address you sign in with. What this site keeps
+    for an account is:</p>
+  <ul>
+    <li>an account id, and the id the sign-in provider gives it;</li>
+    <li>an email address <i>only</i> if an administrator invited you by email, or you gave one for
+      the daily digest;</li>
+    <li>a display name, if you choose to set one — shown only to you;</li>
+    <li>which version of this policy you accepted, and when you last signed in;</li>
+    <li>your open sign-ins (a session cookie on the website, a stored session in the app), kept
+      here only as a one-way hash.</li>
+  </ul>
+  <p>A code emailed to sign you in is kept for 15 minutes, in a form that cannot be read back.</p>
 
-    <article class="do">
-      <span class="n">Report</span>
-      <h3>Send a request to the City from here</h3>
-      <p>Describe the issue, place it on the map and attach a photo. It goes to the City's own
-        Alex311 system and comes back with a real City case number — the same as if you had used
-        their form.</p>
-      <ul>
-        <li>We check the address against the City's list and suggest the spelling it will accept.</li>
-        <li>If something similar is already open nearby, we show you before you send.</li>
-        <li>Your request lands under <b>My requests</b>, so you can find it again.</li>
-      </ul>
-      <div class="go"><a href="/submit">Report an issue</a> <span class="tab-tag">beta</span></div>
-    </article>
+  <h3>Sending a report</h3>
+  <p>A report you send from here is filed with the City of Alexandria through its own Alex311
+    form. To do that, this site sends the City:</p>
+  <ul>
+    <li>the request type, the address or location you chose, your description and your answers
+      to the City's questions;</li>
+    <li>your <b>first and last name, email address and phone number</b>, which the City requires
+      on many request types;</li>
+    <li>any <b>photos</b> you attach.</li>
+  </ul>
+  <p>From then on the City holds that information under its own policies, and may publish parts
+    of the request (not your contact details) in its public record.</p>
+  <p>On this side: your contact details and photos are <b>deleted as soon as the City has filed
+    the request</b>. Photos are re-encoded before they are stored, which removes the hidden
+    location and device data a phone puts in them. Photos on a request you never sent are deleted
+    after 7 days. What remains is a record that a request was sent — its type, place and
+    description, the City's case number, and the checks made to prevent abuse — without your name,
+    email, phone or photos.</p>
+  <p>The iPhone app asks for your location only to suggest the address of a report or show
+    requests near you, and only while you use it. A location reaches this site when you choose
+    it for a report or search nearby; it is not tracked or kept as a history.</p>
 
-    <article class="do">
-      <span class="n">Rate</span>
-      <h3>Say whether it was actually addressed</h3>
-      <p>The City's data says <i>closed</i>. Only the person who reported it knows whether it was
-        fixed. Rate your own request from 1 to 5 — that is the outcome of record for it.</p>
-      <ul>
-        <li>Follow requests you did not send and add a community view, kept separate.</li>
-        <li>Private unless you choose to show your score. Names are never shown.</li>
-        <li>An account here is for this site only — it is not your Alex311 account with the
-          City, and does not connect to one.</li>
-        <li>Together, the ratings answer a question on the Analytics tab that no other source can.</li>
-      </ul>
-      <div class="go" id="rate-go"><a href="/submit/my">Sign in to start</a></div>
-    </article>
-  </section>
+  <h3>Following, rating and watching</h3>
+  <ul>
+    <li><b>Your list</b> — the requests you sent and the ones you follow.</li>
+    <li><b>Ratings</b> — whether a request was actually addressed, from 1 to 5. A rating is private
+      unless you choose to show the score on that request's page; a shown score never carries your
+      name. Ratings are also counted in the site's statistics, in totals only.</li>
+    <li><b>Notes</b> you write with a rating are private. They are never shown to anyone else.</li>
+    <li><b>Watches</b> — request types, addresses or map areas you asked to hear about. An address
+      is often a home, so these are visible only to you.</li>
+  </ul>
 
-  <section class="latest card" aria-labelledby="latest-h">
-    <h3 id="latest-h">Newest requests <a href="/explore">All requests →</a></h3>
-    <ol class="rows" id="latest"><li class="empty">Loading…</li></ol>
-  </section>
+  <h3>Email and notifications</h3>
+  <ul>
+    <li><b>Sign-in emails</b> go to the address you type, and nowhere else.</li>
+    <li><b>The daily digest</b> is off unless you turn it on, goes only to an address you
+      confirmed, and every one has a link that stops it.</li>
+    <li><b>Push notifications</b> in the app, if you allow them, tell you when a request you sent
+      or follow changes. For that the site keeps the device token Apple gives the app. It is
+      removed when you sign out or delete your account, or when Apple reports it no longer valid.</li>
+  </ul>
+  <p>Email is delivered by Mailgun and notifications by Apple; each receives only what it needs
+    to deliver the message.</p>
 
-  <section class="about" aria-label="About this site">
-    <div>
-      <h3>Where the data comes from</h3>
-      <p>The City of Alexandria publishes its Alex311 service requests. This site copies them
-        several times a day, keeps the history, and links every case back to the official
-        record. Reports sent from here go into the same City system as everyone else's.</p>
-    </div>
-    <div>
-      <h3>What this site is not</h3>
-      <p>Not the City, and not a way to reach it in an emergency — for anything urgent, call 911;
-        for the City itself, call 311. Signing in here is not signing in to Alex311: an account on
-        this site is its own thing and does not connect to any account you have with the City.
-        For the official site, see
-        <a href="https://alex311.alexandriava.gov" rel="noopener">alex311.alexandriava.gov</a>.</p>
-    </div>
-  </section>
+  <h3>What is never done</h3>
+  <p>No advertising. No tracking across apps or websites. No analytics profile. Nothing is sold,
+    rented or shared for marketing. Information is shared only as described above: with the City
+    when you send a report, and with the services that host the site, sign you in, and deliver
+    email and notifications.</p>
 
-  <p class="foot"><a href="/privacy">Privacy</a> · <a href="/support">Support</a><br>
-    Data ingested from the public Alex311 portal. Case links open a record page here,
-    which links to the official City record. This is not an official City of Alexandria service.</p>
+  <h3>Deleting your account</h3>
+  <p>On the website, open <a href="/submit/account">your account page</a> and choose
+    <b>Delete my account</b>. In the app, open <b>Account</b> and choose <b>Delete account</b>.
+    Either removes, immediately: the account, its sign-in record, your list, your ratings and
+    notes (including any score you chose to show), your watches, your digest address, and your
+    registered devices.</p>
+  <p>Two things are outside this site's reach: requests already filed with the City are the
+    City's records, and the record that a request was sent (without your contact details)
+    is kept as described above.</p>
+
+  <h3>Children</h3>
+  <p>This service is for residents reporting issues to their city and is not directed to children
+    under 13. It does not knowingly collect information from them.</p>
+
+  <h3>Changes and contact</h3>
+  <p>If this policy changes in a way that matters, the date above changes and signed-in users
+    are asked to accept the new version. Questions, or a request about your information:
+    <a href="mailto:{{PRIVACY_EMAIL}}">{{PRIVACY_EMAIL}}</a>.</p>
+
+  <p class="foot"><a href="/privacy">Privacy</a> · <a href="/support">Support</a> ·
+    This is not an official City of Alexandria service.</p>
 </main>
-
-<script>
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
-  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-const ago = iso => {
-  if (!iso) return '';
-  const h = Math.max(0, (Date.now() - new Date(iso)) / 36e5);
-  if (h < 1) return 'just now';
-  if (h < 24) return `${Math.round(h)} h ago`;
-  const d = Math.round(h / 24);
-  return d === 1 ? 'yesterday' : `${d} days ago`;
-};
-const badge = st => {
-  const s = (st || '').toLowerCase();
-  const cls = s === 'open' ? 'open' : s === 'closed' ? 'closed' : '';
-  return `<span class="badge ${cls}">${esc(st || 'unknown')}</span>`;
-};
-
-// The figures: whole-history counts from /api/meta, and the two "how long" numbers
-// from the same aggregate the Analytics tab draws (unfiltered, so they match it).
-fetch('/api/meta').then(r => r.json()).then(m => {
-  $('f-total').textContent = (m.total ?? 0).toLocaleString();
-  $('f-open').textContent = (m.open ?? 0).toLocaleString();
-  if (m.last_ingest && m.last_ingest.finished_at)
-    $('f-note').textContent = `Counting every request the City has published · updated ${ago(m.last_ingest.finished_at)}.`;
-}).catch(() => {});
-fetch('/api/analytics').then(r => r.json()).then(d => {
-  const s = d.summary || {};
-  $('f-median').textContent = s.median_ttc == null ? '–' : (+s.median_ttc).toFixed(1);
-  $('f-30d').textContent = s.closed ? Math.round(100 * s.closed_within_30d / s.closed) + '%' : '–';
-}).catch(() => {});
-
-// The newest six, linked to their record pages here rather than the City's.
-fetch('/api/requests?sort=requested&dir=desc&limit=6').then(r => r.json()).then(({rows}) => {
-  const box = $('latest');
-  if (!rows || !rows.length) { box.innerHTML = '<li class="empty">Nothing on record yet.</li>'; return; }
-  box.innerHTML = rows.map(r => `<li>
-    <a class="case" href="/r/${encodeURIComponent(r.service_request_id)}">${esc(r.service_request_id)}</a>
-    <span class="what"><span class="type">${esc(r.service_name || 'Request')}${badge(r.status)}</span>
-      <span class="where">${esc(r.address || 'No address given')}</span></span>
-    <span class="when">${ago(r.requested_datetime)}</span></li>`).join('');
-}).catch(() => { $('latest').innerHTML = '<li class="empty">Could not load the newest requests.</li>'; });
-
-// Signed in: the callout becomes "you are signed in", and the rating card points at
-// the list. The chip script (deferred, so it has run by DOMContentLoaded) did the
-// fetch and reveals the bar links; this only reads its answer.
-document.addEventListener('DOMContentLoaded', () => {
-  (window.alex311 && window.alex311.whoami || Promise.resolve({user: null})).then(({user}) => {
-    if (!user) return;
-    $('rate-go').innerHTML = '<a href="/submit/my">My requests</a>';
-    $('callout-h').textContent = `Signed in as ${user.label || user.email || 'your account'}`;
-    $('callout-p').textContent = 'Your requests, the ones you follow, and your ratings are under My requests. Your sign-in details and the ways out are on your account page.';
-    $('callout-btns').innerHTML = '<a class="btn primary" href="/submit/my">My requests</a>'
-      + '<a class="btn quiet" href="/submit/account">Account</a>';
-  });
-});
-</script>
 </body>
 </html>
