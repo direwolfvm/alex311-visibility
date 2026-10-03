@@ -269,6 +269,25 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         link_sends[key] = recent
         return True
 
+    # Sign-in links: enough for real life (a link lands in Junk, a mail scanner
+    # or a browser uses it up, someone asks again before the first arrives),
+    # still far short of flooding an inbox. The numbers are a contract with
+    # the iOS app (Session.sendsPerHour / Session.resendDelay): change both.
+    LINKS_PER_ADDRESS_PER_HOUR = 5
+    LINK_SPACING_SECONDS = 60
+    LINKS_PER_CALLER_PER_HOUR = 20          # many residents can share one address: a library, an office
+
+    def _wait(key: str, limit: int, window: float = 3600.0, spacing: float = 0.0) -> int:
+        """Seconds until `key` may send again; 0 if it may now. Records nothing."""
+        now = time.monotonic()
+        recent = [t for t in link_sends.get(key, []) if now - t < window]
+        link_sends[key] = recent
+        if recent and spacing and now - recent[-1] < spacing:
+            return max(1, math.ceil(spacing - (now - recent[-1])))
+        if len(recent) >= limit:
+            return max(1, math.ceil(window - (now - recent[0])))   # when the oldest leaves the window
+        return 0
+
     @public.post("/api/email-link")
     def email_sign_in_link(body: EmailLinkBody, request: Request):
         """Send a sign-in link in this site's own email.
@@ -286,8 +305,15 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
             raise HTTPException(400, "that does not look like an email address")
         caller = request.headers.get("x-forwarded-for", "").split(",")[0].strip() \
             or (request.client.host if request.client else "?")
-        if not (_allow(f"email:{email}", 2) and _allow(f"ip:{caller}", 10)):
-            raise HTTPException(429, "a link was sent recently; check that inbox first")
+        # both checked before either is counted, so one refusal does not spend the other's allowance
+        wait = max(_wait(f"email:{email}", LINKS_PER_ADDRESS_PER_HOUR, spacing=LINK_SPACING_SECONDS),
+                   _wait(f"ip:{caller}", LINKS_PER_CALLER_PER_HOUR))
+        if wait:
+            when = f"{wait} seconds" if wait < 90 else f"about {math.ceil(wait / 60)} minutes"
+            raise HTTPException(429, f"a link was sent recently; check that inbox, or ask again in {when}",
+                                headers={"Retry-After": str(wait)})
+        for key in (f"email:{email}", f"ip:{caller}"):
+            link_sends.setdefault(key, []).append(time.monotonic())
         origin = os.environ.get("SITE_ORIGIN") or str(request.base_url).rstrip("/")
         try:
             link = fb.mint_sign_in_link(email, origin)

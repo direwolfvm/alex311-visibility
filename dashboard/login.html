@@ -73,6 +73,15 @@
   .policy { font-size:12px; color:var(--muted); line-height:1.5; margin:14px 0 0;
             padding:10px 12px; border:1px solid var(--border); border-radius:8px; }
   .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+  .choice { border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .btnlink { display:block; text-align:center; padding:11px; border-radius:8px; font-weight:600;
+             text-decoration:none; border:1px solid var(--accent); color:var(--accent); background:#fff; }
+  .btnlink:hover { background:#eff6ff; }
+  .btnlink.lead { background:var(--accent); color:#fff; }
+  .btnlink.lead:hover { background:#1740ad; }
+  #link-choice.app-first { display:flex; flex-direction:column; }
+  #link-choice:not(.app-first) { display:flex; flex-direction:column-reverse; }
+  #link-choice[hidden] { display:none; }
   .foot { margin-top:20px; padding-top:16px; border-top:1px solid var(--border);
           color:var(--muted); font-size:12px; }
   .explain { border:1px solid var(--border); background:#f8fafc; border-radius:8px;
@@ -107,6 +116,29 @@
   <p class="sub">Keep the requests you send from here in one place, follow others, and say whether
     they were addressed. New here? Continue with Google or ask for an emailed link — an account
     is created for you.</p>
+
+  <!-- Arriving with a sign-in link this browser did not ask for. Mail services
+       that rewrite links (Outlook Safe Links, Proofpoint, Mimecast) send the
+       phone here by redirect, and iOS only hands a link to an app when it is
+       tapped directly. Signing in here would use up the one-time code the
+       app is waiting for — so ask, and consume nothing until answered. -->
+  <div id="link-choice" hidden>
+    <div class="choice" id="choice-app">
+      <b id="app-h">Signing in to the Alex311 Reborn app?</b>
+      <p class="policy" style="border:none;padding:0;margin:4px 0 10px">If you asked to sign in from the app on
+        this phone, open the link there.</p>
+      <a class="btnlink" id="open-app" href="#">Open in the app</a>
+    </div>
+    <div class="or">or</div>
+    <div class="choice" id="choice-here">
+      <b id="here-h">Signing in on this browser instead?</b>
+      <div class="linkrow" style="margin-top:8px">
+        <label class="sr-only" for="here-email">The email address the link was sent to</label>
+        <input type="email" id="here-email" autocomplete="email" placeholder="the address the link was sent to">
+        <button type="button" class="alt" id="here-go">Sign in here</button>
+      </div>
+    </div>
+  </div>
 
   <div class="explain">
     <p><b>What this is.</b> An unofficial mirror of the City's Alex311 requests, with a way to
@@ -155,6 +187,25 @@
 const $ = id => document.getElementById(id);
 function say(id, text) { const el = $(id); el.textContent = text; el.hidden = false; }
 
+// A sign-in link in the address bar, and whether this browser asked for it.
+// Decided from the URL alone, before Firebase loads, so the choice appears
+// at once and nothing is consumed by showing it.
+const linkParams = new URLSearchParams(location.search);
+const hasLink = linkParams.get('mode') === 'signIn' && !!linkParams.get('oobCode');
+const askedHere = (() => { try { return localStorage.getItem('alex311.signin.email'); } catch { return null; } })();
+if (hasLink && !askedHere) {
+  const onIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  $('link-choice').hidden = false;
+  $('link-choice').classList.toggle('app-first', onIOS);
+  $('open-app').classList.toggle('lead', onIOS);
+  // whichever comes first is the plain question; the other is the "instead"
+  $('app-h').textContent = onIOS ? 'Signing in to the Alex311 Reborn app?' : 'Signing in to the Alex311 Reborn app instead?';
+  $('here-h').textContent = onIOS ? 'Signing in on this browser instead?' : 'Sign in on this browser';
+  $('link-choice').style.marginBottom = '16px';
+  // the same query, on the app's own scheme: it reads oobCode from any link whose mode is signIn
+  $('open-app').href = 'alex311://signin' + location.search;
+}
+
 async function finish(user) {
   const token = await user.getIdToken();
   const r = await fetch('/submit/api/session', {
@@ -185,18 +236,30 @@ async function finish(user) {
   const auth = firebase.auth();
   // our own pool of users, not the one the rest of the project shares
   if (cfg.config.tenantId) auth.tenantId = cfg.config.tenantId;
-  $('firebase-signin').hidden = false;
+  // the usual ways in stay out of the way while a link is waiting to be dealt with
+  $('firebase-signin').hidden = hasLink && !askedHere;
 
   // arriving back from the email link
   if (auth.isSignInWithEmailLink(location.href)) {
-    let email = localStorage.getItem('alex311.signin.email');
-    if (!email) email = prompt('Confirm the email address the link was sent to');
-    if (email) {
+    const signInHere = async email => {
       try {
         const cred = await auth.signInWithEmailLink(email, location.href);
         localStorage.removeItem('alex311.signin.email');
         await finish(cred.user);
       } catch (e) { say('error', e.message); }
+    };
+    if (askedHere) {
+      await signInHere(askedHere);            // this browser asked for the link: sign in at once
+    } else {
+      // someone else's browser, or the app's link arriving by redirect: only on request
+      const go = () => {
+        const email = $('here-email').value.trim();
+        if (!email) { $('here-email').focus(); return; }
+        $('here-go').disabled = true;
+        signInHere(email).finally(() => { $('here-go').disabled = false; });
+      };
+      $('here-go').addEventListener('click', go);
+      $('here-email').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
     }
   }
 

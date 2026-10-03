@@ -150,4 +150,5 @@ def test_the_endpoint_never_echoes_the_link_or_the_address():
     fn = SUBMIT.split("def email_sign_in_link(")[1].split("\n    @public")[0]
     assert 'log.warning("sign-in email failed: %s", type(e).__name__)' in fn
     assert 'return {"sent": True}' in fn
-    assert "_allow(f\"email:{email}\"" in fn and "_allow(f\"ip:{caller}\"" in fn
+    assert '_wait(f"email:{email}", LINKS_PER_ADDRESS_PER_HOUR, spacing=LINK_SPACING_SECONDS)' in fn
+    assert '_wait(f"ip:{caller}", LINKS_PER_CALLER_PER_HOUR)' in fn

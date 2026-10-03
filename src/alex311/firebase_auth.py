@@ -156,6 +156,9 @@ with this email address. Open this link on the device where you asked for it:
 The link works once and expires soon. If you did not ask for it, you can ignore
 this email; nothing happens without the link.
 
+Using the Alex311 Reborn app on an iPhone? Open this link on that phone. If it
+opens in a browser instead, the page offers to hand it to the app.
+
 About this account: it is for {host} only. It keeps the list of requests you
 sent or follow here and the ratings you give them. It is separate from any
 Alex311 account you have with the City of Alexandria and does not connect to
@@ -175,6 +178,8 @@ padding:10px 18px;border-radius:8px;font-weight:600;display:inline-block">Sign i
 <a href="{link}" style="color:#1d4ed8;word-break:break-all">{link}</a></p>
 <p>The link works once and expires soon. If you did not ask for it, you can ignore this email;
 nothing happens without the link.</p>
+<p style="font-size:13px;color:#5c6675">Using the Alex311 Reborn app on an iPhone? Open this link on
+that phone. If it opens in a browser instead, the page offers to hand it to the app.</p>
 <p style="font-size:13px;color:#5c6675;border-top:1px solid #e2e8f0;padding-top:12px;margin-top:20px">
 <b>About this account.</b> It is for {host} only: it keeps the list of requests you sent or follow
 here and the ratings you give them. It is separate from any Alex311 account you have with the City
