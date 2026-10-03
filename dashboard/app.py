@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
@@ -564,6 +564,29 @@ def home():
 def explore():
     """The map, the list and the Analytics tab (#analytics)."""
     return FileResponse(STATIC / "explore.html", media_type="text/html")
+
+
+def _contact_page(name: str) -> HTMLResponse:
+    """The two pages the public and App Review open without signing in.
+    Server-rendered: the contact address and the operator's name come from
+    the environment, so the pages are whole in the first response."""
+    contact = os.environ.get("SITE_CONTACT_EMAIL", "support@alex311visibility.me")
+    html = (STATIC / name).read_text()
+    for key, value in (("{{CONTACT_EMAIL}}", contact),
+                       ("{{PRIVACY_EMAIL}}", os.environ.get("SITE_PRIVACY_EMAIL", contact)),
+                       ("{{OPERATOR}}", os.environ.get("SITE_OPERATOR", "Herbert Industries"))):
+        html = html.replace(key, value)
+    return HTMLResponse(html, headers={"Cache-Control": "public, max-age=300"})
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy():
+    return _contact_page("privacy.html")
+
+
+@app.get("/support", response_class=HTMLResponse)
+def support():
+    return _contact_page("support.html")
 
 
 @app.get("/.well-known/apple-app-site-association")

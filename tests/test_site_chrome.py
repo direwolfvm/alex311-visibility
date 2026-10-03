@@ -21,6 +21,8 @@ PAGES = {
     "my": ROOT / "my.html",
     "account": ROOT / "account.html",
     "login": ROOT / "login.html",
+    "privacy": ROOT / "static/privacy.html",
+    "support": ROOT / "static/support.html",
 }
 HTML = {name: path.read_text() for name, path in PAGES.items()}
 

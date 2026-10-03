@@ -56,7 +56,8 @@ def test_what_is_shown_publicly_is_a_score_and_a_count():
 def test_deleting_the_account_takes_everything_and_touches_nothing_else():
     fn = DB.split("def delete_account(")[1].split("\ndef ")[0]
     assert "DELETE FROM portal_users WHERE user_id = %s" in fn
-    assert "Never touches Firebase" in fn
+    # the sign-in record is removed by the caller, in this site's tenant only
+    assert "in the tenant only, never the" in fn
     for table in ("request_links", "feedback", "portal_sessions"):
         assert "ON DELETE CASCADE" in SCHEMA.split(f"CREATE TABLE IF NOT EXISTS {table} (")[1].split(");")[0]
 
@@ -69,7 +70,8 @@ def test_the_last_administrator_cannot_delete_themselves():
 
 def test_deletion_takes_two_presses_and_says_what_it_does():
     assert "Confirm: delete my account and my list" in ACCOUNT
-    assert "is not touched" in ACCOUNT
+    assert "your sign-in\n      record with this site" in ACCOUNT        # deletion removes the sign-in record too
+    assert "is not touched" not in ACCOUNT
     assert 'href="/submit/account"' in MY   # My requests points at the account page
 
 

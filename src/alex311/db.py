@@ -626,13 +626,12 @@ def public_scores(conn: psycopg.Connection, *, service_request_id: str) -> list[
 
 def delete_account(conn: psycopg.Connection, *, user_id: str) -> bool:
     """Remove an account and everything hanging off it: sessions, links,
-    verdicts, shared or not. The cascade does the work.
+    verdicts (shared or not), watches, devices. The cascade does the work.
 
-    Never touches Firebase. This project's Identity Platform is shared with
-    another application, and a Google account that has signed into both is
-    one Firebase user as Google sees it; deleting it there would sign the
-    person out of the other application too. What we hold is the uid, and
-    that goes with the row.
+    The database half only. The person's sign-in record lives in this site's
+    own Identity Platform tenant and is removed by the caller
+    (`firebase_auth.delete_tenant_user`) — in the tenant only, never the
+    project's default pool, which belongs to another application.
     """
     row = conn.execute("DELETE FROM portal_users WHERE user_id = %s RETURNING 1",
                        (user_id,)).fetchone()

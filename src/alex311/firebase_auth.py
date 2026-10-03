@@ -33,7 +33,7 @@ from dataclasses import dataclass
 
 log = logging.getLogger("alex311.firebase_auth")
 
-POLICY_VERSION = "2026-09-15"
+POLICY_VERSION = "2026-10-03"      # the date on /privacy
 
 
 @dataclass(frozen=True)
@@ -96,6 +96,45 @@ def verify_id_token(token: str) -> Identity:
     return Identity(uid=claims["sub"], email=claims.get("email"),
                     email_verified=bool(claims.get("email_verified")),
                     provider=firebase.get("sign_in_provider", "unknown"))
+
+
+# ------------------------------------------------------ deleting a sign-in
+def delete_tenant_user(uid: str) -> bool:
+    """Remove one person's sign-in record from THIS SITE'S TENANT, as part of
+    deleting their account.
+
+    Only ever the tenant. The GCP project's Identity Platform is shared with
+    another application, whose users live in the project's default pool;
+    this refuses to run without a tenant configured rather than fall back to
+    that pool. Inside the tenant a user belongs to this site alone, so
+    removing it cannot sign anyone out of anything else.
+
+    Returns True if Firebase removed it (or it was already gone).
+    """
+    project = os.environ.get("FIREBASE_PROJECT_ID")
+    tenant = os.environ.get("FIREBASE_TENANT_ID")
+    if not project or not tenant:
+        raise NotConfigured("refusing to delete a sign-in without a tenant: "
+                            "the default pool belongs to another application")
+    import google.auth
+    import requests
+    from google.auth.transport.requests import Request as GRequest
+    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    creds.refresh(GRequest())
+    r = requests.post(
+        f"https://identitytoolkit.googleapis.com/v1/projects/{project}/tenants/{tenant}/accounts:delete",
+        json={"localId": uid}, timeout=15,
+        headers={"Authorization": f"Bearer {creds.token}", "x-goog-user-project": project})
+    if r.status_code == 200:
+        return True
+    try:
+        message = r.json().get("error", {}).get("message", "")
+    except Exception:
+        message = ""
+    if "USER_NOT_FOUND" in message:
+        return True
+    log.warning("firebase would not delete a tenant user (%s %s)", r.status_code, message[:60])
+    return False
 
 
 # ------------------------------------------------------------ sign-in links
