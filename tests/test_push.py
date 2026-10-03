@@ -29,7 +29,7 @@ def apns_key(monkeypatch):
     pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
                             serialization.NoEncryption()).decode()
     monkeypatch.setenv("APNS_KEY", pem); monkeypatch.setenv("APNS_KEY_ID", "KEYID12345")
-    monkeypatch.setenv("APNS_TEAM_ID", "TEAMID1234"); monkeypatch.setenv("APNS_TOPIC", "me.alex311visibility.app")
+    monkeypatch.setenv("APNS_TEAM_ID", "TEAMID1234"); monkeypatch.setenv("APNS_TOPIC", "com.herbertindustries.Alex311-Reborn")
     monkeypatch.setattr(P, "_jwt", None)
     return key
 
@@ -74,7 +74,7 @@ def test_a_send_goes_to_the_right_host_with_the_right_headers(apns_key):
             seen.update(url=url, body=json.loads(content), headers=headers); return Resp()
     assert P.send("ab" * 32, "sandbox", {"aps": {"alert": "x"}}, client=Client()) == (200, "")
     assert seen["url"] == "https://api.sandbox.push.apple.com/3/device/" + "ab" * 32
-    assert seen["headers"]["apns-topic"] == "me.alex311visibility.app"
+    assert seen["headers"]["apns-topic"] == "com.herbertindustries.Alex311-Reborn"
     assert seen["headers"]["apns-push-type"] == "alert" and seen["headers"]["authorization"].startswith("bearer ")
     P.send("ab" * 32, "production", {}, client=Client())
     assert seen["url"].startswith("https://api.push.apple.com/3/device/")

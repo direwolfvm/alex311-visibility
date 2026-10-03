@@ -245,7 +245,7 @@ caller per hour, enforced in-process.
 
 ## 5a¾. The iOS app: Universal Links
 
-The native app (`me.alex311visibility.app`) opens this site's sign-in links,
+The native app (`com.herbertindustries.Alex311-Reborn`) opens this site's sign-in links,
 request records and the digest's My requests link directly, once the site
 vouches for it. The service serves the vouching file at
 `/.well-known/apple-app-site-association` (JSON, no redirect — Apple fetches it
@@ -253,7 +253,7 @@ through its own CDN) when it knows the app's id:
 
 ```bash
 gcloud run services update alex311-dashboard --region=$REGION \
-    --update-env-vars=APPLE_APP_IDS=<Apple Team ID>.me.alex311visibility.app
+    --update-env-vars=APPLE_APP_IDS=<Apple Team ID>.com.herbertindustries.Alex311-Reborn
 ```
 
 The Team ID is the ten-character id under Membership at developer.apple.com.
