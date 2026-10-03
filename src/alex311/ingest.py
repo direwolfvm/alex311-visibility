@@ -14,13 +14,14 @@ from __future__ import annotations
 import argparse
 import io
 import logging
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 
 import httpx
 
-from . import db, models
+from . import db, models, push
 from .client import Alex311Client
 from .media_store import object_name, store_from_env
 
@@ -120,6 +121,14 @@ def run_ingest(
                       records_upserted=upserted, details_fetched=details,
                       media_downloaded=downloaded,
                       windows_incomplete=len(capped))
+        # the mirror has just learned what changed; tell the people it concerns.
+        # Never lets a notification problem fail an ingest that succeeded.
+        if push.configured():
+            try:
+                push.notify(conn, site_origin=os.environ.get("SITE_ORIGIN", "https://alex311visibility.me"))
+            except Exception as e:
+                log.warning("push pass failed: %s", type(e).__name__)
+                conn.rollback()
     except Exception as e:
         db.finish_run(conn, run_id, ok=False, records_seen=seen,
                       records_upserted=upserted, details_fetched=details,
