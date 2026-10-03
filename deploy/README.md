@@ -325,6 +325,41 @@ gcloud scheduler jobs create http alex311-digest-schedule \
 Three failed sends in a row switch an address off. Nothing is sent on a day
 with nothing new.
 
+## 5d. Fast refresh job (every 15 minutes)
+
+The ingest reads everything four times a day. This asks the City only about
+the cases people **sent or follow**, at a rate that matches how likely each
+is to have changed, then runs the push pass — so "your request was closed"
+arrives in minutes rather than hours, and a request just filed appears on My
+requests without the six-hour wait.
+
+| case | asked about |
+|---|---|
+| sent from here, filed in the last 48 h (including one the City has not listed yet) | every run |
+| open, sent or followed, under 14 days old | hourly |
+| older open cases | the ingest, every 6 h |
+| closed | not at all |
+
+One call per case, a second apart, at most 40 per run, and the run **stops at
+the first error** rather than asking again. One pass at a time (advisory lock).
+
+```bash
+gcloud run jobs create alex311-refresh --image=$IMAGE --region=$REGION \
+    --set-cloudsql-instances=$SQL_INSTANCE \
+    --set-secrets=DATABASE_URL=alex311-database-url:latest,APNS_KEY=alex311-apns-key:latest \
+    --set-env-vars=APNS_KEY_ID=<key id>,APNS_TEAM_ID=<team id>,APNS_TOPIC=<bundle id>,SITE_ORIGIN=https://alex311visibility.me \
+    --task-timeout=300 --max-retries=0 \
+    --command=python --args="-m,alex311.refresh"
+
+gcloud scheduler jobs create http alex311-refresh-schedule \
+    --location=$REGION --schedule="*/15 * * * *" --time-zone="America/New_York" \
+    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-refresh:run" \
+    --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
+```
+
+Both this job and the ingest run the push pass; a change is claimed on the
+link before it is sent, so only one of them sends it.
+
 ## 6. Registry drift check (weekly)
 
 `docs/data/form-registry.json` describes a form the City controls. This job asks

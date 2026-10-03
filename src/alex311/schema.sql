@@ -440,3 +440,9 @@ DO $$ BEGIN
     GRANT SELECT, INSERT, UPDATE, DELETE ON signin_codes TO alex311_app;
   END IF;
 END $$;
+
+-- The fast refresh (alex311.refresh, every 15 minutes) asks the City about
+-- the cases people sent or follow. `refreshed_at` is when a link's case was
+-- last asked about — kept on the link because a case the City does not know
+-- yet has no row in service_requests to keep it on.
+ALTER TABLE request_links ADD COLUMN IF NOT EXISTS refreshed_at TIMESTAMPTZ;

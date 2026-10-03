@@ -3,9 +3,10 @@
 "Your request changed", on the phone, when the mirror learns of it.
 
 ## What is sent
-After each ingest (four times a day), for every request an account **sent or
-follows** whose status differs from the one that account was last told about,
-one notification per registered device:
+After each pass — the fast refresh every 15 minutes for the cases people are
+waiting on (see the runbook, §5d), and the full ingest four times a day — for
+every request an account **sent or follows** whose status differs from the
+one that account was last told about, one notification per registered device:
 
 ```json
 {"aps": {"alert": {"title": "Noise Issues: closed",
@@ -16,8 +17,17 @@ one notification per registered device:
 ```
 
 `case` is what the app should open; `url` is the same record as a Universal
-Link. The first time a link's request is seen, nothing is sent — that status
-is the baseline. Watches (type / address / area) are not pushed; they are the
+Link. The first time a link's request is seen is a silent baseline — except
+for a request the person **just sent** (linked in the last 48 hours): when
+the City first lists it they get
+
+```json
+{"aps": {"alert": {"title": "Noise Issues: received by the City",
+                   "body": "The City has your request 26-00036546 at 500 N PITT ST. It is open."}, …},
+ "case": "26-00036546", "url": "…"}
+```
+
+Same shape, same `case` key; the app needs no new handling. Watches (type / address / area) are not pushed; they are the
 daily digest's job.
 
 ## For the app

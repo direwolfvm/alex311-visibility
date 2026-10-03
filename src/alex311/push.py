@@ -6,9 +6,17 @@ after each ingest, every request someone sent or follows whose status is
 not the one they were last told about gets one notification per device,
 and the link remembers what was said (`request_links.notified_status`).
 
-The first time a link's request is seen, nothing is sent — that status is
-the baseline, not news. A request filed from here is "open" the first time
-the mirror sees it, and the person already knows that.
+The first time a link's request is seen is a baseline, not news — with one
+exception: a request someone just sent from here. When the City first lists
+it, that person is told "the City received your request": it is the moment
+the filing stops being a promise from this site and becomes the City's
+record. Only for a link made in the last two days, so switching this on
+never announces a months-old request as newly received.
+
+Two jobs run this pass (the six-hourly ingest and the fifteen-minute
+refresh), so a change is *claimed* before it is sent: the link is updated
+only if it still holds the status this pass read, and whoever loses that
+race sends nothing.
 
 Scope, deliberately: requests you sent or follow. Watches (a type, an
 address, an area) stay on the daily digest; a push per new pothole in a
@@ -139,6 +147,23 @@ def unregister(conn: psycopg.Connection, *, user_id: str, token: str) -> bool:
 
 # ----------------------------------------------------------------- the pass
 
+RECEIVED_WINDOW_HOURS = 48
+
+
+def received(row: dict, site_origin: str) -> dict:
+    """The City has listed a request this person just sent."""
+    what = row["service_name"] or "Your request"
+    return {
+        "aps": {"alert": {"title": f"{what}: received by the City",
+                          "body": (f"The City has your request {row['service_request_id']}"
+                                   + (f" at {row['address']}" if row["address"] else "")
+                                   + f". It is {(row['status'] or 'open').lower()}.")},
+                "sound": "default", "thread-id": row["service_request_id"]},
+        "case": row["service_request_id"],
+        "url": f"{site_origin}/r/{row['service_request_id']}",
+    }
+
+
 def message(row: dict, site_origin: str) -> dict:
     status = (row["status"] or "updated").lower()
     what = row["service_name"] or "Your request"
@@ -164,17 +189,34 @@ def notify(conn: psycopg.Connection, *, site_origin: str = "https://alex311visib
     conn.execute(admin)
     changed = conn.execute(
         """SELECT l.user_id, l.service_request_id, l.relation, l.notified_status,
+                  (l.created_at > now() - make_interval(hours => %s)) AS just_linked,
                   r.status, r.service_name, r.address
              FROM request_links l JOIN service_requests r USING (service_request_id)
             WHERE r.status IS NOT NULL AND r.status IS DISTINCT FROM l.notified_status
-            ORDER BY l.user_id""").fetchall()
-    counts = {"changed": len(changed), "baselined": 0, "sent": 0, "failed": 0, "devices_off": 0}
+            ORDER BY l.user_id""", (RECEIVED_WINDOW_HOURS,)).fetchall()
+    counts = {"changed": len(changed), "baselined": 0, "received": 0, "sent": 0, "failed": 0,
+              "devices_off": 0, "lost_race": 0}
     for row in changed:
-        if row["notified_status"] is not None:
+        # Claim it first: only the pass that moves the link off the status it read may send.
+        claimed = conn.execute(
+            """UPDATE request_links SET notified_status = %s
+                WHERE user_id = %s AND service_request_id = %s
+                  AND notified_status IS NOT DISTINCT FROM %s RETURNING 1""",
+            (row["status"], row["user_id"], row["service_request_id"], row["notified_status"])).fetchone()
+        conn.commit()
+        conn.execute(admin)
+        if not claimed:
+            counts["lost_race"] += 1
+            continue
+        first = row["notified_status"] is None
+        announce = first and row["relation"] == "mine" and row["just_linked"]
+        if not first or announce:
             devices = conn.execute(
                 "SELECT token, environment FROM push_devices WHERE user_id = %s AND disabled_at IS NULL",
                 (row["user_id"],)).fetchall()
-            payload = message(row, site_origin)
+            payload = received(row, site_origin) if announce else message(row, site_origin)
+            if announce:
+                counts["received"] += 1
             for d in devices:
                 try:
                     status, reason = send_fn(d["token"], d["environment"], payload)
@@ -191,13 +233,9 @@ def notify(conn: psycopg.Connection, *, site_origin: str = "https://alex311visib
                 else:
                     log.warning("apns said %s %s", status, reason)
                     counts["failed"] += 1
+            conn.commit()                                    # any device switched off
+            conn.execute(admin)
         else:
             counts["baselined"] += 1
-        # what they have now been told (or, the first time, simply what it is)
-        conn.execute(
-            "UPDATE request_links SET notified_status = %s WHERE user_id = %s AND service_request_id = %s",
-            (row["status"], row["user_id"], row["service_request_id"]))
-        conn.commit()
-        conn.execute(admin)
     log.info("push pass: %s", counts)
     return counts
