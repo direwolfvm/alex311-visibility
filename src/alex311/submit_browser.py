@@ -110,6 +110,56 @@ def gates_open(live: bool) -> tuple[bool, str]:
     return True, "both gates open"
 
 
+def _norm(text: str | None) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).strip()
+
+
+def match_question(service: dict, head: dict, answers: dict,
+                   options: list[str] | None = None) -> dict | None:
+    """The registry question that the wizard is showing right now.
+
+    The wizard numbers what it shows, and the registry records each question's
+    `order` — but an order is not unique. Eight services have several
+    questions sharing one (TESCONTN's order 3 is a move-in date on one branch
+    and a damage question on another; some of them were only ever seen in the
+    City's data, never on the walked path). Taking the first with the order,
+    as this used to, picked the wrong one for whichever branch was not first:
+    the resident's answer was looked up under another question's key, came
+    back missing, and the filing stopped as "needs an answer".
+
+    So: what is on the screen decides. Among the questions with that order,
+    the one whose wording matches the rendered question; failing that, the
+    one whose options are the ones offered; failing that, one the resident
+    actually answered; and only then a walked question before a data-only one.
+    """
+    same = [q for q in service["questions"] if q["order"] == head["k"]]
+    if len(same) <= 1:
+        return same[0] if same else None
+    shown = _norm(head.get("text"))
+    if shown:
+        worded = [q for q in same if _norm(q.get("text")) and
+                  (_norm(q["text"]) == shown or shown.startswith(_norm(q["text"]))
+                   or _norm(q["text"]).startswith(shown))]
+        if len(worded) == 1:
+            return worded[0]
+        same = worded or same
+    if options:
+        offered = {_norm(o) for o in options}
+        def overlap(q):
+            return len(offered & {_norm(o.get("value") if isinstance(o, dict) else o)
+                                  for o in (q.get("options") or [])})
+        best = max(overlap(q) for q in same)
+        if best:
+            fits = [q for q in same if overlap(q) == best]
+            if len(fits) == 1:
+                return fits[0]
+            same = fits
+    answered_ = [q for q in same if (q.get("code") or f"q{q['order']}") in answers]
+    same = answered_ or same
+    walked = [q for q in same if q.get("source") != "data-only"]
+    return (walked or same)[0]
+
+
 async def _fill_from_registry(pg, service: dict, answers: dict, description: str,
                               result: SubmitResult, *, invent: bool) -> None:
     """Answer the wizard's questions from `answers`, question by question.
@@ -135,8 +185,9 @@ async def _fill_from_registry(pg, service: dict, answers: dict, description: str
         meta = classify(head)
         done.add(head["k"])
 
-        # match the rendered question back to the registry by order, then code
-        q = next((x for x in service["questions"] if x["order"] == head["k"]), None)
+        # match the rendered question back to the registry: by order, then by
+        # what is actually on the screen (see match_question)
+        q = match_question(service, head, answers, meta.get("options"))
         key = (q.get("code") or f"q{head['k']}") if q else f"q{head['k']}"
         want = answers.get(key)
         if want is None and q:
