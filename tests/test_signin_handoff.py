@@ -29,7 +29,9 @@ def test_the_choice_is_made_from_the_url_before_firebase_loads():
 
 
 def test_open_in_the_app_carries_the_whole_query_on_the_apps_scheme():
-    assert "$('open-app').href = 'alex311://signin' + location.search;" in LOGIN
+    assert "$('open-app').href = 'com.herbertindustries.alex311-reborn://signin' + location.search;" in LOGIN
+    # alex311:// is the City's own app's scheme; the button must never use it
+    assert "'alex311://" not in LOGIN
     assert ">Open in the app</a>" in LOGIN
     assert "If you asked to sign in from the app on\n        this phone, open the link there." in LOGIN   # no promise it is installed
 

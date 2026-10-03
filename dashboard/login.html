@@ -214,8 +214,10 @@ if (hasLink && !askedHere) {
   $('app-h').textContent = onIOS ? 'Signing in to the Alex311 Reborn app?' : 'Signing in to the Alex311 Reborn app instead?';
   $('here-h').textContent = onIOS ? 'Signing in on this browser instead?' : 'Sign in on this browser';
   $('link-choice').style.marginBottom = '16px';
-  // the same query, on the app's own scheme: it reads oobCode from any link whose mode is signIn
-  $('open-app').href = 'alex311://signin' + location.search;
+  // The same query, on the app's own scheme — reverse-DNS on its bundle id, which nobody else
+  // will claim. Not alex311://: that is the City's official app's scheme, iOS does not arbitrate
+  // between two apps claiming one, and the button opened theirs.
+  $('open-app').href = 'com.herbertindustries.alex311-reborn://signin' + location.search;
 }
 
 async function finish(user) {
