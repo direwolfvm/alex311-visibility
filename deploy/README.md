@@ -243,6 +243,24 @@ covers `firebaseauth.users.sendEmail`; a narrower role is
 `roles/firebaseauth.admin`. Two emails per address per hour, ten per
 caller per hour, enforced in-process.
 
+## 5a¾. The iOS app: Universal Links
+
+The native app (`me.alex311visibility.app`) opens this site's sign-in links,
+request records and the digest's My requests link directly, once the site
+vouches for it. The service serves the vouching file at
+`/.well-known/apple-app-site-association` (JSON, no redirect — Apple fetches it
+through its own CDN) when it knows the app's id:
+
+```bash
+gcloud run services update alex311-dashboard --region=$REGION \
+    --update-env-vars=APPLE_APP_IDS=<Apple Team ID>.me.alex311visibility.app
+```
+
+The Team ID is the ten-character id under Membership at developer.apple.com.
+Unset, the path is a 404 and links open in Safari as before. Apple caches the
+file for a day or more; after a change, reinstall the app (or use the
+`?mode=developer` associated-domain form on a development build) to see it.
+
 ## 5b. The application database role (row-level security)
 
 The account tables (`request_links`, and `feedback` when it lands) carry

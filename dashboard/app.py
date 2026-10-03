@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
@@ -564,6 +564,35 @@ def home():
 def explore():
     """The map, the list and the Analytics tab (#analytics)."""
     return FileResponse(STATIC / "explore.html", media_type="text/html")
+
+
+@app.get("/.well-known/apple-app-site-association")
+def apple_app_site_association():
+    """What lets iOS open this site's links in the native app (Universal Links).
+
+    Apple fetches it — through its own CDN, not from the phone — at exactly
+    this path, over HTTPS, without following a redirect, and expects JSON. It
+    names the app and the paths the app handles: the emailed sign-in link, a
+    shared request record, and the digest's My requests link. Everything
+    else, including the digest's confirm and unsubscribe links, stays in the
+    browser.
+
+    The app id is "<Apple Team ID>.<bundle id>", from APPLE_APP_IDS (comma-
+    separated if there is ever more than one build). Unset, this is a 404 and
+    links simply open in Safari as before.
+    """
+    ids = [a.strip() for a in os.environ.get("APPLE_APP_IDS", "").split(",") if a.strip()]
+    if not ids:
+        raise HTTPException(404, "no app is associated with this site")
+    return JSONResponse(
+        {"applinks": {"details": [{
+            "appIDs": ids,
+            "components": [
+                {"/": "/submit/login", "?": {"mode": "signIn"}, "comment": "email sign-in links"},
+                {"/": "/r/*", "comment": "a shared request record"},
+                {"/": "/submit/my", "comment": "the digest's My requests link"},
+            ]}]}},
+        headers={"Cache-Control": "public, max-age=3600"})
 
 
 @app.get("/api/healthz")
