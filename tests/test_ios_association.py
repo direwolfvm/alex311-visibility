@@ -30,12 +30,12 @@ def test_without_an_app_id_it_is_a_404(monkeypatch):
 
 def test_it_names_the_app_and_only_the_paths_the_app_handles(monkeypatch):
     from dashboard import app as A
-    monkeypatch.setenv("APPLE_APP_IDS", "ABCDE12345.me.alex311visibility.app")
+    monkeypatch.setenv("APPLE_APP_IDS", "ABCDE12345.com.herbertindustries.Alex311-Reborn")
     r = A.apple_app_site_association()
     assert r.media_type == "application/json"
     body = json.loads(r.body)
     d = body["applinks"]["details"][0]
-    assert d["appIDs"] == ["ABCDE12345.me.alex311visibility.app"]
+    assert d["appIDs"] == ["ABCDE12345.com.herbertindustries.Alex311-Reborn"]
     paths = [(c["/"], c.get("?")) for c in d["components"]]
     assert paths == [("/submit/login", {"mode": "signIn"}), ("/r/*", None), ("/submit/my", None)]
     # the digest's confirm and unsubscribe links stay in the browser
