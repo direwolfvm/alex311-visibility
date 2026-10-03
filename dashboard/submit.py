@@ -17,6 +17,7 @@ import re
 import secrets
 import time
 from datetime import datetime, timezone
+from urllib.parse import parse_qs, urlsplit
 from pathlib import Path
 
 from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Request,
@@ -26,7 +27,8 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 from alex311.client import Alex311Client
-from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, photos, push, refresh, watches,
+from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, photos, push, refresh,
+                     signin_code, watches,
                      portal_auth as pa)
 
 from . import registry as R
@@ -96,6 +98,11 @@ def merge_candidates(rows: list[dict], key: str) -> list[dict]:
 
 class EmailLinkBody(BaseModel):
     email: str
+
+
+class EmailCodeBody(BaseModel):
+    email: str
+    code: str
 
 
 class ProfileBody(BaseModel):
@@ -317,12 +324,53 @@ def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: ke
         origin = os.environ.get("SITE_ORIGIN") or str(request.base_url).rstrip("/")
         try:
             link = fb.mint_sign_in_link(email, origin)
-            subject, text, html = fb.sign_in_email(link, origin)
+            # the same email carries a short code, for when it is read on another device
+            code = None
+            if signin_code.available():
+                try:
+                    oob = parse_qs(urlsplit(link).query).get("oobCode", [""])[0]
+                    with pool_getter().connection() as conn:
+                        code = signin_code.pretty(signin_code.issue(conn, email=email, oob_code=oob))
+                except Exception as e:           # a code is a convenience; the link still goes
+                    log.warning("sign-in code not issued: %s", type(e).__name__)
+            subject, text, html = fb.sign_in_email(link, origin, code)
             mail.send(email, subject, text, html)
         except Exception as e:                   # never echo the link or the address
             log.warning("sign-in email failed: %s", type(e).__name__)
             raise HTTPException(502, "could not send the email just now; try again shortly")
-        return {"sent": True}
+        return {"sent": True, "code": code is not None}
+
+    CODE_TRIES_PER_CALLER_PER_HOUR = 30
+
+    @public.post("/api/email-code")
+    def email_sign_in_code(body: EmailCodeBody, request: Request):
+        """Trade the six-digit code from the sign-in email for the link's
+        one-time oobCode, which the caller redeems with Firebase exactly as
+        it would the link.
+
+        400 a wrong code — or an address that never asked; the two are
+        indistinguishable on purpose. 410 expired or already used. 429 burned
+        by wrong tries, or too many tries from one caller.
+        """
+        if not signin_code.available():
+            raise HTTPException(503, "sign-in codes are not available here")
+        caller = request.headers.get("x-forwarded-for", "").split(",")[0].strip() \
+            or (request.client.host if request.client else "?")
+        wait = _wait(f"code-ip:{caller}", CODE_TRIES_PER_CALLER_PER_HOUR)
+        if wait:
+            raise HTTPException(429, "too many tries; ask for a new link later",
+                                headers={"Retry-After": str(wait)})
+        link_sends.setdefault(f"code-ip:{caller}", []).append(time.monotonic())
+        with pool_getter().connection() as conn:
+            try:
+                oob = signin_code.redeem(conn, email=body.email, code=body.code)
+            except signin_code.WrongCode as e:
+                raise HTTPException(400, str(e))
+            except signin_code.Gone as e:
+                raise HTTPException(410, str(e))
+            except signin_code.TooMany as e:
+                raise HTTPException(429, str(e))
+        return {"oobCode": oob}
 
     @public.post("/api/session")
     def session_from_firebase(body: FirebaseSession, request: Request):

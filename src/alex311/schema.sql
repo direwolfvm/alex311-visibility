@@ -420,3 +420,23 @@ DO $$ BEGIN
 END $$;
 
 ALTER TABLE request_links ADD COLUMN IF NOT EXISTS notified_status TEXT;
+
+-- The six-digit sign-in code (alex311.signin_code). No address, no code and
+-- no readable oobCode are stored: a keyed hash of the address, a keyed hash
+-- of (address, code), and the link's oobCode sealed under a key derived from
+-- the server secret and the code itself. Fifteen minutes, five wrong tries,
+-- one use; a new link for the address replaces the row.
+CREATE TABLE IF NOT EXISTS signin_codes (
+    email_key   TEXT PRIMARY KEY,
+    code_hash   TEXT NOT NULL,
+    oob_sealed  TEXT NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    wrong       INTEGER NOT NULL DEFAULT 0,
+    used_at     TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON signin_codes TO alex311_app;
+  END IF;
+END $$;

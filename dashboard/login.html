@@ -172,6 +172,18 @@
 
   <div class="box" id="error" hidden role="alert"></div>
   <div class="box ok" id="sent" hidden role="status"></div>
+  <!-- shown once a link has been sent: the same email carries a six-digit code,
+       for when it is read on another device than this one -->
+  <div id="code-entry" hidden style="margin-top:12px">
+    <div class="linkrow">
+      <label class="sr-only" for="code">The six-digit code from the email</label>
+      <input type="text" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7"
+             placeholder="6-digit code from the email">
+      <button type="button" class="alt" id="code-go">Sign in with code</button>
+    </div>
+    <p class="policy" style="border:none;padding:0;margin:6px 0 0">Reading the email on another device?
+      Enter its code here instead of tapping the link.</p>
+  </div>
 
   <p class="foot">Google or an emailed link creates your account the first time you use it —
     there is no separate registration form. If an administrator invited you, sign in with the
@@ -270,6 +282,29 @@ async function finish(user) {
     } catch (e) { if (e.code !== 'auth/popup-closed-by-user') say('error', e.message); }
   });
 
+  // the code from the email, traded for the link's one-time code and redeemed the same way
+  const withCode = async () => {
+    const email = $('code-entry').dataset.email || $('link-email').value.trim();
+    const code = $('code').value.trim();
+    if (!email || !code) { $('code').focus(); return; }
+    $('code-go').disabled = true;
+    try {
+      const r = await fetch('/submit/api/email-code', {method: 'POST',
+        headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, code})});
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.detail || `that did not work (${r.status})`);
+      const link = `${location.origin}/submit/login?mode=signIn&oobCode=${encodeURIComponent(d.oobCode)}`
+        + `&apiKey=${encodeURIComponent(cfg.config.apiKey)}`
+        + (cfg.config.tenantId ? `&tenantId=${encodeURIComponent(cfg.config.tenantId)}` : '');
+      const cred = await auth.signInWithEmailLink(email, link);
+      localStorage.removeItem('alex311.signin.email');
+      await finish(cred.user);
+    } catch (e) { say('error', e.message); }
+    finally { $('code-go').disabled = false; }
+  };
+  $('code-go').addEventListener('click', withCode);
+  $('code').addEventListener('keydown', e => { if (e.key === 'Enter') withCode(); });
+
   $('send-link').addEventListener('click', async () => {
     const email = $('link-email').value.trim();
     if (!email) { $('link-email').focus(); return; }
@@ -283,6 +318,7 @@ async function finish(user) {
       localStorage.setItem('alex311.signin.email', email);
       say('sent', `Sent. Open the link in the email we just sent to ${email}, on this device.`);
       $('error').hidden = true;
+      $('code-entry').hidden = false; $('code-entry').dataset.email = email;
     } catch (e) { say('error', e.message); }
   });
 })();
