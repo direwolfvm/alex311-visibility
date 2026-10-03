@@ -138,13 +138,20 @@ def mint_sign_in_link(email: str, site_origin: str) -> str:
     return f"{site_origin}/submit/login?{urlencode(keep)}"
 
 
-def sign_in_email(link: str, site_origin: str) -> tuple[str, str, str]:
+def sign_in_email(link: str, site_origin: str, code: str | None = None) -> tuple[str, str, str]:
     """Subject, plain text and HTML for the email that carries a sign-in link.
 
     Written for the person opening it, in this site's name, and clear about
     what the account is not: it is separate from any Alex311 account with
     the City, and nothing happens unless the link is used."""
     host = site_origin.split("//", 1)[-1]
+    # the code, for when the email is read on one device and the sign-in is on another
+    code_text = (f"\nReading this on a different device? Enter this code where you asked to sign in\n"
+                 f"(it works for 15 minutes, once):\n\n    {code}\n") if code else ""
+    code_html = (f'<p>Reading this on a different device? Enter this code where you asked to sign in '
+                 f'(it works for 15 minutes, once):</p>'
+                 f'<p style="font:700 26px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em;'
+                 f'margin:8px 0 16px">{code}</p>') if code else ""
     subject = "Your sign-in link for Alex311 Reborn"
     text = f"""Hello,
 
@@ -158,7 +165,7 @@ this email; nothing happens without the link.
 
 Using the Alex311 Reborn app on an iPhone? Open this link on that phone. If it
 opens in a browser instead, the page offers to hand it to the app.
-
+{code_text}
 About this account: it is for {host} only. It keeps the list of requests you
 sent or follow here and the ratings you give them. It is separate from any
 Alex311 account you have with the City of Alexandria and does not connect to
@@ -180,6 +187,7 @@ padding:10px 18px;border-radius:8px;font-weight:600;display:inline-block">Sign i
 nothing happens without the link.</p>
 <p style="font-size:13px;color:#5c6675">Using the Alex311 Reborn app on an iPhone? Open this link on
 that phone. If it opens in a browser instead, the page offers to hand it to the app.</p>
+{code_html}
 <p style="font-size:13px;color:#5c6675;border-top:1px solid #e2e8f0;padding-top:12px;margin-top:20px">
 <b>About this account.</b> It is for {host} only: it keeps the list of requests you sent or follow
 here and the ratings you give them. It is separate from any Alex311 account you have with the City
