@@ -14,7 +14,12 @@ def svc(code):
 
 def test_index_covers_catalog():
     idx = R.service_index(REG)
-    assert len(idx) == 111
+    # every service in the City's catalog snapshot, and nothing it has retired
+    import json
+    catalog = json.loads((R.Path(__file__).resolve().parents[1] / "docs/data/service-catalog.json").read_text()) \
+        if hasattr(R, "Path") else json.load(open("docs/data/service-catalog.json"))
+    assert len(idx) == len(catalog) == 109
+    assert not {"TESTSGNL", "RPCATREE"} & {s["service_code"] for s in idx}     # retired by the City, Oct 2026
     assert any(s["service_code"] == "TESMISCO" for s in idx)
 
 

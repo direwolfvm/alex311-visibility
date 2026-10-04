@@ -41,7 +41,6 @@
 | Report Water Quality Issues | `TESWATER` | 6 | 5 | 0 | 0 | yes | True |
 | Food Truck Concerns | `PZFDTRUK` | 1 | 0 | 0 | 0 | no | True |
 | Streetlights (New) | `TESSTLGHTN` | 1 | 0 | 2 | 0 | no | True |
-| Traffic Signals and Street Lights | `TESTSGNL` | 3 | 0 | 0 | 1 | yes | True |
 | Recycling Drop-Off Centers | `TESRECYCTRS` | 2 | 0 | 0 | 0 | no | True |
 | Farmers' Market Vendor Inquiries and Complaints | `DGSVENDO` | 2 | 1 | 0 | 0 | no | True |
 | Alexandria Fire Department Comments or Inquiries | `AFDGENER` | 0 | 0 | 0 | 0 | no | True |
@@ -113,7 +112,6 @@
 | Sidewalk | `TESSIDEWALK` | 3 | 2 | 0 | 0 | no | True |
 | Tree Storm Damage | `RPCATRESDMG` | 3 | 3 | 0 | 0 | yes | True |
 | Missed Leaf Collection | `TESLEAF` | 4 | 1 | 0 | 0 | no | True |
-| Trees | `RPCATREE` | 4 | 5 | 0 | 0 | yes | True |
 | Contact Mayor, Vice Mayor and/or City Council | `CTYCNCL` | 3 | 0 | 1 | 0 | no | True |
 | Short Term Rental Complaint or Permitting | `PZRENTL` | 1 | 0 | 1 | 0 | no | True |
 | Mobility, Access, and Traffic Safety | `ALXTRFCO` | 2 | 1 | 6 | 0 | no | True |
@@ -467,19 +465,6 @@ Banners: “Please describe in detail the new light needed in the additional inf
 1. **What type of light is being requested?** *(required)* — `01PL-TESSTLGTTYPE` — radio; options: Streetlight, Park or Trail Light, Traffic Light/Signal
    - Streetlight: advisory; “Please be aware that request for new lights require a detailed review. Click here for more information.”
    - Park or Trail Light: advisory; “Please be aware that request for new lights require a detailed review. Click here for more information.”
-
-## Traffic Signals and Street Lights (`TESTSGNL`)
-
-1. **What is the nature of your request?** *(required)* — `01PL-SIGNALTYP` — radio; options: Traffic Signal, Street Light, Pedestrian Signal, Park or Trail Light, Other
-   - ⚠ rendered but never present in the mined data: Park or Trail Light
-   - Traffic Signal: “Please provide the details of your request in the Additional Information box below. Pictures are helpful for staff to properly locate your issue.”; reveals → Q2, Q3
-   - Street Light: reveals → Q2, Q3
-   - Pedestrian Signal: reveals → Q2, Q3, Q4
-   - Park or Trail Light: reveals → Q2, Q3
-   - Other: reveals → Q2, Q3, Q4
-2. **What is your traffic signal issue?** *(required)* — select; options: Bulb Out, Intersection Dark, Twisted, Flashing, Timing Issue, Other
-3. **Approximately when was the problem observed?** — `01DT-SIGNALOBSERVED` — radio; options: Morning, Afternoon, Evening, Overnight
-   - ⚠ rendered but never present in the mined data: Evening
 
 ## Recycling Drop-Off Centers (`TESRECYCTRS`)
 
@@ -1018,27 +1003,6 @@ Banners: “For updates and more information about Leaf Collection please go to:
    - Alley: probe error — TimeoutError: Locator.click: Timeout 30000ms exceeded.
 Call log:
   - waiting for locator("input[type=radio][name=\"01PL-LEAFMISLOC\"][value=\"Alley\"]").f
-
-## Trees (`RPCATREE`)
-
-Banners: “If this is an immediate danger please call 911.” · “Please provide the details of your request in the Additional Information box below.”
-
-1. **Is the tree blocking the road?** *(required)* — `01PL-RPCTREERD` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: Yes
-   - Yes: **HARD STOP**; “Please call the Police non-emergency line at 703.746.4444 to report.”
-   - No: reveals → Q2
-2. **Are the tree roots damaging the sidewalk?** *(required)* — `01PL-RPCTREESIDE` — radio; options: Yes, No
-   - ⚠ rendered but never present in the mined data: Yes
-   - Yes: **HARD STOP**
-   - No: reveals → Q3
-3. **Is the tree on public or private property?** *(required)* — `01PL-TREEPROPERTY` — radio; options: Private, Public
-   - ⚠ rendered but never present in the mined data: Private
-   - Private: **HARD STOP**; “The City of Alexandria does not maintain or consult on privately owned trees. Please contact a commercial arborist. If this request involves a privately owned tree impacting the public right of way, please submit a request to 'Plan Review, Permit Processing and Other Code Enforcement Inquiries'.”
-   - Public: reveals → Q4
-4. **What is the nature of your request?** *(required)* — `01PL-RPCTREETYP` — radio; options: Tree Pruning, Tree Removal, Request New Planting, Brush Removal, Overgrown Sidewalk Vegetation
-   - ⚠ rendered but never present in the mined data: Request New Planting, Brush Removal, Overgrown Sidewalk Vegetation
-   - Brush Removal: **HARD STOP**
-   - Overgrown Sidewalk Vegetation: **HARD STOP**
 
 ## Contact Mayor, Vice Mayor and/or City Council (`CTYCNCL`)
 
