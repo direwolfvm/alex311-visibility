@@ -785,18 +785,63 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
             pa.set_disabled(conn, user_id, False)
         return {"user_id": user_id, "disabled": False}
 
-    @router.get("/api/registry")
-    def registry_index():
+    # The registry describes a form the City controls, and it changes without
+    # notice (two request types were retired in October 2026). Every registry
+    # response carries a version and an ETag, so the app — or the page — keeps
+    # its copy only while it is current, and nobody has to ship a build to
+    # follow the City.
+    def _fresh(request: Request) -> Response | None:
+        """304 if the caller already holds this version."""
+        etag = f'"{R.registry_version()}"'
+        held = request.headers.get("if-none-match", "")
+        if etag in [h.strip().removeprefix("W/") for h in held.split(",")]:
+            return Response(status_code=304, headers=_registry_headers())
+        return None
+
+    def _registry_headers() -> dict:
+        return {"ETag": f'"{R.registry_version()}"', "Cache-Control": "private, max-age=300",
+                "X-Registry-Version": R.registry_version(), "X-Registry-Schema": str(R.SCHEMA)}
+
+    @public.get("/api/registry/version")
+    def registry_version():
+        """Is my copy current? Public and tiny, so the app can ask at launch
+        or in a background refresh without a session."""
         reg = R.load_registry()
-        return {"generated": reg["generated"], "sources": reg.get("sources"),
-                "services": R.service_index(reg)}
+        return JSONResponse({"version": R.registry_version(), "schema": R.SCHEMA,
+                             "generated": reg["generated"], "services": len(reg["services"])},
+                            headers={"Cache-Control": "public, max-age=300",
+                                     "ETag": f'"{R.registry_version()}"'})
+
+    @router.get("/api/registry")
+    def registry_index(request: Request):
+        """The picker's list: one light entry per request type."""
+        if (r := _fresh(request)) is not None:
+            return r
+        reg = R.load_registry()
+        return JSONResponse({"version": R.registry_version(), "schema": R.SCHEMA,
+                             "generated": reg["generated"], "sources": reg.get("sources"),
+                             "services": R.service_index(reg)}, headers=_registry_headers())
+
+    @router.get("/api/registry/full")
+    def registry_full(request: Request):
+        """Every request type with its questions and rules, in one response —
+        what a client stores to work from, revalidating with If-None-Match."""
+        if (r := _fresh(request)) is not None:
+            return r
+        gz = "gzip" in request.headers.get("accept-encoding", "")
+        headers = _registry_headers() | {"Vary": "Accept-Encoding"}
+        if gz:
+            headers["Content-Encoding"] = "gzip"
+        return Response(R.full_payload(gz), media_type="application/json", headers=headers)
 
     @router.get("/api/service/{code}")
-    def service(code: str):
+    def service(code: str, request: Request):
+        if (r := _fresh(request)) is not None:
+            return r
         s = R.get_service(R.load_registry(), code)
         if not s:
             raise HTTPException(404, "unknown service code")
-        return s
+        return JSONResponse(s, headers=_registry_headers())
 
     @router.post("/api/validate")
     def validate(body: ValidateBody):

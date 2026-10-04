@@ -21,6 +21,38 @@ def load_registry(path: str | None = None) -> dict:
     return json.loads(p.read_text())
 
 
+# What a client must understand to use the registry: the shape of a question,
+# an option's `rule`, `reveals`/`revealed_by`, and `source`. Raised only when
+# that shape changes in a way an older client would get wrong — not when the
+# City adds or retires a request type. A client that sees a number higher
+# than it knows should fall back to the website for reporting.
+SCHEMA = 1
+
+
+@lru_cache(maxsize=1)
+def registry_version(path: str | None = None) -> str:
+    """A short fingerprint of the registry's content. Changes exactly when the
+    registry does — a rebuild after the City retires a request type, say — so
+    a client can ask "is mine still current?" for the price of a header."""
+    import hashlib
+    p = Path(path or os.environ.get("FORM_REGISTRY", DEFAULT_PATH))
+    return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+
+
+@lru_cache(maxsize=4)
+def full_payload(gzipped: bool = False) -> bytes:
+    """The whole registry in one response, serialized once: every service with
+    its questions, plus the version and schema a client caches it under."""
+    reg = load_registry()
+    body = json.dumps({"version": registry_version(), "schema": SCHEMA,
+                       "generated": reg["generated"], "sources": reg.get("sources"),
+                       "services": reg["services"]}, separators=(",", ":")).encode()
+    if gzipped:
+        import gzip
+        return gzip.compress(body, 6, mtime=0)
+    return body
+
+
 def service_index(reg: dict) -> list[dict]:
     """Lightweight list for the picker."""
     out = []
