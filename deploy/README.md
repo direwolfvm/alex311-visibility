@@ -515,6 +515,10 @@ Things worth knowing:
   args back.
 - `ingest_runs` has a row per run (`kind='walk'`); the Registry tab shows the
   last one.
+- **History is kept for good.** Every version used or offered, an append-only
+  log of who adopted what and when, every walk, and the version each report was
+  written against: [docs/registry-history.md](../docs/registry-history.md). Do
+  not prune these tables.
 - The mined half of the registry (`docs/data/question-schema.mined.json`) still
   ships in the image; regenerate it with `scripts/mine_question_schema.sql`
   when the drift check (§6) reports questions the data has and the registry

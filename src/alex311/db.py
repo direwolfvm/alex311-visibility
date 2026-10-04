@@ -273,7 +273,8 @@ def record_attempt(conn: psycopg.Connection, *, submitter_id: str | None,
                    address_key: str, lat: float | None, long: float | None,
                    description: str | None, answers: dict, outcome: str,
                    findings: list, cooldown_until=None,
-                   city_address: str | None = None) -> int:
+                   city_address: str | None = None,
+                   registry_version: str | None = None) -> int:
     """Persist one evaluated attempt. Returns its id.
 
     Written for every outcome, including `allow`: the rate limits count real
@@ -283,12 +284,12 @@ def record_attempt(conn: psycopg.Connection, *, submitter_id: str | None,
         """INSERT INTO submission_attempts
              (submitter_id, service_code, service_name, address, address_key,
               lat, long, description, answers, outcome, findings, cooldown_until,
-              city_address)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+              city_address, registry_version)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
            RETURNING attempt_id""",
         (submitter_id, service_code, service_name, address, address_key, lat, long,
          description, Jsonb(answers), outcome, Jsonb(findings), cooldown_until,
-         city_address),
+         city_address, registry_version),
     ).fetchone()
     conn.commit()
     return row["attempt_id"]

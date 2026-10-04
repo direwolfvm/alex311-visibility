@@ -78,14 +78,24 @@ needs_db = pytest.mark.skipif(not DB or ("localhost" not in DB and "127.0.0.1" n
                               reason="needs a local DATABASE_URL")
 
 
+def forget(c):
+    """Empty the history, which the database otherwise refuses to do — so this
+    steps around the trigger, as only a local superuser can."""
+    c.execute("SET session_replication_role = replica")
+    for t in ("registry_versions", "registry_events", "wizard_walks"):
+        c.execute(f"DELETE FROM {t}")
+    c.execute("SET session_replication_role = DEFAULT")
+    c.commit()
+
+
 @pytest.fixture()
 def conn():
     from alex311 import db
     c = db.connect(DB)
-    c.execute("DELETE FROM registry_versions"); c.execute("DELETE FROM wizard_walks"); c.commit()
+    forget(c)
     yield c
     c.rollback()
-    c.execute("DELETE FROM registry_versions"); c.execute("DELETE FROM wizard_walks"); c.commit()
+    forget(c)
     c.close()
 
 

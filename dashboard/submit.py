@@ -861,6 +861,21 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
         data["serving"] = {"version": R.registry_version(), "source": R.registry_source()}
         return data
 
+    @router.get("/api/admin/registry/history")
+    def registry_history(actor: str = Depends(admin_only)):
+        """The log: every time a registry was offered, adopted, replaced or dismissed."""
+        with pool_getter().connection() as conn:
+            return {"events": registry_store.events(conn)}
+
+    @router.get("/api/admin/registry/version/{version}")
+    def registry_stored(version: str, actor: str = Depends(admin_only)):
+        """A past (or waiting) version, whole — the form as it was."""
+        with pool_getter().connection() as conn:
+            row = registry_store.get(conn, version)
+        if row is None:
+            raise HTTPException(404, "no such registry version")
+        return row
+
     @router.post("/api/admin/registry/adopt")
     def registry_adopt(body: RegistryDecision, actor: str = Depends(admin_only)):
         with pool_getter().connection() as conn:
@@ -941,7 +956,9 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
                 lat=body.lat, long=body.long, description=body.description,
                 answers=body.answers, outcome=decision.outcome, findings=findings,
                 cooldown_until=decision.cooldown_until,
-                city_address=(body.city_address or "").strip() or None)
+                city_address=(body.city_address or "").strip() or None,
+                # which form this report was written against, for reading it later
+                registry_version=R.registry_version())
 
         return {"attempt_id": attempt_id, "outcome": decision.outcome,
                 "may_proceed": decision.allowed, "findings": findings,

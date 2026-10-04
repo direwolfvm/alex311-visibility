@@ -8,6 +8,7 @@ dismissed proposal is not offered again; an earlier version can be put back.
 import copy
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -140,14 +141,24 @@ needs_db = pytest.mark.skipif(not DB or ("localhost" not in DB and "127.0.0.1" n
                               reason="needs a local DATABASE_URL")
 
 
+def forget(c):
+    """Empty the history, which the database otherwise refuses to do — so this
+    steps around the trigger, as only a local superuser can."""
+    c.execute("SET session_replication_role = replica")
+    for t in ("registry_versions", "registry_events", "wizard_walks"):
+        c.execute(f"DELETE FROM {t}")
+    c.execute("SET session_replication_role = DEFAULT")
+    c.commit()
+
+
 @pytest.fixture()
 def conn():
     from alex311 import db
     c = db.connect(DB)
-    c.execute("DELETE FROM registry_versions"); c.execute("DELETE FROM wizard_walks"); c.commit()
+    forget(c)
     yield c
     c.rollback()
-    c.execute("DELETE FROM registry_versions"); c.execute("DELETE FROM wizard_walks"); c.commit()
+    forget(c)
     c.close()
 
 
@@ -188,7 +199,8 @@ def test_one_proposal_at_a_time_and_a_dismissed_one_stays_dismissed(conn):
     a = S.propose(conn, changed(lambda r: r["services"][0].update(description="First.")))
     b = S.propose(conn, changed(lambda r: r["services"][0].update(description="Second.")))
     rows = {r["version"]: r["status"] for r in conn.execute("SELECT version, status FROM registry_versions")}
-    assert rows == {a["version"]: "retired", b["version"]: "proposed"}
+    assert rows == {S.bundled()["version"]: "retired",          # where the history starts
+                    a["version"]: "retired", b["version"]: "proposed"}
     assert S.dismiss(conn, b["version"], "admin@test.io") is True
     again = S.propose(conn, changed(lambda r: r["services"][0].update(description="Second.")))
     assert again["status"] == "dismissed" and S.state(conn)["proposed"] is None
@@ -211,3 +223,115 @@ def test_a_retired_request_type_leaves_at_once_and_can_be_put_back(conn):
     S.adopt(conn, version, "admin@test.io")                                   # and back again
     assert S.current(conn)["version"] == version
     assert conn.execute("SELECT count(*) AS n FROM registry_versions WHERE status = 'active'").fetchone()["n"] == 1
+
+
+# ------------------------------------------------------------------ history
+
+def test_nothing_in_the_history_is_ever_deleted_or_rewritten():
+    src = "".join((ROOT / f).read_text() for f in
+                  ("src/alex311/registry_store.py", "src/alex311/walk.py", "dashboard/submit.py"))
+    for table in ("registry_versions", "registry_events", "wizard_walks"):
+        assert f"DELETE FROM {table}" not in src
+    assert "UPDATE registry_events" not in src and "SET registry =" not in src
+    schema = (ROOT / "src/alex311/schema.sql").read_text()
+    assert "GRANT SELECT, INSERT ON registry_events TO alex311_app" in schema      # append only
+    assert schema.count("EXECUTE FUNCTION registry_history_is_kept()") == 6        # and a trigger says so
+    assert "ADD COLUMN IF NOT EXISTS registry_version TEXT" in schema
+    assert "registry_version=R.registry_version()" in ROUTES                       # each report says which form
+    assert (ROOT / "docs/registry-history.md").is_file()
+
+
+@needs_db
+def test_the_history_starts_with_the_registry_shipped_with_the_site(conn):
+    assert S.in_use_at(conn, "now") is None                                   # nothing recorded yet
+    got = S.propose(conn, changed(lambda r: r["services"][0].update(description="New words.")))
+    S.adopt(conn, got["version"], "admin@test.io")
+    base = S.bundled()["version"]
+    kept = S.get(conn, base)
+    assert kept["status"] == "retired" and kept["registry"] == BUNDLED          # whole, as it was
+    log = [(e["event"], e["version"]) for e in reversed(S.events(conn))]
+    assert log == [("baseline", base), ("proposed", got["version"]), ("adopted", got["version"])]
+    assert S.get(conn, got["version"])["changes"] == got["changes"]
+
+
+@needs_db
+def test_which_form_was_in_use_on_a_given_day_has_an_answer(conn):
+    base = S.bundled()["version"]
+    a = S.propose(conn, changed(lambda r: r["services"][0].update(description="First.")))
+    S.adopt(conn, a["version"], "admin@test.io")
+    b = S.propose(conn, changed(lambda r: r["services"][0].update(description="Second.")))
+    S.adopt(conn, b["version"], "admin@test.io")
+    S.adopt(conn, a["version"], "admin@test.io")                             # "Use again"
+    # spread the log over four days, oldest first, to ask about the days between
+    ids = [r["event_id"] for r in conn.execute("SELECT event_id FROM registry_events ORDER BY event_id")]
+    conn.execute("SET session_replication_role = replica")                  # test only: nothing else may
+    for n, event_id in enumerate(ids):
+        conn.execute("UPDATE registry_events SET at = now() - make_interval(days => %s) WHERE event_id = %s",
+                     (len(ids) - n, event_id))
+    conn.execute("SET session_replication_role = DEFAULT")
+    conn.commit()
+    adopted = [e for e in reversed(S.events(conn)) if e["event"] == "adopted"]
+    assert [e["version"] for e in adopted] == [a["version"], b["version"], a["version"]]
+    assert S.in_use_at(conn, adopted[0]["at"]) == a["version"]
+    assert S.in_use_at(conn, adopted[1]["at"]) == b["version"]
+    assert S.in_use_at(conn, "now") == a["version"]                          # in use twice; both recorded
+    assert S.in_use_at(conn, adopted[0]["at"] - timedelta(hours=1)) == base
+    replaced = [e["version"] for e in reversed(S.events(conn)) if e["event"] == "replaced"]
+    assert replaced == [a["version"], b["version"]]
+    # every version that was ever in use is still there, whole
+    for v in (base, a["version"], b["version"]):
+        assert S.get(conn, v)["registry"]["services"]
+
+
+@needs_db
+def test_the_app_role_can_add_to_the_log_but_not_change_it(conn):
+    import psycopg
+    from alex311 import db
+    got = S.propose(conn, changed(lambda r: r["services"][0].update(description="New words.")))
+    app = db.connect(os.environ.get("APP_DATABASE_URL") or DB)
+    try:
+        assert S.adopt(app, got["version"], "admin@test.io") is True          # appends to the log
+        assert [e["event"] for e in S.events(app)] == ["adopted", "proposed", "baseline"]
+        if os.environ.get("APP_DATABASE_URL"):
+            for sql in ("UPDATE registry_events SET by = 'someone else'", "DELETE FROM registry_events",
+                        "DELETE FROM registry_versions", "DELETE FROM wizard_walks"):
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    app.execute(sql)
+                app.rollback()
+    finally:
+        app.close()
+
+
+@needs_db
+def test_not_even_the_owner_can_delete_or_rewrite_the_history(conn):
+    import psycopg
+    from psycopg.types.json import Jsonb
+    from alex311 import walk as W
+    got = S.propose(conn, changed(lambda r: r["services"][0].update(description="New words.")))
+    W.record(conn, {"service_code": "X", "service_name": "X", "questions": [], "error": None,
+                    "continue_enabled_at_end": True}, in_use=None, last=None)
+    for sql, args in (
+            ("DELETE FROM registry_versions", ()), ("DELETE FROM registry_events", ()),
+            ("DELETE FROM wizard_walks", ()), ("UPDATE registry_events SET by = 'x'", ()),
+            ("UPDATE wizard_walks SET ok = false", ()), ("TRUNCATE registry_events", ()),
+            ("UPDATE registry_versions SET registry = %s WHERE version = %s",
+             (Jsonb({"services": []}), got["version"]))):
+        with pytest.raises(psycopg.errors.RaiseException, match="kept|never rewritten"):
+            conn.execute(sql, args)
+        conn.rollback()
+    assert S.adopt(conn, got["version"], "admin@test.io") is True            # its state may still move
+    assert S.get(conn, got["version"])["status"] == "active"
+
+
+@needs_db
+def test_a_report_records_the_form_it_was_written_against(conn):
+    from alex311 import db
+    attempt = db.record_attempt(conn, submitter_id=None, service_code="X", service_name="X", address="1 Test St",
+                                address_key="history-test", lat=None, long=None, description="d", answers={},
+                                outcome="allow", findings=[], registry_version="abc123abc123abcd")
+    try:
+        row = conn.execute("SELECT registry_version FROM submission_attempts WHERE attempt_id = %s",
+                            (attempt,)).fetchone()
+        assert row["registry_version"] == "abc123abc123abcd"
+    finally:
+        conn.execute("DELETE FROM submission_attempts WHERE attempt_id = %s", (attempt,)); conn.commit()
