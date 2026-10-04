@@ -24,7 +24,7 @@ from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Request
                      Response)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from alex311.client import Alex311Client
 from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, mail, photos, push, refresh,
@@ -32,6 +32,7 @@ from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, 
                      portal_auth as pa)
 
 from . import registry as R
+from alex311 import registry_store
 
 log = logging.getLogger("alex311.submit")
 
@@ -201,6 +202,10 @@ def _identify(request: Request, pool_getter,
     if _basic_ok(creds):
         return os.environ.get("SUBMIT_USER", "alex311user"), None
     raise Unauthenticated()
+
+
+class RegistryDecision(BaseModel):
+    version: str = Field(min_length=8, max_length=64)
 
 
 def register_submit_routes(app, pool_getter, sender=None) -> None:  # sender: kept for callers
@@ -844,6 +849,32 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
         if not s:
             raise HTTPException(404, "unknown service code")
         return JSONResponse(s, headers=_registry_headers())
+
+    # The registry as data: the nightly walk offers a new registry when the
+    # City's form has moved, and an administrator decides. Adopting changes
+    # what every resident is asked, so it is for administrators and it is
+    # recorded with who did it.
+    @router.get("/api/admin/registry")
+    def registry_state(actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            data = registry_store.state(conn)
+        data["serving"] = {"version": R.registry_version(), "source": R.registry_source()}
+        return data
+
+    @router.post("/api/admin/registry/adopt")
+    def registry_adopt(body: RegistryDecision, actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            if not registry_store.adopt(conn, body.version, actor):
+                raise HTTPException(404, "no such registry version")
+        R.refresh()                      # this instance now; the others within a minute
+        return {"adopted": body.version, "serving": R.registry_version()}
+
+    @router.post("/api/admin/registry/dismiss")
+    def registry_dismiss(body: RegistryDecision, actor: str = Depends(admin_only)):
+        with pool_getter().connection() as conn:
+            if not registry_store.dismiss(conn, body.version, actor):
+                raise HTTPException(404, "that version is not waiting")
+        return {"dismissed": body.version}
 
     @router.post("/api/validate")
     def validate(body: ValidateBody):

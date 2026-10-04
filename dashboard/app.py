@@ -42,7 +42,25 @@ async def lifespan(app: FastAPI):
         max_size=int(os.environ.get("DB_POOL_SIZE", "5")),
         kwargs={"row_factory": dict_row},
     )
+    # The report form is drawn from the registry an administrator adopted, kept
+    # in the database (alex311.registry_store); the file in the image is used
+    # until there is one, and whenever this cannot be read.
+    from alex311 import registry_store
+    from . import registry
+
+    def adopted(have: str | None):
+        with pool.connection() as conn:
+            row = conn.execute("SELECT version FROM registry_versions WHERE status = 'active'").fetchone()
+            if row is None:
+                return None
+            if row["version"] == have:
+                return {"version": have, "registry": None}
+            got = registry_store.active(conn)
+            return got and {"version": got["version"], "registry": got["registry"]}
+
+    registry.set_provider(adopted)
     yield
+    registry.set_provider(None)
     pool.close()
 
 

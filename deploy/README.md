@@ -19,6 +19,7 @@ Live in project **permitting-ai-helper** (us-east4):
 | Health schedule | hourly at :45 (`alex311-health-schedule`) |
 | Submission job | `alex311-submit` (§7) — own image with a browser, **created unarmed**, run by hand |
 | Drift schedule | Mondays 06:30 America/New_York (`alex311-drift-schedule`) |
+| Walk schedule | weeknights 02:30 America/New_York (`alex311-walk-schedule`) — job `alex311-walk` on the worker image (§6a) |
 | Alerting | policy "Alex311 job failures" → email channel (jke314@outlook.com) |
 
 Redeploy after a code change:
@@ -445,17 +446,82 @@ A run on 2026-09-10 over 1,799 wizard submissions from the previous 30 days
 reported no drift.
 
 The third source, the wizard walk itself, needs Playwright and deliberately
-does **not** ship in this image. Run it from a workstation instead:
+does **not** ship in this image. It runs as its own job on the worker image —
+§6a.
+
+## 6a. The nightly walk, and the registry as data
+
+The registry in use is a row in the database (`registry_versions`, status
+`active`), not a file in the image. The web service, the filing worker and the
+drift check all read it; the file shipped in the image
+(`docs/data/form-registry.json`) is used until something has been adopted, and
+whenever the database cannot be read. Following the City no longer takes a
+commit or a deploy.
+
+`alex311-walk` keeps it true. Each weeknight it:
+
+1. makes one catalog call — a request type the City has retired is removed from
+   the registry in use **at once**, with no one's approval;
+2. re-walks the ~24 request types walked longest ago (the whole catalog about
+   once a week), read-only, one at a time, and records each in `wizard_walks`;
+3. builds the registry those walks describe and, if it differs from the one in
+   use, stores it as a **proposal**.
+
+A proposal changes nothing until an administrator presses **Adopt** on the
+admin page (Registry tab), which lists every difference in plain words. An
+earlier version can be put back from the same tab ("Use again").
+
+The job runs on the **worker image** (it needs the browser) with a different
+command. It never presses Submit and needs no arming:
 
 ```bash
-scripts/weekly_drift.sh          # both halves; --no-crawl for the browser-free one
+SUBMIT_IMAGE=us-east4-docker.pkg.dev/$PROJECT/cloud-run-source-deploy/alex311-submit:latest
+gcloud run jobs create alex311-walk --image=$SUBMIT_IMAGE --region=$REGION \
+    --set-cloudsql-instances=$PROJECT:$REGION:metabase-sql \
+    --set-secrets=DATABASE_URL=alex311-database-url:latest \
+    --update-env-vars=ALEX311_SUBMIT_JOB=alex311-submit,ALEX311_REGION=$REGION \
+    --memory=2Gi --cpu=1 --max-retries=0 --task-timeout=3600 \
+    --command=python --args="-m,alex311.walk,--limit,24,--minutes,45"
+
+gcloud run jobs add-iam-policy-binding alex311-walk --region=$REGION \
+    --member="serviceAccount:$SA" --role="roles/run.invoker"
+gcloud scheduler jobs create http alex311-walk-schedule --location=$REGION \
+    --schedule="30 2 * * 1-5" --time-zone="America/New_York" \
+    --uri="https://$REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-walk:run" \
+    --http-method=POST --oauth-service-account-email=$SA
 ```
 
-That re-walks all 111 services read-only (about an hour, sequential and polite,
-it never presses Submit) and diffs the result against the committed rules with
-`spike/rules_diff.py`, which reports new or reworded questions, changed widgets,
-added or removed options, and any rule that flipped. When drift is real, adopt
-it by rebuilding the registry and committing the regenerated data.
+Things worth knowing:
+
+- **Its exit code is the notification.** It exits 1 the night a *new* proposal
+  appears (and when it had to stop because the portal was refusing), so the
+  job-failure alert in §8 is the email that says "the City's form changed". A
+  proposal that is still waiting the next night does not alert again. Set
+  `WALK_ALERT_EMAIL` (with the mail settings of §5a½) for an email that lists
+  the differences as well.
+- **Filings go first.** The walk holds the worker's floor lock only while it has
+  a page open, waits while anything is queued, and the worker waits for a walk
+  to finish the request type it is on rather than leaving. A filing sent at
+  02:40 is delayed by at most one request type (usually under two minutes).
+- **A walk that sees less is doubted.** No questions where there were three is
+  more often a slow page than a changed form. That walk is marked suspect, not
+  used, walked again first the next night, and believed only if the second walk
+  agrees. The Registry tab lists these.
+- **A short catalog is not believed.** If the catalog call lists fewer than 80%
+  of the request types in use, the run fails rather than retiring them.
+- By hand: `gcloud run jobs execute alex311-walk --region=$REGION --wait`. To
+  walk particular types, update the job's args to add `--codes,TESSEWER,RPCMAIN`
+  (per-execution `--args` overrides fail in this project), run it, and put the
+  args back.
+- `ingest_runs` has a row per run (`kind='walk'`); the Registry tab shows the
+  last one.
+- The mined half of the registry (`docs/data/question-schema.mined.json`) still
+  ships in the image; regenerate it with `scripts/mine_question_schema.sql`
+  when the drift check (§6) reports questions the data has and the registry
+  does not.
+
+`scripts/weekly_drift.sh` and `spike/wizard_rules.py` still work for walking
+into a file from a workstation; nothing depends on them any more.
 
 ## 7. Submission worker (separate image, separate job)
 
@@ -470,7 +536,7 @@ work from the database instead: the form releases a prepared request when the
 tester presses send, and the worker drains released rows.
 
 > **Two images, and deploying one does not deploy the other.** Changing
-> `submit_worker.py`, `submit_browser.py` or anything else the worker imports
+> `submit_worker.py`, `submit_browser.py`, `walk.py` or anything else the worker imports
 > needs this build *and* a `gcloud run jobs update`; the dashboard build leaves
 > the job running whatever it ran before. This is easy to miss because both
 > images are built from the same repository and the job keeps working — with

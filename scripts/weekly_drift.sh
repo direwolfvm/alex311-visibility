@@ -5,7 +5,9 @@
 #   1. browser-free — live catalog + recently ingested answers. Also runs as a
 #                     Cloud Run job on its own (see deploy/README.md).
 #   2. wizard walk  — needs Playwright, so it runs here rather than in the
-#                     deployed web image.
+#                     deployed web image. In production the nightly job
+#                     (alex311.walk, deploy/README.md §6a) does this instead;
+#                     this half is for walking into a file by hand.
 #
 # Both are strictly read-only. The crawler asserts it never presses Submit, and
 # nothing in this script files a request.

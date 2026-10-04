@@ -378,9 +378,9 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
                headless: bool, screenshot: str | None,
                attempt_id: int | None = None,
                photos: list[tuple[str, bytes]] | None = None) -> SubmitResult:
-    from . import registry_drift as rd            # reuse the registry loader
+    from . import registry_store                  # the registry in use, same as the site's
 
-    reg = rd.load_registry()
+    reg = registry_store.current()["registry"]
     service = next((s for s in reg["services"] if s["service_code"] == service_code), None)
     if service is None:
         return SubmitResult(False, live, "unknown_service", service_code,

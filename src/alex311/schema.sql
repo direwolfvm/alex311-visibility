@@ -446,3 +446,45 @@ END $$;
 -- last asked about — kept on the link because a case the City does not know
 -- yet has no row in service_requests to keep it on.
 ALTER TABLE request_links ADD COLUMN IF NOT EXISTS refreshed_at TIMESTAMPTZ;
+
+-- The registry as data (alex311.registry_store) and the nightly walk that
+-- keeps it true (alex311.walk). Neither table holds anything about a person:
+-- they describe the City's form.
+--
+-- wizard_walks: one row per walk of one request type — what the City's form
+-- rendered and what each answer did. Kept as history; the newest believable
+-- row per type is what the next registry is built from.
+CREATE TABLE IF NOT EXISTS wizard_walks (
+    walk_id       BIGSERIAL PRIMARY KEY,
+    service_code  TEXT NOT NULL,
+    service_name  TEXT NOT NULL,
+    walked_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ok            BOOLEAN NOT NULL,                 -- the walk ran to the end of the questions
+    suspect       BOOLEAN NOT NULL DEFAULT false,   -- lost what an earlier walk saw; not believed until seen twice
+    changes       JSONB NOT NULL DEFAULT '[]',      -- against the walk in use before it
+    result        JSONB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS wizard_walks_code_idx ON wizard_walks (service_code, walked_at DESC);
+
+-- registry_versions: every registry this site has used or been offered.
+-- Exactly one is 'active' (none = the file shipped in the image is in use).
+-- 'proposed' waits for an administrator; adopting one retires the active.
+CREATE TABLE IF NOT EXISTS registry_versions (
+    version     TEXT PRIMARY KEY,                   -- fingerprint of the content
+    status      TEXT NOT NULL CHECK (status IN ('proposed', 'active', 'retired', 'dismissed')),
+    registry    JSONB NOT NULL,
+    changes     JSONB NOT NULL DEFAULT '[]',        -- against the registry in use when it was built
+    note        TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at  TIMESTAMPTZ,
+    decided_by  TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS registry_versions_one_active
+    ON registry_versions ((status)) WHERE status = 'active';
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT ON wizard_walks TO alex311_app;
+    GRANT SELECT, UPDATE ON registry_versions TO alex311_app;
+  END IF;
+END $$;
