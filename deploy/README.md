@@ -79,7 +79,9 @@ gcloud builds submit --tag $IMAGE .
 > **Two things every schedule needs, or it fires into nothing.** The digest and
 > refresh schedules were created without them and silently did not run for
 > days (2026-10-04): Cloud Scheduler reported `status.code` 5, then 7, and the
-> jobs simply never executed.
+> jobs simply never executed. The weekly drift check had the second problem
+> too and had not run on its schedule since it was created — so nobody was
+> told when the City dropped two request types from its catalog.
 >
 > 1. **The regional host** — `https://$REGION-run.googleapis.com/…/jobs/<job>:run`.
 >    The global `run.googleapis.com` answers 404 for this API.
