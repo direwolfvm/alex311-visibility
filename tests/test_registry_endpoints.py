@@ -41,6 +41,9 @@ def test_anyone_can_ask_whether_their_copy_is_current(client):
                     "generated": R.load_registry()["generated"],
                     "services": len(R.load_registry()["services"])}
     assert r.headers["etag"] == f'"{R.registry_version()}"'
+    # and the probe answers 304 like the rest, so "always send If-None-Match" works everywhere
+    assert client.get("/submit/api/registry/version",
+                      headers={"If-None-Match": r.headers["etag"]}).status_code == 304
 
 
 def test_the_registry_itself_still_needs_the_gate(client):

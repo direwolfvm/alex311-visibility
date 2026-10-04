@@ -803,9 +803,11 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
                 "X-Registry-Version": R.registry_version(), "X-Registry-Schema": str(R.SCHEMA)}
 
     @public.get("/api/registry/version")
-    def registry_version():
+    def registry_version(request: Request):
         """Is my copy current? Public and tiny, so the app can ask at launch
         or in a background refresh without a session."""
+        if (r := _fresh(request)) is not None:
+            return r
         reg = R.load_registry()
         return JSONResponse({"version": R.registry_version(), "schema": R.SCHEMA,
                              "generated": reg["generated"], "services": len(reg["services"])},
