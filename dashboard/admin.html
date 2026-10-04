@@ -127,6 +127,16 @@
   td.actions button { padding:5px 10px; font-size:13px; margin-left:4px; }
   .table-wrap { overflow-x:auto; }
 
+  .pill.proposed { background:var(--warnbg); color:var(--warn); }
+  .pill.active   { background:var(--okbg); color:var(--ok); }
+  .pill.retired, .pill.dismissed { background:var(--border); color:var(--muted); }
+  .changes { margin:0 0 14px; padding:0; list-style:none; max-height:420px; overflow-y:auto;
+             border:1px solid var(--border); border-radius:8px; font-size:13px; }
+  .changes li { padding:7px 12px; border-top:1px solid var(--border); overflow-wrap:anywhere; }
+  .changes li:first-child { border-top:none; }
+  .changes li b { font-weight:600; margin-right:6px; }
+  .changes li.removal b { color:var(--bad); }
+
   .box { padding:11px 13px; border-radius:8px; font-size:13px; margin-top:12px; }
   .box.ok  { background:var(--okbg); border:1px solid #a7f3d0; color:var(--ok); }
   .box.bad { background:var(--badbg); border:1px solid #fecaca; color:var(--bad); }
@@ -170,6 +180,8 @@
             aria-selected="true" aria-controls="panel-status">Status<span class="n" id="n-live">·</span></button>
     <button role="tab" id="st-users" data-panel="users" tabindex="-1"
             aria-selected="false" aria-controls="panel-users">Users<span class="n" id="n-users">·</span></button>
+    <button role="tab" id="st-registry" data-panel="registry" tabindex="-1"
+            aria-selected="false" aria-controls="panel-registry">Registry<span class="n" id="n-registry">·</span></button>
   </div>
 
   <div class="box bad" id="error" hidden role="alert"></div>
@@ -252,6 +264,49 @@
   </section>
 </div>
 
+  <section id="panel-registry" role="tabpanel" aria-labelledby="st-registry" hidden>
+    <div class="card" id="reg-proposal-card" hidden>
+      <h2>The City's form has changed</h2>
+      <p class="lede" id="reg-proposal-lede"></p>
+      <ul class="changes" id="reg-changes"></ul>
+      <div class="form-row">
+        <button class="primary" id="reg-adopt">Adopt this registry</button>
+        <button id="reg-dismiss">Dismiss</button>
+        <span class="hint">Adopting changes what the report form asks, for everyone, within a minute.
+          Nothing is filed and nothing already queued is touched.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Registry in use</h2>
+      <p class="lede">The report form's questions and rules, read from the City's own form. A walk
+        re-reads a slice of request types each weeknight; a request type the City retires is
+        removed at once, and anything else waits here for you.</p>
+      <div class="stat-grid" id="reg-stats"></div>
+      <p class="hint" id="reg-inuse"></p>
+    </div>
+
+    <div class="card" id="reg-attention-card" hidden>
+      <h2>Walks that need a second look</h2>
+      <p class="lede">A walk that failed, or saw less than the one before it. These are walked
+        again first the next night and are not used until a second walk agrees.</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Request type</th><th>Walked</th><th>What happened</th></tr></thead>
+          <tbody id="reg-attention"></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Versions</h2>
+      <div class="table-wrap">
+        <table><thead><tr><th>Version</th><th>State</th><th>When</th><th>By</th><th>Changes</th><th></th></tr></thead>
+          <tbody id="reg-history"></tbody></table>
+      </div>
+      <p class="empty" id="reg-history-empty" hidden>Nothing has been adopted yet: the registry
+        shipped with the site is in use.</p>
+    </div>
+  </section>
+
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => (
@@ -281,6 +336,7 @@ function selectPanel(b, focus = false) {
   });
   $('panel-status').hidden = b.dataset.panel !== 'status';
   $('panel-users').hidden = b.dataset.panel !== 'users';
+  $('panel-registry').hidden = b.dataset.panel !== 'registry';
   if (focus) b.focus();
 }
 tabs.forEach(b => b.addEventListener('click', () => selectPanel(b)));
@@ -473,12 +529,105 @@ $('add').addEventListener('submit', async e => {
 });
 
 // -------------------------------------------------------------------- boot
+// ---------------------------------------------------------------- registry
+const KIND = {
+  service_added: 'New request type', service_removed: 'Request type retired',
+  service_renamed: 'Renamed', service_description_changed: 'Description changed',
+  service_groups_changed: 'Moved between groups', service_keywords_changed: 'Keywords changed',
+  service_banners_changed: 'Notice changed', walk_changed: 'Walk result changed',
+  question_added: 'New question', question_removed: 'Question removed',
+  question_reworded: 'Question reworded', required_changed: 'Required changed',
+  widget_changed: 'Input changed', question_source_changed: 'Question now seen on the form',
+  option_added: 'New option', option_removed: 'Option removed',
+  rule_changed: 'Rule changed', rule_message_changed: 'Rule message changed'};
+let proposedVersion = null;
+
+function changeLine(c) {
+  const i = c.indexOf(' '), kind = c.slice(0, i), rest = c.slice(i + 1);
+  const removal = /removed$/.test(kind);
+  return `<li class="${removal ? 'removal' : ''}"><b>${esc(KIND[kind] || kind)}</b>${esc(rest)}</li>`;
+}
+
+let registryShown = '';
+function renderRegistry(d) {
+  // the board refreshes every few seconds; redrawing an unchanged list would
+  // throw away where the reader had scrolled to in it
+  const same = JSON.stringify(d);
+  if (same === registryShown) return;
+  registryShown = same;
+  const p = d.proposed, u = d.in_use, w = d.walks;
+  proposedVersion = p ? p.version : null;
+  $('n-registry').textContent = p ? p.changes.length : '·';
+  $('reg-proposal-card').hidden = !p;
+  if (p) {
+    $('reg-proposal-lede').textContent =
+      `The walk found ${p.changes.length} difference${p.changes.length === 1 ? '' : 's'} between the ` +
+      `City's form and the registry in use. Offered ${when(p.created_at)} as version ${p.version}, ` +
+      `with ${p.services} request types.`;
+    $('reg-changes').innerHTML = p.changes.map(changeLine).join('');
+  }
+  const cards = [
+    {n: u.services, label: 'request types'},
+    {n: `${w.walked || 0} / ${w.total}`, label: 'walked by the job'},
+    {n: day(w.oldest), label: 'oldest walk'},
+    {n: (w.failing || 0) + (w.suspect || 0), label: 'need a second look',
+     cls: (w.failing || w.suspect) ? 'bad' : ''}];
+  $('reg-stats').innerHTML = cards.map(c =>
+    `<div class="stat ${c.cls || ''}"><b>${esc(c.n)}</b><span>${c.label}</span></div>`).join('');
+  const run = d.last_run;
+  $('reg-inuse').innerHTML =
+    `Version <code>${esc(u.version)}</code> — ` +
+    (u.source === 'database'
+      ? `adopted ${when(u.adopted_at)} by ${esc(u.adopted_by || 'the walk')}.`
+      : 'the registry shipped with the site; nothing has been adopted yet.') +
+    (d.serving.version !== u.version ? ` This server is still on <code>${esc(d.serving.version)}</code> and will follow within a minute.` : '') +
+    (run ? ` Last walk ${when(run.started_at)}: ${run.finished_at ? esc(run.records_seen ?? 0) + ' request types' : 'still running'}` +
+           `${run.error ? ' — ' + esc(run.error) : ''}.` : ' The walk has not run yet.');
+  $('reg-attention-card').hidden = !d.attention.length;
+  $('reg-attention').innerHTML = d.attention.map(a => `<tr>
+    <td>${esc(a.service_name)} <code>${esc(a.service_code)}</code></td>
+    <td class="num">${when(a.walked_at)}</td>
+    <td>${a.ok ? 'Saw less than the walk before it' : esc(a.error || 'Did not finish')}</td></tr>`).join('');
+  $('reg-history-empty').hidden = d.history.length > 0;
+  $('reg-history').innerHTML = d.history.map(h => `<tr>
+    <td><code>${esc(h.version)}</code>${h.note ? `<div class="hint">${esc(h.note)}</div>` : ''}</td>
+    <td><span class="pill ${esc(h.status)}">${h.status === 'active' ? 'in use' : esc(h.status)}</span></td>
+    <td class="num">${when(h.decided_at || h.created_at)}</td>
+    <td>${esc(h.decided_by || '—')}</td>
+    <td class="num">${esc(h.n_changes)}</td>
+    <td class="actions">${h.status === 'retired'
+      ? `<button data-readopt="${esc(h.version)}">Use again</button>` : ''}</td></tr>`).join('');
+}
+
+async function decide(action, version, button) {
+  button.disabled = true;
+  try {
+    await api('/admin/registry/' + action, {method: 'POST', body: JSON.stringify({version})});
+    $('error').hidden = true;
+    renderRegistry(await api('/admin/registry'));
+  } catch (err) { fail(err); }
+  finally { button.disabled = false; }
+}
+$('panel-registry').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.id === 'reg-adopt' && proposedVersion &&
+      confirm('Adopt this registry? The report form changes for everyone within a minute.'))
+    decide('adopt', proposedVersion, b);
+  else if (b.id === 'reg-dismiss' && proposedVersion &&
+      confirm('Dismiss this proposal? The registry in use stays as it is.'))
+    decide('dismiss', proposedVersion, b);
+  else if (b.dataset.readopt &&
+      confirm(`Go back to version ${b.dataset.readopt}? The report form changes for everyone within a minute.`))
+    decide('adopt', b.dataset.readopt, b);
+});
+
 const IN_FLIGHT = ['queued', 'approved', 'filing'];
 
 async function load() {
-  const [who, sub, rev, users, metrics] = await Promise.all([
+  const [who, sub, rev, users, metrics, reg] = await Promise.all([
     api('/whoami'), api('/submission-queue'), api('/review-queue'), api('/users'),
-    api('/instrument')]);
+    api('/instrument'), api('/admin/registry')]);
   me = who.user;
   const rows = sub.queue || [];
   renderStats(metrics);
@@ -486,6 +635,7 @@ async function load() {
   renderHistory(rows);
   renderHeld(rev.queue || []);
   renderUsers(users.users || []);
+  renderRegistry(reg);
 }
 
 // The board is only useful if it keeps up with what testers are doing, and a

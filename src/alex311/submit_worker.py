@@ -50,6 +50,9 @@ FLOOR_LOCK = 311_2026
 RECHECK_SECONDS = 4
 # Between filings, so a burst of testers does not read as a burst on their site.
 PAUSE_SECONDS = 5
+# The nightly walk holds the floor one request type at a time; the longest it
+# keeps a page open is ten minutes, and usually under two.
+WALK_WAIT_SECONDS = 540
 
 
 def take_the_floor(conn) -> bool:
@@ -57,6 +60,29 @@ def take_the_floor(conn) -> bool:
     got = conn.execute("SELECT pg_try_advisory_lock(%s) AS ok", (FLOOR_LOCK,)).fetchone()
     conn.commit()
     return bool(got and got["ok"])
+
+
+def wait_out_a_walk(conn, *, seconds: int = WALK_WAIT_SECONDS, every: float = 5) -> bool:
+    """The floor is taken. If it is the nightly walk (`alex311.walk`) holding
+    it, wait: the walk lets go after the request type it is on, and stands
+    aside while anything is queued. True once the floor is ours.
+
+    A walk is recognized by its own lock. If nobody holds that, the floor is
+    with another filing worker, and leaving is still correct.
+    """
+    from .walk import WALK_LOCK
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        free = conn.execute("SELECT pg_try_advisory_lock(%s) AS ok", (WALK_LOCK,)).fetchone()["ok"]
+        if free:
+            conn.execute("SELECT pg_advisory_unlock(%s)", (WALK_LOCK,))
+        conn.commit()
+        if free:
+            return take_the_floor(conn)      # no walk: it was a worker, or it has just left
+        time.sleep(every)
+        if take_the_floor(conn):
+            return True
+    return False
 
 
 def leave_the_floor(conn) -> None:
@@ -169,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     conn = db.connect()
-    if not take_the_floor(conn):
+    if not take_the_floor(conn) and not wait_out_a_walk(conn):
         # Another execution is already driving a browser. Leaving is correct:
         # the one holding the floor re-checks the queue before it lets go.
         log.info("another worker holds the floor; nothing to do")

@@ -123,8 +123,9 @@ def test_the_admin_views_are_still_administrator_only():
 
 def test_both_jobs_still_live_behind_the_one_tab():
     assert 'id="panel-status"' in PAGE and 'id="panel-users"' in PAGE
-    assert PAGE.count('role="tabpanel"') == 2
-    assert PAGE.count('role="tab"') == 2
+    assert 'id="panel-registry"' in PAGE                      # and the registry, since the walk
+    assert PAGE.count('role="tabpanel"') == 3
+    assert PAGE.count('role="tab"') == 3
 
 
 def test_the_old_address_for_user_management_still_works():

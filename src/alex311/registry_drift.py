@@ -11,8 +11,8 @@ sources that need **no browser**, so it can run in the deployed image:
                                         submitted that the registry does not know
 
 The third source — the wizard walk itself — needs Playwright and stays out of
-the web image; `spike/rules_diff.py` diffs a fresh crawl against the committed
-rules instead. Everything here is read-only: one catalog call and some SELECTs.
+the web image; the nightly walk (`alex311.walk`) does it on the worker image
+and offers a new registry when the form has moved. Everything here is read-only: one catalog call and some SELECTs.
 
 Channel matters, and more than it first appears. About a third of records reach
 the City some way other than the wizard — staff typing a phone call, an emailed
@@ -88,7 +88,12 @@ def registry_path(path: str | os.PathLike | None = None) -> Path:
 
 
 def load_registry(path: str | os.PathLike | None = None) -> dict:
-    return json.loads(registry_path(path).read_text())
+    """The registry to check: a named file, or else the one in use — the
+    adopted version in the database, or the bundled file when there is none."""
+    if path:
+        return json.loads(registry_path(path).read_text())
+    from . import registry_store
+    return registry_store.current()["registry"]
 
 
 def norm(t: str | None) -> str:
@@ -344,8 +349,8 @@ def main(argv: list[str] | None = None) -> int:
                       error="; ".join(str(f) for f in findings)[:2000] or None)
 
     if findings:
-        log.error("registry drift: %d finding(s) — re-crawl with "
-                  "spike/wizard_rules.py and rebuild the registry", len(findings))
+        log.error("registry drift: %d finding(s) — the nightly walk will offer a "
+                  "new registry; see the Registry tab on the admin page", len(findings))
         return 1
     log.info("registry drift: none")
     return 0

@@ -28,9 +28,9 @@ AUTH = ("alex311user", "localtest")
 def test_the_version_is_a_fingerprint_of_the_content(tmp_path):
     a = tmp_path / "a.json"; a.write_text('{"generated": "x", "services": []}')
     b = tmp_path / "b.json"; b.write_text('{"generated": "x", "services": [{"service_code": "NEW"}]}')
-    va, vb = R.registry_version.__wrapped__(str(a)), R.registry_version.__wrapped__(str(b))
+    va, vb = R.registry_version(str(a)), R.registry_version(str(b))
     assert va != vb and len(va) == 16
-    assert R.registry_version.__wrapped__(str(a)) == va          # same content, same version
+    assert R.registry_version(str(a)) == va          # same content, same version
 
 
 def test_anyone_can_ask_whether_their_copy_is_current(client):

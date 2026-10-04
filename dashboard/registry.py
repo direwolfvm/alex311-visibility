@@ -1,25 +1,32 @@
-"""Form registry: load docs/data/form-registry.json and validate answers against it.
+"""Form registry: the schema the report form is drawn from, and validation against it.
 
-The registry (built by spike/build_registry.py) is the single schema the
-generic form consumes — catalog + mined questions + wizard rules. Validation
-here is server-authoritative: the client mirrors it for inline feedback, but
-nothing reaches the submission queue that the wizard itself would reject.
+The registry — catalog + mined questions + wizard rules — is the single
+schema the generic form consumes. Validation here is server-authoritative:
+the client mirrors it for inline feedback, but nothing reaches the
+submission queue that the wizard itself would reject.
+
+Which registry: the one in use (`alex311.registry_store`) — the version an
+administrator adopted, kept in the database so following the City does not
+take a deploy — or, until something has been adopted and whenever the
+database cannot be read, the file shipped in the image
+(`docs/data/form-registry.json`). The service asks the database at most once
+a minute; everything else is served from memory.
 """
 from __future__ import annotations
 
+import gzip
+import hashlib
 import json
+import logging
 import os
+import threading
+import time
 from functools import lru_cache
 from pathlib import Path
 
+log = logging.getLogger("alex311.registry")
+
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "docs/data/form-registry.json"
-
-
-@lru_cache(maxsize=1)
-def load_registry(path: str | None = None) -> dict:
-    p = Path(path or os.environ.get("FORM_REGISTRY", DEFAULT_PATH))
-    return json.loads(p.read_text())
-
 
 # What a client must understand to use the registry: the shape of a question,
 # an option's `rule`, `reveals`/`revealed_by`, and `source`. Raised only when
@@ -28,28 +35,102 @@ def load_registry(path: str | None = None) -> dict:
 # than it knows should fall back to the website for reporting.
 SCHEMA = 1
 
+TTL_SECONDS = 60
 
-@lru_cache(maxsize=1)
-def registry_version(path: str | None = None) -> str:
-    """A short fingerprint of the registry's content. Changes exactly when the
-    registry does — a rebuild after the City retires a request type, say — so
-    a client can ask "is mine still current?" for the price of a header."""
-    import hashlib
-    p = Path(path or os.environ.get("FORM_REGISTRY", DEFAULT_PATH))
-    return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+_provider = None                 # () -> {"version", "registry"} | None, set by the web service
+_lock = threading.Lock()
+_held: dict | None = None        # {"at", "version", "registry", "source"}
+_payloads: dict[tuple[str, bool], bytes] = {}
+
+
+def set_provider(fn) -> None:
+    """Tell the registry where the adopted version lives. `fn(have)` returns
+    {"version", "registry"} for it — `registry` may be None when the version
+    is the one already held (`have`) — or None when nothing has been adopted.
+    Without a provider (tests, scripts) the bundled file is the registry."""
+    global _provider
+    _provider = fn
+    refresh()
+
+
+def refresh() -> None:
+    """Forget what is held, so the next request asks again — called when an
+    administrator adopts a version, so this instance follows at once."""
+    global _held
+    with _lock:
+        _held = None
+        _payloads.clear()
 
 
 @lru_cache(maxsize=4)
+def _bundled(path: str | None = None) -> tuple[str, dict]:
+    p = Path(path or os.environ.get("FORM_REGISTRY", DEFAULT_PATH))
+    raw = p.read_bytes()
+    return hashlib.sha256(raw).hexdigest()[:16], json.loads(raw)
+
+
+def _current() -> dict:
+    global _held
+    if _provider is None:
+        version, reg = _bundled()
+        return {"version": version, "registry": reg, "source": "bundled"}
+    now = time.monotonic()
+    held = _held
+    if held is not None and now - held["at"] < TTL_SECONDS:
+        return held
+    with _lock:
+        if _held is not None and now - _held["at"] < TTL_SECONDS:
+            return _held
+        try:
+            got = _provider(_held["version"] if _held else None)
+            if got is not None and got.get("registry") is None:      # still the version we hold
+                got = {"version": _held["version"], "registry": _held["registry"]}
+        except Exception as e:
+            # keep serving what we have; failing that, the file in the image
+            log.warning("registry: could not read the adopted version (%s)", type(e).__name__)
+            got = _held and {"version": _held["version"], "registry": _held["registry"]}
+            source = (_held or {}).get("source", "bundled")
+        else:
+            source = "database"
+        if got is None:
+            version, reg = _bundled()
+            got, source = {"version": version, "registry": reg}, "bundled"
+        if _held is None or _held["version"] != got["version"]:
+            _payloads.clear()
+        _held = {"at": now, "version": got["version"], "registry": got["registry"], "source": source}
+        return _held
+
+
+def load_registry(path: str | None = None) -> dict:
+    """The registry in use (or, given a path, that file)."""
+    return _bundled(path)[1] if path else _current()["registry"]
+
+
+def registry_version(path: str | None = None) -> str:
+    """A short fingerprint of the registry's content. Changes exactly when the
+    registry does — an adoption after the City changes its form, say — so a
+    client can ask "is mine still current?" for the price of a header."""
+    return _bundled(path)[0] if path else _current()["version"]
+
+
+def registry_source() -> str:
+    return _current()["source"]
+
+
 def full_payload(gzipped: bool = False) -> bytes:
-    """The whole registry in one response, serialized once: every service with
-    its questions, plus the version and schema a client caches it under."""
-    reg = load_registry()
-    body = json.dumps({"version": registry_version(), "schema": SCHEMA,
-                       "generated": reg["generated"], "sources": reg.get("sources"),
-                       "services": reg["services"]}, separators=(",", ":")).encode()
-    if gzipped:
-        import gzip
-        return gzip.compress(body, 6, mtime=0)
+    """The whole registry in one response, serialized once per version: every
+    service with its questions, plus the version and schema a client caches it under."""
+    cur = _current()
+    key = (cur["version"], gzipped)
+    body = _payloads.get(key)
+    if body is None:
+        reg = cur["registry"]
+        body = json.dumps({"version": cur["version"], "schema": SCHEMA,
+                           "generated": reg["generated"], "sources": reg.get("sources"),
+                           "services": reg["services"]}, separators=(",", ":")).encode()
+        if gzipped:
+            body = gzip.compress(body, 6, mtime=0)
+        _payloads[key] = body
     return body
 
 

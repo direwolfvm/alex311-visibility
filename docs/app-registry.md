@@ -42,3 +42,12 @@ A client mirrors the registry's rules for instant feedback, but
 `POST /submit/api/validate` and `/precheck` apply the server's current
 registry regardless of what the client holds. A stale copy can make the form
 ask the wrong questions; it cannot get a wrong request filed.
+
+## When it changes
+
+The registry in use is data, not part of a deploy. A nightly walk of the
+City's form offers a new registry when the form has moved, and an
+administrator adopts it; a request type the City retires is removed without
+waiting. Either way `version` changes, and that is the only signal a client
+needs. Responses may be cached for five minutes (`Cache-Control`), so a
+client follows an adoption within about that long.
