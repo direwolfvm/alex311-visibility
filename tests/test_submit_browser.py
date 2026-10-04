@@ -211,7 +211,7 @@ def test_an_order_is_not_a_question():
     reg = json.loads((Path(__file__).resolve().parents[1] / "docs/data/form-registry.json").read_text())
     clashing = {s["service_code"] for s in reg["services"]
                 if len({q["order"] for q in s["questions"]}) < len(s["questions"])}
-    assert {"TESCONTN", "TESTSGNL", "TESSEWER", "ALXCABI"} <= clashing
+    assert {"TESCONTN", "TESTSGNLM", "TESSEWER", "ALXCABI"} <= clashing
 
 
 def test_the_wording_on_the_screen_picks_the_question():

@@ -2138,41 +2138,6 @@
   }
  },
  {
-  "service_code": "RPCATREE",
-  "service_name": "Trees",
-  "description": "Use this request to submit questions about tree planting, pruning, or removal.",
-  "keywords": "RPCATREE, Trees, Fallen, Planting, Pruning, Branches, Roots",
-  "group": null,
-  "metadata": true,
-  "type": "realtime",
-  "definitions": {
-   "view_only_sr": false,
-   "service_departments": [
-    {
-     "code": "RPCA",
-     "name": "Recreation, Parks & Cultural Activities",
-     "phone": null,
-     "email": null,
-     "web_link": null
-    }
-   ],
-   "service_categories": [
-    {
-     "code": "RPCA",
-     "name": "Recreation & Cultural Activities",
-     "description": "Includes Historic Alexandria, recreation programs, trees and park maintenance requests.",
-     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1684742258/QA/zuvvfyhcvb91mykhwf69.svg"
-    },
-    {
-     "code": "POPSVCRQ",
-     "name": "Popular Service Requests",
-     "description": "The most popular service request types in the city of Alexandria.",
-     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
-    }
-   ]
-  }
- },
- {
   "service_code": "TESREPAR",
   "service_name": "Alley or Street",
   "description": "Use this service request to report repairs needed to Alleys or Streets. Repair and paving projects typically take place from Spring until early Fall. Staff make every effort to provide timely, accurate information about this work and to minimize disruption and duration.",
@@ -3073,55 +3038,6 @@
     }
    ],
    "service_categories": [
-    {
-     "code": "PARKTRANS",
-     "name": "Parking & Transportation",
-     "description": "Includes traffic and parking infrastructure, traffic safety, mobility and public transportation requests.",
-     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1701165277/CitizenAsset/CategoryIcons/parking_svg_New.svg"
-    }
-   ]
-  }
- },
- {
-  "service_code": "TESTSGNL",
-  "service_name": "Traffic Signals and Street Lights",
-  "description": "Use this service request for pedestrian or traffic concerns or street light outages. This includes signals that are malfunctioning, bulb outages, or timing issues. Dominion Virginia Power maintains the majority of the street lights within Alexandria. Street light outages can be reported directly to Dominion by calling 1.866.DOM.HELP (1.866.366.4357). Please be aware that request for new signals and lights require a detailed review by staff before approval.",
-  "keywords": "TESTSGNL, Traffic Signals, Pedestrian Signal, Pedestrian Button, Crosswalk Signal, Bulb Out, Flashing Signal, Signal Timing, Radar Flashers, School Zone Flashers, Streetlight, Streetlights, Dominion, Street Light, Traffic Light, Pedestrian",
-  "group": null,
-  "metadata": true,
-  "type": "realtime",
-  "definitions": {
-   "view_only_sr": false,
-   "service_departments": [
-    {
-     "code": "TES",
-     "name": "Transportation & Environmental Services",
-     "phone": null,
-     "email": null,
-     "web_link": null
-    },
-    {
-     "code": "RPCA",
-     "name": "Recreation, Parks & Cultural Activities",
-     "phone": null,
-     "email": null,
-     "web_link": null
-    },
-    {
-     "code": "DP",
-     "name": "Dominion Power",
-     "phone": null,
-     "email": null,
-     "web_link": null
-    }
-   ],
-   "service_categories": [
-    {
-     "code": "POPSVCRQ",
-     "name": "Popular Service Requests",
-     "description": "The most popular service request types in the city of Alexandria.",
-     "category_icon_name": "https://res.cloudinary.com/incapsulate/image/upload/v1696401779/CitizenAsset/CategoryIcons/Popular_Case_Categories_New.svg"
-    },
     {
      "code": "PARKTRANS",
      "name": "Parking & Transportation",

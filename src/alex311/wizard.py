@@ -3,7 +3,7 @@
 Everything about how that wizard actually behaves lives here: the shadow-DOM
 scan, the six widget kinds, the Validation Alert modals, the service-type
 suggestion, the Esri location step, and the tile-by-tile quirks discovered by
-walking all 111 services.
+walking every service in the catalog.
 
 **This module cannot submit.** It navigates and fills, and stops at the review
 step. Pressing the final button is `alex311.submit_browser`'s job alone, behind
