@@ -46,6 +46,9 @@ import time
 import psycopg
 
 log = logging.getLogger("alex311.push")
+# httpx logs each request's URL at INFO, and an APNs URL ends in the device
+# token — which reaches one person's phone and has no business in a log.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 HOSTS = {"production": "https://api.push.apple.com", "sandbox": "https://api.sandbox.push.apple.com"}
 TOKEN_TTL = 50 * 60                 # Apple accepts a provider token for an hour

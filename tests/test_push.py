@@ -211,3 +211,10 @@ def test_two_passes_cannot_both_send_the_same_change():
         other.rollback(); other.close(); owner.rollback()
         owner.execute("DELETE FROM service_requests WHERE service_request_id LIKE 'PR-%'")
         owner.execute("DELETE FROM portal_users WHERE email LIKE 'pr-%@test.io'"); owner.commit(); owner.close()
+
+
+def test_device_tokens_do_not_reach_the_logs():
+    """httpx logs request URLs at INFO; an APNs URL ends in the device token."""
+    import logging
+    assert logging.getLogger("httpx").level >= logging.WARNING
+    assert 'logging.getLogger("httpx").setLevel(logging.WARNING)' in (ROOT / "src/alex311/push.py").read_text()

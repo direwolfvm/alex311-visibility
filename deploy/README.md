@@ -76,6 +76,26 @@ gcloud builds submit --tag $IMAGE .
 
 ## 3. Ingest job (every 6 hours, off-peak-friendly)
 
+> **Two things every schedule needs, or it fires into nothing.** The digest and
+> refresh schedules were created without them and silently did not run for
+> days (2026-10-04): Cloud Scheduler reported `status.code` 5, then 7, and the
+> jobs simply never executed.
+>
+> 1. **The regional host** — `https://$REGION-run.googleapis.com/…/jobs/<job>:run`.
+>    The global `run.googleapis.com` answers 404 for this API.
+> 2. **Permission for the scheduler's service account on that job:**
+>    ```bash
+>    gcloud run jobs add-iam-policy-binding <job> --region=$REGION \
+>        --member=serviceAccount:<scheduler-sa>@$PROJECT.iam.gserviceaccount.com --role=roles/run.invoker
+>    ```
+>
+> After creating one, prove it: `gcloud scheduler jobs run <schedule>`, then
+> `gcloud scheduler jobs describe <schedule> --format='value(status.code)'` must
+> be empty and `gcloud run jobs executions list --job <job>` must show a new
+> execution. In zsh, write `${JOB}:run`, not `$JOB:run` — `:r` is a modifier
+> and eats the "r".
+
+
 ```bash
 gcloud run jobs create alex311-ingest --image=$IMAGE --region=$REGION \
     --set-cloudsql-instances=$SQL_INSTANCE \
@@ -85,7 +105,7 @@ gcloud run jobs create alex311-ingest --image=$IMAGE --region=$REGION \
 
 gcloud scheduler jobs create http alex311-ingest-schedule \
     --location=$REGION --schedule="20 3,9,15,21 * * *" --time-zone="America/New_York" \
-    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-ingest:run" \
+    --uri="https://$REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-ingest:run" \
     --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
 ```
 
@@ -110,7 +130,7 @@ gcloud run jobs create alex311-health --image=$IMAGE --region=$REGION \
 
 gcloud scheduler jobs create http alex311-health-schedule \
     --location=$REGION --schedule="45 * * * *" \
-    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-health:run" \
+    --uri="https://$REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-health:run" \
     --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
 ```
 
@@ -339,7 +359,7 @@ gcloud run jobs create alex311-digest --image=$IMAGE --region=$REGION \
 
 gcloud scheduler jobs create http alex311-digest-schedule \
     --location=$REGION --schedule="0 7 * * *" --time-zone="America/New_York" \
-    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-digest:run" \
+    --uri="https://$REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-digest:run" \
     --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
 ```
 
@@ -375,7 +395,7 @@ gcloud run jobs create alex311-refresh --image=$IMAGE --region=$REGION \
 
 gcloud scheduler jobs create http alex311-refresh-schedule \
     --location=$REGION --schedule="*/15 * * * *" --time-zone="America/New_York" \
-    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-refresh:run" \
+    --uri="https://$REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-refresh:run" \
     --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
 ```
 
@@ -397,7 +417,7 @@ gcloud run jobs create alex311-drift --image=$IMAGE --region=$REGION \
 
 gcloud scheduler jobs create http alex311-drift-schedule \
     --location=$REGION --schedule="30 6 * * 1" --time-zone="America/New_York" \
-    --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-drift:run" \
+    --uri="https://$REGION-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/$PROJECT/jobs/alex311-drift:run" \
     --http-method=POST --oauth-service-account-email=<scheduler-sa>@$PROJECT.iam.gserviceaccount.com
 ```
 
