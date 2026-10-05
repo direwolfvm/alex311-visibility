@@ -298,6 +298,9 @@
 
     <div class="card">
       <h2>Versions</h2>
+      <p class="lede">Every registry this site has used or been offered is kept, whole. Open a
+        version to see the form as it was; each report records the version it was written against.
+        <a href="/submit/api/admin/registry/history" target="_blank" rel="noopener">Full log</a></p>
       <div class="table-wrap">
         <table><thead><tr><th>Version</th><th>State</th><th>When</th><th>By</th><th>Changes</th><th></th></tr></thead>
           <tbody id="reg-history"></tbody></table>
@@ -590,7 +593,8 @@ function renderRegistry(d) {
     <td>${a.ok ? 'Saw less than the walk before it' : esc(a.error || 'Did not finish')}</td></tr>`).join('');
   $('reg-history-empty').hidden = d.history.length > 0;
   $('reg-history').innerHTML = d.history.map(h => `<tr>
-    <td><code>${esc(h.version)}</code>${h.note ? `<div class="hint">${esc(h.note)}</div>` : ''}</td>
+    <td><a href="/submit/api/admin/registry/version/${encodeURIComponent(h.version)}" target="_blank" rel="noopener"
+           title="The whole registry as it was"><code>${esc(h.version)}</code></a>${h.note ? `<div class="hint">${esc(h.note)}</div>` : ''}</td>
     <td><span class="pill ${esc(h.status)}">${h.status === 'active' ? 'in use' : esc(h.status)}</span></td>
     <td class="num">${when(h.decided_at || h.created_at)}</td>
     <td>${esc(h.decided_by || '—')}</td>

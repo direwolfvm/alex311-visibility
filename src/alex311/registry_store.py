@@ -12,6 +12,12 @@ The file shipped in the image (`docs/data/form-registry.json`) is what is
 used until something has been adopted, and whenever the database cannot be
 read — a registry a day old is better than no report form.
 
+Nothing is thrown away. Every version ever used or offered stays in
+`registry_versions`, whole; `registry_events` is an append-only log of when
+each was offered, adopted, replaced or dismissed and by whom; and every
+report records the version it was written against. See
+docs/registry-history.md.
+
 Two rules about what happens without a person:
 
   * A request type the City has retired is removed at once. Offering it
@@ -173,11 +179,39 @@ def diff(old: dict, new: dict) -> list[str]:
 
 # ------------------------------------------------------- offering and deciding
 
+def _event(conn, version: str, event: str, by: str | None = None, **detail) -> None:
+    """One line in the history. Appended, never changed."""
+    conn.execute("INSERT INTO registry_events (version, event, by, detail) VALUES (%s, %s, %s, %s)",
+                 (version, event, by, Jsonb(detail)))
+
+
+def _keep_baseline(conn) -> None:
+    """Before the first stored version is offered or goes into use, store the
+    registry that was in use until now — the file shipped in the image — so the history
+    starts at the beginning rather than at the first change."""
+    if conn.execute("SELECT 1 FROM registry_events WHERE event IN ('baseline', 'adopted') LIMIT 1").fetchone():
+        return
+    b = bundled()
+    conn.execute(
+        """INSERT INTO registry_versions (version, status, registry, note, decided_at)
+           VALUES (%s, 'retired', %s, %s, now()) ON CONFLICT (version) DO NOTHING""",
+        (b["version"], Jsonb(b["registry"]),
+         "The registry shipped with the site, in use before anything was adopted."))
+    _event(conn, b["version"], "baseline", generated=b["registry"].get("generated"))
+
+
 def _make_active(conn, version: str, by: str) -> None:
+    _keep_baseline(conn)
+    was = conn.execute("SELECT version FROM registry_versions WHERE status = 'active'").fetchone()
+    if was and was["version"] == version:
+        return
+    if was:
+        _event(conn, was["version"], "replaced", by, replaced_by=version)
     conn.execute("UPDATE registry_versions SET status = 'retired', decided_at = now() "
                  "WHERE status = 'active' AND version <> %s", (version,))
     conn.execute("UPDATE registry_versions SET status = 'active', decided_at = now(), decided_by = %s "
                  "WHERE version = %s", (by, version))
+    _event(conn, version, "adopted", by, replaced=was["version"] if was else bundled()["version"])
 
 
 def _store(conn, registry: dict, status: str, changes: list[str], note: str) -> str:
@@ -226,12 +260,15 @@ def propose(conn, registry: dict, *, note: str = "") -> dict:
     if seen and seen["status"] in ("dismissed", "active"):
         conn.rollback()
         return {"version": version, "changes": changes, "status": seen["status"]}
+    _keep_baseline(conn)                 # the history starts no later than the first offer
     # one proposal at a time: a newer walk replaces what was waiting
     conn.execute("UPDATE registry_versions SET status = 'retired', decided_at = now() "
                  "WHERE status = 'proposed' AND version <> %s", (version,))
     _store(conn, registry, "proposed", changes, note)
     conn.execute("UPDATE registry_versions SET status = 'proposed', decided_at = NULL, decided_by = NULL "
                  "WHERE version = %s", (version,))
+    if not seen or seen["status"] != "proposed":
+        _event(conn, version, "proposed", "walk", against=cur["version"], changes=changes)
     conn.commit()
     return {"version": version, "changes": changes, "status": "proposed", "new": seen is None}
 
@@ -254,15 +291,46 @@ def dismiss(conn, version: str, by: str) -> bool:
     n = conn.execute(
         "UPDATE registry_versions SET status = 'dismissed', decided_at = now(), decided_by = %s "
         "WHERE version = %s AND status = 'proposed'", (by, version)).rowcount
+    if n:
+        _event(conn, version, "dismissed", by)
     conn.commit()
     return n > 0
 
 
 def use_bundled(conn, by: str) -> None:
     """Stop using any stored version; the file in the image is in use again."""
+    for row in conn.execute("SELECT version FROM registry_versions WHERE status = 'active'").fetchall():
+        _event(conn, row["version"], "withdrawn", by, replaced_by=bundled()["version"])
     conn.execute("UPDATE registry_versions SET status = 'retired', decided_at = now(), decided_by = %s "
                  "WHERE status = 'active'", (by,))
     conn.commit()
+
+
+# ---------------------------------------------------------------- the history
+
+def get(conn, version: str) -> dict | None:
+    """A stored version, whole: the registry as it was, with how it differed
+    from the one before it. Versions are kept for good."""
+    return conn.execute(
+        "SELECT version, status, registry, changes, note, created_at, decided_at, decided_by "
+        "FROM registry_versions WHERE version = %s", (version,)).fetchone()
+
+
+def events(conn, limit: int = 500) -> list[dict]:
+    return conn.execute("SELECT at, version, event, by, detail FROM registry_events "
+                        "ORDER BY event_id DESC LIMIT %s", (limit,)).fetchall()
+
+
+def in_use_at(conn, when) -> str | None:
+    """The version the report form was drawn from at a moment in the past —
+    the last one put into use at or before it. None before the history starts."""
+    row = conn.execute(
+        "SELECT version, event, detail FROM registry_events "
+        "WHERE at <= %s AND event IN ('baseline', 'adopted', 'withdrawn') ORDER BY event_id DESC LIMIT 1",
+        (when,)).fetchone()
+    if row is None:
+        return None
+    return row["detail"].get("replaced_by") if row["event"] == "withdrawn" else row["version"]
 
 
 def state(conn) -> dict:
@@ -287,7 +355,7 @@ def state(conn) -> dict:
     history = conn.execute(
         "SELECT version, status, note, created_at, decided_at, decided_by, "
         "       jsonb_array_length(changes) AS n_changes "
-        "FROM registry_versions ORDER BY COALESCE(decided_at, created_at) DESC LIMIT 8").fetchall()
+        "FROM registry_versions ORDER BY COALESCE(decided_at, created_at) DESC LIMIT 100").fetchall()
     walks = conn.execute(
         """SELECT count(*) AS walked, min(walked_at) AS oldest, max(walked_at) AS newest,
                   count(*) FILTER (WHERE NOT ok) AS failing,

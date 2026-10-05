@@ -488,3 +488,70 @@ DO $$ BEGIN
     GRANT SELECT, UPDATE ON registry_versions TO alex311_app;
   END IF;
 END $$;
+
+-- History of the report form. Three things, none of which is ever deleted:
+--   registry_versions  every registry this site has used or been offered, whole
+--   registry_events    an append-only log: when each was offered, put in use,
+--                      taken out of use, or dismissed, and by whom — so "what
+--                      did the form ask on a given day" has an answer even when
+--                      a version was in use more than once
+--   submission_attempts.registry_version  the version a report was written
+--                      against, so its answers can be read beside the questions
+--                      that were actually asked
+CREATE TABLE IF NOT EXISTS registry_events (
+    event_id    BIGSERIAL PRIMARY KEY,
+    at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    version     TEXT NOT NULL,
+    event       TEXT NOT NULL CHECK (event IN ('baseline', 'proposed', 'adopted', 'replaced', 'dismissed', 'withdrawn')),
+    by          TEXT,
+    detail      JSONB NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS registry_events_at_idx ON registry_events (at);
+ALTER TABLE submission_attempts ADD COLUMN IF NOT EXISTS registry_version TEXT;
+
+-- Kept means kept, for every role including the owner the jobs run as: a
+-- trigger refuses to delete or rewrite. Removing history is then a deliberate
+-- act (dropping the trigger), never a side effect of a query.
+CREATE OR REPLACE FUNCTION registry_history_is_kept() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'registry_versions' THEN
+    -- its state may move (proposed, active, retired); what it says may not
+    IF NEW.version <> OLD.version OR NEW.registry IS DISTINCT FROM OLD.registry
+       OR NEW.created_at <> OLD.created_at THEN
+      RAISE EXCEPTION 'a stored registry version is never rewritten (%)', OLD.version;
+    END IF;
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'the history of the report form is kept: % on % is not allowed', TG_OP, TG_TABLE_NAME;
+END $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS kept ON registry_versions;
+CREATE TRIGGER kept BEFORE UPDATE OR DELETE ON registry_versions
+    FOR EACH ROW EXECUTE FUNCTION registry_history_is_kept();
+DROP TRIGGER IF EXISTS kept ON registry_events;
+CREATE TRIGGER kept BEFORE UPDATE OR DELETE ON registry_events
+    FOR EACH ROW EXECUTE FUNCTION registry_history_is_kept();
+DROP TRIGGER IF EXISTS kept ON wizard_walks;
+CREATE TRIGGER kept BEFORE UPDATE OR DELETE ON wizard_walks
+    FOR EACH ROW EXECUTE FUNCTION registry_history_is_kept();
+DROP TRIGGER IF EXISTS kept_whole ON registry_versions;
+CREATE TRIGGER kept_whole BEFORE TRUNCATE ON registry_versions
+    FOR EACH STATEMENT EXECUTE FUNCTION registry_history_is_kept();
+DROP TRIGGER IF EXISTS kept_whole ON registry_events;
+CREATE TRIGGER kept_whole BEFORE TRUNCATE ON registry_events
+    FOR EACH STATEMENT EXECUTE FUNCTION registry_history_is_kept();
+DROP TRIGGER IF EXISTS kept_whole ON wizard_walks;
+CREATE TRIGGER kept_whole BEFORE TRUNCATE ON wizard_walks
+    FOR EACH STATEMENT EXECUTE FUNCTION registry_history_is_kept();
+
+-- And the web service's role is not given the means in the first place (the
+-- blanket grant above would otherwise hand it UPDATE and DELETE on everything).
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    REVOKE ALL ON registry_versions, registry_events, wizard_walks FROM alex311_app;
+    GRANT SELECT, INSERT, UPDATE ON registry_versions TO alex311_app;   -- adopt, dismiss, the baseline
+    GRANT SELECT, INSERT ON registry_events TO alex311_app;             -- append only
+    GRANT SELECT ON wizard_walks TO alex311_app;
+    GRANT USAGE, SELECT ON SEQUENCE registry_events_event_id_seq TO alex311_app;
+  END IF;
+END $$;
