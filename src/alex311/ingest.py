@@ -125,7 +125,7 @@ def run_ingest(
         # Never lets a notification problem fail an ingest that succeeded.
         if push.configured():
             try:
-                push.notify(conn, site_origin=os.environ.get("SITE_ORIGIN", "https://alex311visibility.me"))
+                push.notify(conn, site_origin=os.environ.get("SITE_ORIGIN", "https://alex311-reborn.com"))
             except Exception as e:
                 log.warning("push pass failed: %s", type(e).__name__)
                 conn.rollback()

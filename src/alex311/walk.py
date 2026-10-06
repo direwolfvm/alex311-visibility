@@ -510,7 +510,7 @@ def main(argv: list[str] | None = None) -> int:
     db.finish_run(conn, run_id, ok=not bad, records_seen=result["walked"],
                   records_upserted=result["changed"], error="; ".join(notes) if (waiting or bad or result["stopped"]) else None)
     if waiting and proposal.get("new"):
-        alert(result, proposal, os.environ.get("SITE_ORIGIN", "https://alex311visibility.me"))
+        alert(result, proposal, os.environ.get("SITE_ORIGIN", "https://alex311-reborn.com"))
     for line in proposal.get("changes", []):
         log.warning("differs from the registry in use: %s", line)
     return 1 if (bad or (waiting and proposal.get("new"))) else 0

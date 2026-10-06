@@ -65,7 +65,7 @@ Two ways in, on purpose:
 
 ## 1. The public dashboard — the part that already works
 
-Live: **https://alex311visibility.me**
+Live: **https://alex311-reborn.com**
 
 (The Cloud Run URL still answers, but the mapped domain is the one to put in front of anyone.)
 

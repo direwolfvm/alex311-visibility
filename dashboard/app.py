@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
@@ -65,6 +65,41 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Alex311 Reborn", lifespan=lifespan)
+
+
+# One address. The site answers on more than one domain (the original
+# alex311visibility.me, the Cloud Run URL, www), but it has one name:
+# SITE_ORIGIN. A page asked for under any other name is sent there, so links
+# people pass around, bookmarks and search results converge on it, and nobody
+# ends up signed in on one domain and signed out on the other.
+#
+# Only pages. API calls, the app's association file and the health check are
+# answered wherever they arrive: a build of the iOS app that still speaks to
+# the old domain keeps working, and Apple keeps finding the association it
+# cached there, until that build is replaced.
+def canonical_host() -> str | None:
+    origin = os.environ.get("SITE_ORIGIN", "")
+    return origin.split("//", 1)[-1].split("/", 1)[0].lower() or None
+
+
+def wants_canonical(method: str, host: str, path: str) -> bool:
+    want = canonical_host()
+    if not want or not host or host.lower() == want or method not in ("GET", "HEAD"):
+        return False
+    if host.split(":", 1)[0] in ("localhost", "127.0.0.1", "[::1]"):
+        return False
+    return not (path.startswith("/api/") or path.startswith("/submit/api/")
+                or path.startswith("/.well-known/"))
+
+
+@app.middleware("http")
+async def one_address(request, call_next):
+    if wants_canonical(request.method, request.headers.get("host", ""), request.url.path):
+        target = os.environ["SITE_ORIGIN"].rstrip("/") + request.url.path
+        if request.url.query:
+            target += "?" + request.url.query
+        return RedirectResponse(target, status_code=308)
+    return await call_next(request)
 
 
 def _parse_polygon(spec: str) -> str:
@@ -588,7 +623,7 @@ def _contact_page(name: str) -> HTMLResponse:
     """The two pages the public and App Review open without signing in.
     Server-rendered: the contact address and the operator's name come from
     the environment, so the pages are whole in the first response."""
-    contact = os.environ.get("SITE_CONTACT_EMAIL", "support@alex311visibility.me")
+    contact = os.environ.get("SITE_CONTACT_EMAIL", "support@alex311-reborn.com")
     html = (STATIC / name).read_text()
     for key, value in (("{{CONTACT_EMAIL}}", contact),
                        ("{{PRIVACY_EMAIL}}", os.environ.get("SITE_PRIVACY_EMAIL", contact)),
