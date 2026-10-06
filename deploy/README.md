@@ -10,6 +10,7 @@ Live in project **permitting-ai-helper** (us-east4):
 | Thing | Value |
 |---|---|
 | Dashboard | https://alex311visibility.me (mapped domain) |
+| Second domain | https://alex311-reborn.com and `www` (mapped 2026-10-06) — answers the same service; links, mail and Universal Links still name `alex311visibility.me` (see §5e) |
 | Cloud Run URL | https://alex311-dashboard-650621702399.us-east4.run.app — still works; the mapped domain is what people should be given |
 | Image | `us-east4-docker.pkg.dev/permitting-ai-helper/cloud-run-source-deploy/alex311-portal:latest` |
 | Database | `alex311` on Cloud SQL `metabase-sql` (user `alex311`) |
@@ -404,6 +405,35 @@ gcloud scheduler jobs create http alex311-refresh-schedule \
 
 Both this job and the ingest run the push pass; a change is claimed on the
 link before it is sent, so only one of them sends it.
+
+## 5e. Domains
+
+Two domains reach the dashboard: `alex311visibility.me` (the original, and
+still the address everything *writes*) and `alex311-reborn.com` (added
+2026-10-06, with `www`). Both are Cloud Run domain mappings on
+`alex311-dashboard`; both are registered at DreamHost with DreamHost DNS.
+
+To map a domain:
+
+1. Google must know the gcloud account owns it: `gcloud domains verify
+   <domain>` opens Search Console; choose the DNS record method and put the
+   `google-site-verification` TXT in DreamHost DNS.
+2. DreamHost: a freshly registered domain has **no DNS zone** until it is
+   added in the panel (Domains → Add Hosting → DNS only); until then the API
+   answers `no_such_zone`. The API (`dns-add_record`) can write A, AAAA, CNAME
+   and TXT, but not MX.
+3. `gcloud beta run domain-mappings create --service=alex311-dashboard
+   --domain=<domain> --region=$REGION`, then add the records it prints: the
+   apex gets four A and four AAAA records (Google's `216.239.3x.21` /
+   `2001:4860:4802:3x::15`), `www` a CNAME to `ghs.googlehosted.com`. The
+   certificate follows within minutes of the records resolving.
+
+What a second domain does **not** do: `SITE_ORIGIN`, the sign-in and digest
+emails, push payloads, the Mailgun sending domain, `support@`, and the
+Universal Links association (§5a¾) all name `alex311visibility.me`. Making
+another domain the primary address is a change to each of those, and the
+session cookie is per host, so a person signed in on one domain is signed
+out on the other.
 
 ## 6. Registry drift check (weekly)
 
