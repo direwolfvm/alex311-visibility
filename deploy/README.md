@@ -9,7 +9,7 @@ Live in project **permitting-ai-helper** (us-east4):
 
 | Thing | Value |
 |---|---|
-| Dashboard | https://alex311visibility.me (mapped domain) |
+| Dashboard | **https://alex311-reborn.com** (primary since 2026-10-06; `SITE_ORIGIN`). `www`, `alex311visibility.me` and the Cloud Run URL redirect pages here (§5e) |
 | Cloud Run URL | https://alex311-dashboard-650621702399.us-east4.run.app — still works; the mapped domain is what people should be given |
 | Image | `us-east4-docker.pkg.dev/permitting-ai-helper/cloud-run-source-deploy/alex311-portal:latest` |
 | Database | `alex311` on Cloud SQL `metabase-sql` (user `alex311`) |
@@ -231,7 +231,8 @@ are. Instead the service mints the link (`accounts:sendOobCode` with
 itself — `POST /submit/api/email-link`. The page falls back to Firebase's own
 email when this is not configured (the endpoint answers 503).
 
-As wired on 2026-09-16: the domain `alex311visibility.me` is a Mailgun sending
+As wired on 2026-09-16 (and moved to `alex311-reborn.com` on 2026-10-06, same
+shape): the domain `alex311-reborn.com` is a Mailgun sending
 domain on the shared Mailgun account (Foundation plan — the free tier allows one
 custom domain and the other application holds it). Its SPF, DKIM
 (`smtp._domainkey`) and tracking (`email` CNAME) records live in DreamHost DNS,
@@ -245,7 +246,7 @@ Configure a sender and one transport on the **dashboard service** only:
 ```bash
 # Mailgun (the domain must be added and verified in Mailgun: SPF + DKIM records)
 gcloud run services update alex311-dashboard --region=$REGION \
-    --update-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Reborn <no-reply@alex311visibility.me>|ALEX311_MAIL_DOMAIN=alex311visibility.me|SITE_ORIGIN=https://alex311visibility.me' \
+    --update-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Reborn <no-reply@alex311-reborn.com>|ALEX311_MAIL_DOMAIN=alex311-reborn.com|SITE_ORIGIN=https://alex311-reborn.com' \
     --update-secrets=MAILGUN_API_KEY=alex311-mailgun-key:latest
 # or any SMTP relay with STARTTLS instead of Mailgun:
 #   --update-env-vars=SMTP_HOST=...,SMTP_PORT=587,SMTP_USER=... --update-secrets=SMTP_PASSWORD=...
@@ -291,12 +292,12 @@ points at them. Server-rendered, with three settings on the dashboard service:
 
 ```bash
 gcloud run services update alex311-dashboard --region=$REGION \
-    --update-env-vars='^|^SITE_CONTACT_EMAIL=support@alex311visibility.me|SITE_OPERATOR=Herbert Industries'
+    --update-env-vars='^|^SITE_CONTACT_EMAIL=support@alex311-reborn.com|SITE_OPERATOR=Herbert Industries'
 # SITE_PRIVACY_EMAIL, if privacy questions should go somewhere else
 ```
 
 `support@` and `privacy@` are real: a Mailgun route forwards both to the
-operator's inbox (`match_recipient("(support|privacy)@alex311visibility.me")`),
+operator's inbox (`match_recipient("(support|privacy)@(alex311visibility\.me|alex311-reborn\.com)")`),
 and the domain's MX records point at Mailgun (`mxa.mailgun.org`,
 `mxb.mailgun.org`, priority 10). DreamHost's API cannot write MX records;
 they are set in its panel under Mail → Custom MX.
@@ -356,7 +357,7 @@ job mints unsubscribe links).
 gcloud run jobs create alex311-digest --image=$IMAGE --region=$REGION \
     --set-cloudsql-instances=$SQL_INSTANCE \
     --set-secrets=DATABASE_URL=alex311-database-url:latest,MAILGUN_API_KEY=alex311-mailgun-key:latest,SUBMIT_SECRET=alex311-submit-secret:latest \
-    --set-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Reborn <no-reply@alex311visibility.me>|ALEX311_MAIL_DOMAIN=alex311visibility.me|SITE_ORIGIN=https://alex311visibility.me' \
+    --set-env-vars='^|^ALEX311_MAIL_FROM=Alex311 Reborn <no-reply@alex311-reborn.com>|ALEX311_MAIL_DOMAIN=alex311-reborn.com|SITE_ORIGIN=https://alex311-reborn.com' \
     --task-timeout=900 --max-retries=0 \
     --command=python --args="-m,alex311.digest"
 
@@ -392,7 +393,7 @@ the first error** rather than asking again. One pass at a time (advisory lock).
 gcloud run jobs create alex311-refresh --image=$IMAGE --region=$REGION \
     --set-cloudsql-instances=$SQL_INSTANCE \
     --set-secrets=DATABASE_URL=alex311-database-url:latest,APNS_KEY=alex311-apns-key:latest \
-    --set-env-vars=APNS_KEY_ID=<key id>,APNS_TEAM_ID=<team id>,APNS_TOPIC=<bundle id>,SITE_ORIGIN=https://alex311visibility.me \
+    --set-env-vars=APNS_KEY_ID=<key id>,APNS_TEAM_ID=<team id>,APNS_TOPIC=<bundle id>,SITE_ORIGIN=https://alex311-reborn.com \
     --task-timeout=300 --max-retries=0 \
     --command=python --args="-m,alex311.refresh"
 
@@ -404,6 +405,57 @@ gcloud scheduler jobs create http alex311-refresh-schedule \
 
 Both this job and the ingest run the push pass; a change is claimed on the
 link before it is sent, so only one of them sends it.
+
+## 5e. Domains: one address
+
+The site's name is `SITE_ORIGIN` — `https://alex311-reborn.com` since
+2026-10-06 (it was `alex311visibility.me` before). Four hosts reach the
+service: that one, `www.alex311-reborn.com`, `alex311visibility.me` and the
+Cloud Run URL. `dashboard/app.py` sends a *page* asked for under any other
+host to `SITE_ORIGIN` with a 308 (path and query kept); API calls, the iOS
+association file and `/api/healthz` are answered wherever they arrive, so an
+app build that still speaks to the old domain keeps working until it is
+replaced. Nothing happens without `SITE_ORIGIN` (development).
+
+All registered domains are at DreamHost with DreamHost DNS. Both mapped
+domains are Cloud Run domain mappings on `alex311-dashboard`.
+
+Changing the primary address means changing, in this order:
+
+1. `SITE_ORIGIN` on the service and on the jobs that write links:
+   `alex311-digest`, `alex311-refresh`, `alex311-ingest`, `alex311-walk`.
+2. Mail: a Mailgun sending domain for the new name (§5a½: SPF, DKIM, tracking
+   CNAME, `_dmarc` in DreamHost DNS; MX records by hand in the panel for
+   inbound), a domain sending key as a new version of `alex311-mailgun-key`,
+   `ALEX311_MAIL_FROM`/`ALEX311_MAIL_DOMAIN` on the service and the digest
+   job, `SITE_CONTACT_EMAIL`, and the support route's recipient pattern.
+3. Identity Platform: the new host must be in the project's **authorized
+   domains** (the sign-in link's `continueUrl` and the Google sign-in popup
+   are both refused otherwise). This is a project-level setting shared with
+   the other apps in the project; add, never remove.
+4. The iOS app: its associated domains (`applinks:`) and its base URL
+   (`docs/one-address.md`). Until a build with the new domain ships, sign-in
+   emails carry links the app does not open directly — the "Open in the
+   app" button on the page covers that — and the old domain keeps serving
+   the association file (§5a¾).
+5. The privacy page's wording, and this file.
+
+Session cookies are per host, so everyone signs in once more after a switch.
+
+To map a domain:
+
+1. Google must know the gcloud account owns it: `gcloud domains verify
+   <domain>` opens Search Console; choose the DNS record method and put the
+   `google-site-verification` TXT in DreamHost DNS.
+2. DreamHost: a freshly registered domain has **no DNS zone** until it is
+   added in the panel (Domains → Add Hosting → DNS only); until then the API
+   answers `no_such_zone`. The API (`dns-add_record`) can write A, AAAA, CNAME
+   and TXT, but not MX.
+3. `gcloud beta run domain-mappings create --service=alex311-dashboard
+   --domain=<domain> --region=$REGION`, then add the records it prints: the
+   apex gets four A and four AAAA records (Google's `216.239.3x.21` /
+   `2001:4860:4802:3x::15`), `www` a CNAME to `ghs.googlehosted.com`. The
+   certificate follows within minutes of the records resolving.
 
 ## 6. Registry drift check (weekly)
 
