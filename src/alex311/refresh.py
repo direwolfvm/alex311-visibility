@@ -129,7 +129,7 @@ def due_cases(conn, *, now: datetime | None = None, cap: int = MAX_PER_RUN) -> l
 
 
 def run(conn, client: Alex311Client, *, now: datetime | None = None,
-        site_origin: str = "https://alex311visibility.me", notify=None) -> dict:
+        site_origin: str = "https://alex311-reborn.com", notify=None) -> dict:
     """One scheduled pass. Returns counts for the log."""
     from . import push
     admin = "SELECT set_config('app.role', 'admin', false)"     # links are under forced RLS
@@ -170,7 +170,7 @@ def run(conn, client: Alex311Client, *, now: datetime | None = None,
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     with db.connect() as conn, Alex311Client() as client:
-        print(run(conn, client, site_origin=os.environ.get("SITE_ORIGIN", "https://alex311visibility.me")))
+        print(run(conn, client, site_origin=os.environ.get("SITE_ORIGIN", "https://alex311-reborn.com")))
     return 0
 
 

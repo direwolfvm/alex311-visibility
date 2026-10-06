@@ -183,7 +183,7 @@ def message(row: dict, site_origin: str) -> dict:
     }
 
 
-def notify(conn: psycopg.Connection, *, site_origin: str = "https://alex311visibility.me",
+def notify(conn: psycopg.Connection, *, site_origin: str = "https://alex311-reborn.com",
            send_fn=None) -> dict:
     """One pass: tell each account about each linked request whose status is
     not the one they were last told. Returns counts."""

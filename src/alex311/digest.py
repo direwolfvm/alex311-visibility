@@ -305,7 +305,7 @@ def main(argv: list[str] | None = None) -> int:
     import sys
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     p = argparse.ArgumentParser(prog="alex311.digest", description="Send the daily digests.")
-    p.add_argument("--site-origin", default=os.environ.get("SITE_ORIGIN", "https://alex311visibility.me"))
+    p.add_argument("--site-origin", default=os.environ.get("SITE_ORIGIN", "https://alex311-reborn.com"))
     a = p.parse_args(argv)
     if not mail.configured():
         print("no mail transport configured; nothing sent", file=sys.stderr)

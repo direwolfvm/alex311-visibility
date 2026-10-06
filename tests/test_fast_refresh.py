@@ -121,7 +121,7 @@ def test_a_pass_asks_marks_and_then_tells(world):
     counts = R.run(conn, client, notify=lambda c, site_origin: told.append(site_origin) or {"sent": 0})
     assert sorted(x for x in client.calls if x.startswith("FR-")) == ["FR-FRESH", "FR-RECENT", "FR-UNLISTED"]
     assert counts["found"] >= 2 and counts["not_yet"] >= 1 and counts["errors"] == 0
-    assert told == ["https://alex311visibility.me"]      # the push pass runs after every refresh
+    assert told == ["https://alex311-reborn.com"]      # the push pass runs after every refresh
     conn.execute("SELECT set_config('app.role', '', false)")
     assert conn.execute("SELECT status FROM service_requests WHERE service_request_id = 'FR-FRESH'").fetchone()["status"] == "Closed"
     # asked a moment ago, so nothing is due again — including the one the City does not list yet

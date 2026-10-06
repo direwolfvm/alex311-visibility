@@ -13,7 +13,7 @@ one that account was last told about, one notification per registered device:
                    "body": "Your request 26-00036546 at 500 N PITT ST is now closed."},
          "sound": "default", "thread-id": "26-00036546"},
  "case": "26-00036546",
- "url": "https://alex311visibility.me/r/26-00036546"}
+ "url": "https://alex311-reborn.com/r/26-00036546"}
 ```
 
 `case` is what the app should open; `url` is the same record as a Universal
@@ -51,7 +51,7 @@ All four, on the **ingest job** (it is the one that sends), or nothing is sent:
 printf '%s' "$(cat AuthKey_XXXXXXXXXX.p8)" | gcloud secrets create alex311-apns-key --data-file=-
 gcloud run jobs update alex311-ingest --region=$REGION \
     --update-secrets=APNS_KEY=alex311-apns-key:latest \
-    --update-env-vars=APNS_KEY_ID=<key id>,APNS_TEAM_ID=<team id>,APNS_TOPIC=com.herbertindustries.Alex311-Reborn,SITE_ORIGIN=https://alex311visibility.me
+    --update-env-vars=APNS_KEY_ID=<key id>,APNS_TEAM_ID=<team id>,APNS_TOPIC=com.herbertindustries.Alex311-Reborn,SITE_ORIGIN=https://alex311-reborn.com
 ```
 
 and `APNS_*` on the dashboard service too if `push_available` should read true
