@@ -1,0 +1,88 @@
+# Deploys the dashboard to Cloud Run through cloudbuild.yaml.
+#
+# Authentication is keyless: GitHub issues an OIDC token for this run and
+# Workload Identity Federation exchanges it for short-lived credentials of the
+# alex311-deployer service account. The "production" environment only allows
+# deployments from main. No long-lived cloud keys are stored in GitHub.
+#
+# Manual only until the first run succeeds; then add `push: branches: [main]`.
+# The worker image (submission and walk jobs) is still built by hand:
+# deploy/README.md §7.
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT: permitting-ai-helper
+  GCP_REGION: us-east4
+  SERVICE: alex311-dashboard
+  APP_URL: https://alex311-reborn.com
+  WORKLOAD_IDENTITY_PROVIDER: projects/650621702399/locations/global/workloadIdentityPools/github/providers/github-oidc
+  DEPLOYER_SERVICE_ACCOUNT: alex311-deployer@permitting-ai-helper.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    name: Build and deploy the dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://alex311-reborn.com
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A last gate before shipping, in case a merge bypassed CI. The DB tests
+      # skip here; CI runs them against Postgres.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked --group dev
+      - run: uv run pytest -q
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      # The staging directory is given explicitly so the deployer does not
+      # need permission to list every bucket in the project.
+      - name: Submit Cloud Build
+        run: |
+          gcloud builds submit \
+            --config cloudbuild.yaml \
+            --project "$GCP_PROJECT" \
+            --gcs-source-staging-dir "gs://${GCP_PROJECT}_cloudbuild/source" \
+            --substitutions "_SERVICE=${SERVICE},_REGION=${GCP_REGION},_TAG=${GITHUB_SHA}" \
+            --quiet
+
+      - name: Verify the live service
+        run: |
+          revision=$(gcloud run services describe "$SERVICE" \
+            --region "$GCP_REGION" --project "$GCP_PROJECT" \
+            --format 'value(status.latestReadyRevisionName)')
+          echo "Serving revision: $revision"
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error "$APP_URL/api/healthz"; then
+              echo
+              echo "Health check passed."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed after deploy." >&2
+          exit 1
