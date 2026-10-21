@@ -1,0 +1,6 @@
+# Firebase web API key in the local launch config. It is the browser key the
+# dashboard serves to every visitor (Firebase web config is public by design);
+# what protects the project is the key's API restrictions, not secrecy.
+893e9e793b2d9592af95210efdb6d76075a8faf5:.claude/launch.json:gcp-api-key:9
+06f41cbb948f77fc549f52e79b6d47466823462f:.claude/launch.json:gcp-api-key:9
+19aeb1440461fc85ad1fd2895ddcbef2e64feb27:.claude/launch.json:gcp-api-key:9
