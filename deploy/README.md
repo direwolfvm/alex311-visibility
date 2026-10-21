@@ -22,13 +22,20 @@ Live in project **permitting-ai-helper** (us-east4):
 | Walk schedule | weeknights 02:30 America/New_York (`alex311-walk-schedule`) — job `alex311-walk` on the worker image (§6a) |
 | Alerting | policy "Alex311 job failures" → email channel (jke314@outlook.com) |
 
-Redeploy after a code change:
+Redeploy after a code change: run the **Deploy** workflow (Actions tab,
+`.github/workflows/deploy.yml`). It authenticates through Workload Identity
+Federation as `alex311-deployer` (no stored keys), runs `cloudbuild.yaml` to
+build `alex311-portal:<commit sha>` (and move `:latest`), deploys
+`alex311-dashboard` onto the sha tag with nothing else changed, and checks
+`https://alex311-reborn.com/api/healthz`. The jobs on this image run `:latest`
+and pick it up on their next execution. The worker image is still built by
+hand (§7).
+
+The same thing from a laptop, if Actions is unavailable:
 
 ```bash
-gcloud builds submit --tag us-east4-docker.pkg.dev/permitting-ai-helper/cloud-run-source-deploy/alex311-portal:latest .
-gcloud run deploy alex311-dashboard --region=us-east4 \
-    --image=us-east4-docker.pkg.dev/permitting-ai-helper/cloud-run-source-deploy/alex311-portal:latest
-# jobs pick up :latest automatically on their next execution
+gcloud builds submit --config cloudbuild.yaml \
+    --substitutions=_TAG=$(git rev-parse HEAD) .
 ```
 
 Note: Cloud Run jobs in this project hit an API quirk where per-execution

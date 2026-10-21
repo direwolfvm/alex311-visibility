@@ -1,0 +1,42 @@
+# Builds the dashboard image and rolls the dashboard onto it. Run by
+# .github/workflows/deploy.yml; by hand it is
+#   gcloud builds submit --config cloudbuild.yaml --substitutions=_TAG=$(git rev-parse HEAD) .
+#
+# The image is pushed twice: :<sha> is what the service runs, so every revision
+# names the commit it came from; :latest moves too, because the ingest, health,
+# digest, refresh and drift jobs run :latest and pick it up on their next
+# execution. The worker image (Dockerfile.submit) is not built here: its jobs
+# are armed and run by hand (cloudbuild.submit.yaml, deploy/README.md §7).
+#
+# Only --image changes. Env vars, secrets, Cloud SQL and the service account
+# stay as they are on the service (deploy/README.md: never the --set-* forms).
+substitutions:
+  _REGION: us-east4
+  _SERVICE: alex311-dashboard
+  _IMAGE: us-east4-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/alex311-portal
+  _TAG: manual
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}:${_TAG}", "-t", "${_IMAGE}:latest", "."]
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "--all-tags", "${_IMAGE}"]
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --region=${_REGION}
+      - --image=${_IMAGE}:${_TAG}
+      - --quiet
+images:
+  - ${_IMAGE}:${_TAG}
+  - ${_IMAGE}:latest
+options:
+  logging: CLOUD_LOGGING_ONLY
+  # lets _IMAGE use ${PROJECT_ID}
+  dynamicSubstitutions: true
+timeout: 1200s
