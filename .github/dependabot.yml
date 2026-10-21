@@ -4,10 +4,18 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Wait until a release is 5 days old. Security updates are not delayed.
+    cooldown:
+      default-days: 5
     open-pull-requests-limit: 5
     groups:
       python-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Majors are planned cross-app upgrade waves, not weekly PRs
+      # (playbooks/dependabot.md in direwolfvm/operator). CI npm audit still catches anything hidden.
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -19,7 +27,19 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Wait until a release is 5 days old. Security updates are not delayed.
+    cooldown:
+      default-days: 5
     ignore:
       # Dockerfile.submit's Playwright tag must move with the playwright pin
       # in pyproject.toml and the pip install line; bump all three by hand.
       - dependency-name: mcr.microsoft.com/playwright/python
+      # Majors are planned cross-app upgrade waves, not weekly PRs
+      # (playbooks/dependabot.md in direwolfvm/operator). CI npm audit still catches anything hidden.
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
+      # Dependabot names the Playwright image "playwright/python"; it moves with the playwright pin.
+      - dependency-name: playwright/python
+      # A Python minor (3.12 -> 3.14) is a runtime upgrade; do it on purpose.
+      - dependency-name: python
+        update-types: [version-update:semver-minor]
