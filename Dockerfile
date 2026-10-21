@@ -2,7 +2,7 @@
 #   dashboard (default):  uvicorn dashboard.app:app
 #   ingest job:           python -m alex311.ingest incremental
 #   health job:           python -m alex311.health
-FROM python:3.12.15-slim
+FROM python:3.14.7-slim
 
 WORKDIR /app
 # Dependencies come from uv.lock, the same versions CI tests and audits, not
