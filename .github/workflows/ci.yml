@@ -113,3 +113,39 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
+
+  # Merges a Dependabot PR once every job above has passed, when the update is patch or
+  # minor (for a grouped PR, its largest bump) or only touches GitHub Actions. Majors and
+  # anything else wait for triage. See playbooks/dependabot.md in direwolfvm/operator.
+  # A merge made with GITHUB_TOKEN does not start other workflows, so no deploy runs for it.
+  dependabot-automerge:
+    name: Dependabot auto-merge
+    needs: [test, audit, secrets, images, dependency-review]
+    # always() lets this run when a job above was skipped (for example dependency
+    # review on a private repo); any failure or cancellation still stops it.
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.actor == 'dependabot[bot]' &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      - name: Merge patch, minor and Actions updates
+        if: >-
+          steps.meta.outputs.package-ecosystem == 'github_actions' ||
+          steps.meta.outputs.package-ecosystem == 'github-actions' ||
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge "$PR_URL" --squash --delete-branch
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}
