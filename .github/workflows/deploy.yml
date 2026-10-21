@@ -5,12 +5,15 @@
 # alex311-deployer service account. The "production" environment only allows
 # deployments from main. No long-lived cloud keys are stored in GitHub.
 #
-# Manual only until the first run succeeds; then add `push: branches: [main]`.
+# Runs on every push to main, and by hand from the Actions tab. To pause
+# deploys, disable this workflow (`gh workflow disable deploy.yml`).
 # The worker image (submission and walk jobs) is still built by hand:
 # deploy/README.md §7.
 name: Deploy
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
