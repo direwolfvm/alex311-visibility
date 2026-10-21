@@ -210,7 +210,11 @@ ALTER TABLE portal_users DROP COLUMN IF EXISTS salt;
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS firebase_uid   TEXT;
 ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS policy_version TEXT;   -- the data policy accepted
 CREATE UNIQUE INDEX IF NOT EXISTS pu_firebase_uid_idx ON portal_users (firebase_uid) WHERE firebase_uid IS NOT NULL;
--- the original UNIQUE on email allows many NULLs, which is what we want
+-- the original UNIQUE on email allows many NULLs, which is what we want.
+-- Phase 1 dropped UNIQUE from the CREATE above, so only databases created
+-- before 2026-09-15 had it. Same name as the constraint's own index: a no-op
+-- where it exists, and it restores one address, one account everywhere else.
+CREATE UNIQUE INDEX IF NOT EXISTS portal_users_email_key ON portal_users (email);
 
 CREATE TABLE IF NOT EXISTS portal_sessions (
     token_hash      TEXT PRIMARY KEY,               -- the token itself lives in the cookie

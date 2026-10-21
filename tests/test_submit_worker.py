@@ -150,15 +150,16 @@ def test_a_crash_never_strands_a_row_in_filing(conn, monkeypatch):
     assert state_of(conn, a)["submit_state"] != "filing"
 
 
-def test_one_request_per_run_by_default(conn, monkeypatch):
-    """Every filing dispatches city staff, so there is no batch mode."""
+def test_max_caps_the_requests_in_one_run(conn, monkeypatch):
+    """Every filing dispatches city staff, so a run handles at most --max.
+    (The default went from 1 to 10 when testers began sending their own.)"""
     for _ in range(3):
         make(conn)
     monkeypatch.setenv(ENV_GATE, "1")
     calls = []
     monkeypatch.setattr(w, "prepare_submission", lambda **kw: (
         calls.append(1), SubmitResult(True, True, "submitted", "X", "X", case_number="26-1"))[1])
-    w.main(["--live"])
+    w.main(["--live", "--max", "1"])
     assert len(calls) == 1
 
 
