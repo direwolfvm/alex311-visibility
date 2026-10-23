@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Issue threads · Alex311 Reborn</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2733; --muted:#5c6675;
+    --accent:#1d4ed8; --open:#b45309; --closed:#047857; --border:#e2e8f0;
+    --openbg:#fef3c7; --closedbg:#ecfdf5; --otherbg:#e2e8f0; --okbg:#ecfdf5; --badbg:#fef2f2; --bad:#b91c1c;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.55 -apple-system,"Segoe UI",Roboto,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  a { color:var(--accent); }
+  .skip-link { position:absolute; left:8px; top:-48px; z-index:3000; background:var(--panel);
+               color:var(--accent); padding:8px 14px; border:1px solid var(--accent);
+               border-radius:0 0 8px 8px; transition:top .12s; }
+  .skip-link:focus { top:0; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+             clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+  /* The site bar, identical to the other pages. */
+  header { display:flex; align-items:baseline; gap:16px; padding:14px 20px;
+           background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .mark { height:26px; width:26px; align-self:center; }
+  header h1 { font-size:18px; margin:0; }
+  header h1 .home { color: inherit; text-decoration: none; }
+  header h1 .home:hover { color: var(--accent); }
+  header .sub { color:var(--muted); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; margin-left:22px; align-self:stretch; }
+  nav.tabs .tab-link { display:flex; align-items:center; gap:6px; text-decoration:none;
+                       font-size:14px; padding:6px 16px 8px; color:var(--muted);
+                       border-bottom:2px solid transparent; }
+  nav.tabs .tab-link:hover { color:var(--ink); border-bottom-color:var(--border); }
+  nav.tabs .tab-link[aria-current="page"] { color:var(--accent); font-weight:600;
+                                            border-bottom-color:var(--accent); }
+  nav.tabs .tab-link[hidden] { display:none; }
+  .tab-tag { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+             background:#dbeafe; color:var(--accent); padding:1px 6px; border-radius:99px; }
+  @media (max-width:640px) {
+    header { gap:2px 10px; padding:8px 14px 0; }
+    header h1 { font-size:16px; }
+    header .sub { flex-basis:100%; font-size:11px; }
+    nav.tabs { margin-left:0; width:100%; order:3; margin-top:2px; }
+    nav.tabs { flex-wrap: wrap; }
+    nav.tabs .tab-link { flex: 1 1 auto; padding: 8px 8px; font-size: 13px; white-space: nowrap;
+                         justify-content: center; text-align: center; }
+    .tab-tag { display:none; }
+  }
+
+  .wrap { max-width:1120px; margin:0 auto; padding:18px 18px 70px; }
+  .lede { color:var(--muted); margin:0 0 14px; max-width:68ch; }
+  .start { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 18px; }
+  .start input { font:inherit; padding:9px 12px; border:1px solid var(--border); border-radius:8px;
+                 min-width:200px; font-family:ui-monospace,"SF Mono",Menlo,monospace; }
+  button { font:inherit; padding:9px 14px; border:1px solid var(--border); border-radius:8px;
+           background:var(--panel); color:var(--ink); cursor:pointer; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+  button.primary:hover { background:#1740ad; color:#fff; }
+  button[disabled] { opacity:.55; cursor:default; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .err { background:var(--badbg); color:var(--bad); border:1px solid #fecaca; border-radius:8px;
+         padding:10px 13px; margin:0 0 14px; font-size:14px; }
+
+  section.card { background:var(--panel); border:1px solid var(--border); border-radius:10px;
+                 padding:16px 18px; margin-bottom:16px; }
+  section.card > h2 { font-size:12px; text-transform:uppercase; letter-spacing:.05em;
+                      color:var(--muted); margin:0 0 10px; }
+  .center .case { font:700 22px/1.15 ui-monospace,"SF Mono",Menlo,monospace; margin:0; }
+  .center .svc { font-size:17px; font-weight:600; margin:2px 0 4px; }
+  .center .where { color:var(--muted); font-size:14px; margin:0 0 10px; }
+  .center .desc { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; max-width:80ch; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:99px; font-size:12px;
+           font-weight:700; text-transform:uppercase; letter-spacing:.04em; vertical-align:middle; }
+  .badge.open { background:var(--openbg); color:var(--open); }
+  .badge.closed { background:var(--closedbg); color:var(--closed); }
+  .badge.other { background:var(--otherbg); color:var(--muted); }
+
+  .pair { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:16px; }
+  @media (max-width:860px) { .pair { grid-template-columns:1fr; } }
+  #graph { width:100%; height:420px; display:block; border-radius:8px; background:#fbfcfd;
+           border:1px solid var(--border); cursor:grab; touch-action:none; }
+  #map { height:420px; border-radius:8px; border:1px solid var(--border); }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin:8px 0 0; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:50%;
+                         margin-right:5px; vertical-align:-1px; background:var(--dot); }
+
+  .rel { list-style:none; margin:0; padding:0; }
+  .rel li { display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:12px; padding:12px 0;
+            border-top:1px solid var(--border); align-items:start; }
+  .rel li:first-child { border-top:none; }
+  .rel li.focus { background:#f3f6ff; margin:0 -18px; padding-left:18px; padding-right:18px; }
+  .score { font:700 18px/1 ui-monospace,Menlo,monospace; color:var(--accent); padding-top:4px; }
+  .score small { display:block; font:500 10px/1.4 -apple-system,sans-serif; color:var(--muted);
+                 text-transform:uppercase; letter-spacing:.04em; }
+  .rel .t { font-weight:600; }
+  .rel .t a { text-decoration:none; }
+  .rel .m { color:var(--muted); font-size:13px; }
+  .rel .d { font-size:14px; margin:4px 0 6px; overflow-wrap:anywhere; }
+  .why { display:flex; gap:6px; flex-wrap:wrap; }
+  .why span { font-size:11px; padding:2px 8px; border-radius:99px; background:var(--otherbg);
+              color:var(--muted); white-space:nowrap; }
+  .why span.strong { background:#dbeafe; color:var(--accent); }
+  .why span.city { background:var(--closedbg); color:var(--closed); }
+  .vote { display:flex; flex-direction:column; gap:6px; align-items:stretch; min-width:118px; }
+  .vote button { padding:5px 10px; font-size:13px; }
+  .vote button.on { border-color:var(--accent); background:#dbeafe; color:var(--accent); }
+  .vote button.on.no { border-color:var(--bad); background:var(--badbg); color:var(--bad); }
+  .vote .tally { font-size:11px; color:var(--muted); text-align:center; }
+  .vote .signin { font-size:12px; color:var(--muted); text-align:center; }
+  .empty { color:var(--muted); font-size:14px; }
+  .how { font-size:13px; color:var(--muted); }
+  .how b { color:var(--ink); }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header>
+  <img src="/favicon.svg" alt="" class="mark">
+  <h1><a href="/" class="home">Alex311 Reborn</a></h1>
+  <span class="sub">Alexandria, VA service requests — unofficial mirror</span>
+  <nav class="tabs" aria-label="Views">
+    <a class="tab-link" href="/explore">Explore</a>
+    <a class="tab-link" href="/explore#analytics">Analytics</a>
+    <a class="tab-link" href="/threads" aria-current="page">Issue threads</a>
+    <a class="tab-link" href="/submit">Report an issue
+      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
+    <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
+  </nav>
+  <div class="account" id="account"></div>
+</header>
+
+<div class="wrap" id="main">
+  <p class="lede">One pothole gets reported five times. Start from any request and this finds the
+    others that are probably about the same thing — by where they are, what kind they are, how
+    they are described, and when — then lets you say whether it got it right.</p>
+
+  <form class="start" id="start">
+    <label class="sr-only" for="case">Case number</label>
+    <input id="case" placeholder="Case number, e.g. 26-00041712" autocomplete="off"
+           pattern="\d{2}-\d{8}" title="A case number looks like 26-00041712">
+    <button type="submit" class="primary">Find its thread</button>
+    <button type="button" id="random">Random request</button>
+  </form>
+  <div class="err" id="err" hidden role="alert"></div>
+  <div class="sr-only" aria-live="polite" id="live"></div>
+
+  <div id="thread" hidden>
+    <section class="card center" id="center"></section>
+
+    <div class="pair">
+      <section class="card">
+        <h2>The thread</h2>
+        <canvas id="graph" role="img" aria-label="Graph of related requests. The list below has the same information."></canvas>
+        <div class="legend" id="legend"></div>
+        <p class="how">Click a request to highlight it; double-click to start from it instead.
+          Thicker lines mean a stronger match.</p>
+      </section>
+      <section class="card">
+        <h2>Where they are</h2>
+        <div id="map"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Related requests <span id="count"></span></h2>
+      <ul class="rel" id="related"></ul>
+      <p class="empty" id="none" hidden>Nothing nearby looks like the same issue. This one may be on its own —
+        or the first report of something.</p>
+      <p class="how" id="method"></p>
+    </section>
+  </div>
+</div>
+
+<script src="/account-chip.js" defer></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const day = v => v ? String(v).slice(0, 10) : '—';
+const PALETTE = ['#1d4ed8','#d97706','#059669','#7c3aed','#0891b2','#db2777','#65a30d','#ea580c','#4f46e5','#0d9488'];
+let me = null, T = null, map = null, markers = [], colors = {}, focus = null;
+
+function fail(msg) { $('err').textContent = msg; $('err').hidden = false; }
+function statusClass(s) {
+  const v = (s || '').toLowerCase();
+  return v.includes('clos') || v.includes('resolv') || v.includes('complet') ? 'closed' : v.includes('open') || v.includes('progress') || v.includes('new') ? 'open' : 'other';
+}
+function colorOf(type) {
+  if (!(type in colors)) colors[type] = PALETTE[Object.keys(colors).length % PALETTE.length];
+  return colors[type];
+}
+
+// ------------------------------------------------------------------ loading
+async function load(caseId, push = true) {
+  $('err').hidden = true;
+  const r = await fetch('/api/threads/' + encodeURIComponent(caseId));
+  if (!r.ok) return fail(r.status === 404 ? `No request ${caseId} in the mirror.` : `Could not load the thread (HTTP ${r.status}).`);
+  T = await r.json(); focus = null; colors = {};
+  $('case').value = caseId;
+  if (push) history.replaceState(null, '', '/threads?case=' + encodeURIComponent(caseId));
+  render();
+}
+
+async function random() {
+  $('random').disabled = true;
+  try {
+    const r = await fetch('/api/threads/random');
+    if (!r.ok) return fail('No request to start from yet.');
+    await load((await r.json()).service_request_id);
+  } finally { $('random').disabled = false; }
+}
+
+// ---------------------------------------------------------------- rendering
+function render() {
+  const c = T.center;
+  $('thread').hidden = false;
+  $('center').innerHTML = `
+    <h2>Starting from</h2>
+    <p class="case"><a href="/r/${esc(c.service_request_id)}" style="text-decoration:none">${esc(c.service_request_id)}</a>
+      <span class="badge ${statusClass(c.status)}">${esc(c.status || 'unknown')}</span></p>
+    <p class="svc">${esc(c.service_name || 'Unknown type')}</p>
+    <p class="where">${esc(c.address || 'no address')} · ${day(c.requested_datetime)}${c.closed_datetime ? ' · closed ' + day(c.closed_datetime) : ''}</p>
+    <p class="desc">${esc(c.description || 'No description was given.')}</p>`;
+  const rel = T.related;
+  $('count').textContent = rel.length ? `(${rel.length})` : '';
+  $('none').hidden = rel.length > 0;
+  $('related').innerHTML = rel.map(r => `
+    <li data-id="${esc(r.service_request_id)}">
+      <div class="score">${Math.round(r.score * 100)}<small>match</small></div>
+      <div>
+        <div class="t"><a href="/r/${esc(r.service_request_id)}">${esc(r.service_request_id)}</a>
+          <span class="badge ${statusClass(r.status)}">${esc(r.status || '?')}</span></div>
+        <div class="m"><span style="color:${colorOf(r.service_name)}">●</span> ${esc(r.service_name || '')} · ${esc(r.address || 'no address')} · ${day(r.requested_datetime)}</div>
+        <div class="d">${esc((r.description || '').slice(0, 220))}${(r.description || '').length > 220 ? '…' : ''}</div>
+        <div class="why">${why(r.why)}</div>
+        <div class="m" style="margin-top:6px"><a href="#" data-start="${esc(r.service_request_id)}">Start from this one →</a></div>
+      </div>
+      ${voteBox(r)}
+    </li>`).join('');
+  $('method').innerHTML = `Looked at <b>${T.considered}</b> requests within ${T.radius_m} m and ${Math.round(T.window_days / 30)} months. `
+    + `Weights: where ${pct(T.weights.proximity)}, what kind ${pct(T.weights.category)}, wording ${pct(T.weights.text)}, when ${pct(T.weights.time)}. `
+    + `Votes move a pair's score by 15 points each, up to 45.`;
+  $('legend').innerHTML = [c.service_name, ...rel.map(r => r.service_name)].filter((v, i, a) => v && a.indexOf(v) === i)
+    .map(t => `<span style="--dot:${colorOf(t)}">${esc(t)}</span>`).join('');
+  $('live').textContent = `${rel.length} related request${rel.length === 1 ? '' : 's'} for ${c.service_request_id}.`;
+  drawMap(); layoutGraph(); drawGraph();
+}
+const pct = v => Math.round(v * 100) + '%';
+
+function why(w) {
+  const out = [];
+  if (w.city_linked) out.push('<span class="city">City marked as duplicate</span>');
+  if (w.distance_m != null) out.push(`<span class="${w.distance_m <= 60 ? 'strong' : ''}">${w.distance_m === 0 ? 'same spot' : w.distance_m + ' m away'}</span>`);
+  if (w.same_type) out.push('<span class="strong">same type</span>');
+  else if (w.same_department) out.push('<span>same department</span>');
+  if (w.text_similarity != null) out.push(`<span class="${w.text_similarity >= 0.35 ? 'strong' : ''}">wording ${Math.round(w.text_similarity * 100)}%${w.shared_words.length ? ': ' + esc(w.shared_words.join(', ')) : ''}</span>`);
+  if (w.days_apart != null) out.push(`<span>${w.days_apart === 0 ? 'same day' : w.days_apart + ' days apart'}</span>`);
+  return out.join('');
+}
+
+function voteBox(r) {
+  const v = r.votes || {related: 0, not_related: 0};
+  const tally = (v.related || v.not_related) ? `${v.related} related · ${v.not_related} not` : 'no votes yet';
+  if (!me) return `<div class="vote"><span class="signin"><a href="/submit/login">Sign in</a> to say whether this is related</span><span class="tally">${tally}</span></div>`;
+  return `<div class="vote">
+    <button data-vote="true" class="${r.my_vote === true ? 'on' : ''}" aria-pressed="${r.my_vote === true}">Related</button>
+    <button data-vote="false" class="no ${r.my_vote === false ? 'on' : ''}" aria-pressed="${r.my_vote === false}">Not related</button>
+    <span class="tally">${tally}</span></div>`;
+}
+
+async function vote(id, value) {
+  const r = T.related.find(x => x.service_request_id === id);
+  const next = r.my_vote === value ? null : value;           // pressing it again withdraws
+  const res = await fetch(`/submit/api/threads/${encodeURIComponent(T.center.service_request_id)}/${encodeURIComponent(id)}`,
+    {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({related: next})});
+  if (!res.ok) return fail('Could not save that — are you still signed in?');
+  const body = await res.json();
+  r.my_vote = body.my_vote; r.votes = body.votes;
+  const li = document.querySelector(`.rel li[data-id="${CSS.escape(id)}"]`);
+  li.querySelector('.vote').outerHTML = voteBox(r);
+  $('live').textContent = next === null ? 'Vote withdrawn.' : next ? 'Marked related.' : 'Marked not related.';
+}
+
+// --------------------------------------------------------------------- map
+function drawMap() {
+  if (!map) {
+    map = L.map('map', {scrollWheelZoom: false});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19}).addTo(map);
+  }
+  markers.forEach(m => m.remove()); markers = [];
+  const pts = [];
+  const add = (r, big) => {
+    if (r.lat == null || r.long == null) return;
+    const m = L.circleMarker([r.lat, r.long], {radius: big ? 10 : 7, color: '#fff', weight: 2,
+      fillColor: colorOf(r.service_name), fillOpacity: big ? 1 : .85}).addTo(map);
+    m.bindTooltip(`${r.service_request_id} · ${r.service_name || ''}`);
+    m.on('click', () => setFocus(r.service_request_id));
+    markers.push(m); pts.push([r.lat, r.long]);
+  };
+  T.related.forEach(r => add(r, false)); add(T.center, true);
+  if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.3), {maxZoom: 17});
+}
+
+// ------------------------------------------------------------------- graph
+// A small force layout: the center is pinned in the middle, related requests
+// repel one another and are pulled along their edges, stronger matches closer.
+let nodes = [], edges = [], drag = null;
+function layoutGraph() {
+  const cv = $('graph'), W = cv.clientWidth, H = cv.clientHeight;
+  const ids = [T.center.service_request_id, ...T.related.map(r => r.service_request_id)];
+  nodes = ids.map((id, i) => {
+    const r = i === 0 ? T.center : T.related[i - 1];
+    const a = (i - 1) / Math.max(1, T.related.length) * Math.PI * 2;
+    const dist = i === 0 ? 0 : (1 - (r.score || .5)) * Math.min(W, H) * .45 + 70;
+    return {id, r, x: W / 2 + Math.cos(a) * dist, y: H / 2 + Math.sin(a) * dist, pinned: i === 0};
+  });
+  const idx = Object.fromEntries(nodes.map((n, i) => [n.id, i]));
+  edges = T.edges.map(e => ({a: idx[e.a], b: idx[e.b], s: e.score})).filter(e => e.a != null && e.b != null);
+  for (let it = 0; it < 240; it++) step(W, H, 1 - it / 240);
+}
+function step(W, H, heat) {
+  for (const n of nodes) { n.vx = 0; n.vy = 0; }
+  for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+    const a = nodes[i], b = nodes[j]; let dx = b.x - a.x, dy = b.y - a.y;
+    const d2 = Math.max(400, dx * dx + dy * dy), f = 9000 / d2, d = Math.sqrt(d2);
+    dx /= d; dy /= d; a.vx -= dx * f; a.vy -= dy * f; b.vx += dx * f; b.vy += dy * f;
+  }
+  for (const e of edges) {
+    const a = nodes[e.a], b = nodes[e.b], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+    const want = 70 + (1 - e.s) * 180, f = (d - want) * 0.03 * (0.5 + e.s);
+    a.vx += dx / d * f; a.vy += dy / d * f; b.vx -= dx / d * f; b.vy -= dy / d * f;
+  }
+  for (const n of nodes) {
+    if (n.pinned) { n.x = W / 2; n.y = H / 2; continue; }
+    n.vx += (W / 2 - n.x) * 0.004; n.vy += (H / 2 - n.y) * 0.004;        // a gentle pull to the middle
+    n.x = Math.max(24, Math.min(W - 24, n.x + n.vx * heat)); n.y = Math.max(24, Math.min(H - 24, n.y + n.vy * heat));
+  }
+}
+function drawGraph() {
+  const cv = $('graph'), dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext('2d'); g.scale(dpr, dpr); g.clearRect(0, 0, W, H);
+  for (const e of edges) {
+    const a = nodes[e.a], b = nodes[e.b];
+    const hot = focus && (a.id === focus || b.id === focus);
+    g.strokeStyle = hot ? '#1d4ed8' : '#b8c2d0'; g.lineWidth = 1 + e.s * 4; g.globalAlpha = hot ? 1 : .7;
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+  }
+  g.globalAlpha = 1;
+  for (const n of nodes) {
+    const rad = n.pinned ? 14 : 9 + (n.r.score || 0) * 6;
+    g.beginPath(); g.arc(n.x, n.y, rad, 0, Math.PI * 2);
+    g.fillStyle = colorOf(n.r.service_name); g.fill();
+    g.lineWidth = n.id === focus ? 3 : 2; g.strokeStyle = n.id === focus ? '#1c2733' : '#fff'; g.stroke();
+    g.fillStyle = '#1c2733'; g.font = (n.pinned ? '600 ' : '') + '11px ui-monospace,Menlo,monospace'; g.textAlign = 'center';
+    g.fillText(n.id.slice(3), n.x, n.y + rad + 12);
+  }
+}
+function nodeAt(x, y) { return nodes.find(n => Math.hypot(n.x - x, n.y - y) <= 16); }
+function pos(ev) { const b = $('graph').getBoundingClientRect(); return [ev.clientX - b.left, ev.clientY - b.top]; }
+function setFocus(id) {
+  focus = focus === id ? null : id;
+  document.querySelectorAll('.rel li').forEach(li => li.classList.toggle('focus', li.dataset.id === focus));
+  if (focus) { const li = document.querySelector(`.rel li[data-id="${CSS.escape(focus)}"]`); li && li.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }
+  drawGraph();
+}
+$('graph').addEventListener('pointerdown', ev => { const [x, y] = pos(ev); const n = nodeAt(x, y); if (n && !n.pinned) { drag = n; $('graph').setPointerCapture(ev.pointerId); } });
+$('graph').addEventListener('pointermove', ev => { if (!drag) return; const [x, y] = pos(ev); drag.x = x; drag.y = y; drawGraph(); });
+$('graph').addEventListener('pointerup', ev => { const [x, y] = pos(ev); const n = nodeAt(x, y); drag = null; if (n && !n.pinned) setFocus(n.id); });
+$('graph').addEventListener('dblclick', ev => { const [x, y] = pos(ev); const n = nodeAt(x, y); if (n && !n.pinned) load(n.id); });
+addEventListener('resize', () => { if (T) { layoutGraph(); drawGraph(); } });
+
+// ------------------------------------------------------------------ wiring
+$('start').addEventListener('submit', ev => { ev.preventDefault(); const v = $('case').value.trim(); if (v) load(v); });
+$('random').addEventListener('click', random);
+$('related').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-vote]'); const s = ev.target.closest('a[data-start]');
+  if (b) vote(b.closest('li').dataset.id, b.dataset.vote === 'true');
+  else if (s) { ev.preventDefault(); load(s.dataset.start); window.scrollTo({top: 0, behavior: 'smooth'}); }
+  else if (ev.target.closest('li') && !ev.target.closest('a')) setFocus(ev.target.closest('li').dataset.id);
+});
+
+fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null}).then(({user}) => {
+  me = user; if (user) $('nav-my').hidden = false;
+  if (user && user.role === 'admin') $('nav-admin').hidden = false;
+  if (T) render();
+}).catch(() => {}).finally(() => {
+  const want = new URLSearchParams(location.search).get('case');
+  want ? load(want, false) : random();
+});
+</script>
+</body>
+</html>

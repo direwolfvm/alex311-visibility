@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
@@ -331,17 +331,27 @@ def trend(
                 top_cats AS (
                     SELECT service_name FROM filtered
                     GROUP BY service_name ORDER BY count(*) DESC LIMIT %s
+                ),
+                counted AS (
+                    SELECT period,
+                           CASE WHEN service_name IN (SELECT service_name FROM top_cats)
+                                THEN service_name ELSE 'Other' END AS category,
+                           count(*) AS n
+                    FROM filtered
+                    GROUP BY period, category
                 )
-                SELECT period,
-                       CASE WHEN service_name IN (SELECT service_name FROM top_cats)
-                            THEN service_name ELSE 'Other' END AS category,
-                       count(*) AS n
-                FROM filtered
-                GROUP BY period, category
-                ORDER BY period""",
-            [interval] + params + [top],
+                -- every period between the first and the last, so a week with
+                -- nothing in it shows as a gap rather than being skipped over
+                SELECT p.period, c.category, c.n
+                FROM generate_series((SELECT min(period) FROM counted),
+                                     (SELECT max(period) FROM counted),
+                                     ('1 ' || %s)::interval) AS p(period)
+                LEFT JOIN counted c ON c.period = p.period
+                ORDER BY p.period""",
+            [interval] + params + [top, interval],
         ).fetchall()
-    return {"interval": interval, "rows": rows}
+    return {"interval": interval, "rows": [r for r in rows if r["category"] is not None],
+            "periods": sorted({r["period"] for r in rows})}
 
 
 @app.get("/api/request/{service_request_id}")
@@ -464,6 +474,16 @@ def analytics(
                 ) t GROUP BY week ORDER BY week""",
             params + params,
         ).fetchall()
+        # weeks with nothing opened or closed still happened
+        if weekly:
+            from datetime import timedelta
+            by_week = {w["week"]: w for w in weekly}
+            week, last = weekly[0]["week"], weekly[-1]["week"]
+            filled = []
+            while week <= last:
+                filled.append(by_week.get(week) or {"week": week, "opened": 0, "closed": 0})
+                week += timedelta(days=7)
+            weekly = filled
 
         weekday = conn.execute(
             f"""SELECT EXTRACT(isodow FROM requested_datetime)::int AS dow, count(*) AS n
@@ -487,6 +507,35 @@ def analytics(
         "weekly": weekly,
         "weekday": weekday,
     }
+
+
+# Issue threads: the requests a request is probably about. Public, like the
+# record it starts from; the votes live behind the sign-in (dashboard/submit.py).
+@app.get("/api/threads/random")
+def thread_random():
+    from alex311 import threads
+    with pool.connection() as conn:
+        case = threads.random_case(conn)
+    if not case:
+        raise HTTPException(404, "no request to start from yet")
+    return {"service_request_id": case}
+
+
+@app.get("/api/threads/{service_request_id}")
+def thread_of(service_request_id: str, request: Request):
+    from alex311 import portal_auth as pa, threads
+    with pool.connection() as conn:
+        user = None
+        token = request.cookies.get(pa.SESSION_COOKIE)
+        if token:
+            try:
+                user = pa.session_user(conn, token)
+            except Exception:
+                conn.rollback()
+        t = threads.thread(conn, service_request_id, user_id=user.user_id if user else None)
+    if t is None:
+        raise HTTPException(404, "no such request")
+    return t
 
 
 # Phone photos arrive at full resolution — a single one is routinely 6 MB — and
@@ -617,6 +666,12 @@ def home():
 def explore():
     """The map, the list and the Analytics tab (#analytics)."""
     return FileResponse(STATIC / "explore.html", media_type="text/html")
+
+
+@app.get("/threads", response_class=FileResponse)
+def threads_page():
+    """Issue threads: start from a request and see what else is about the same thing."""
+    return FileResponse(STATIC / "threads.html", media_type="text/html")
 
 
 def _contact_page(name: str) -> HTMLResponse:

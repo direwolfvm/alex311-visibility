@@ -32,7 +32,7 @@ from alex311 import (abuse, db as adb, digest, firebase_auth as fb, job_runner, 
                      portal_auth as pa)
 
 from . import registry as R
-from alex311 import registry_store
+from alex311 import registry_store, threads
 
 log = logging.getLogger("alex311.submit")
 
@@ -202,6 +202,10 @@ def _identify(request: Request, pool_getter,
     if _basic_ok(creds):
         return os.environ.get("SUBMIT_USER", "alex311user"), None
     raise Unauthenticated()
+
+
+class ThreadVote(BaseModel):
+    related: bool | None = None
 
 
 class RegistryDecision(BaseModel):
@@ -693,6 +697,22 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
     # "Was this issue actually addressed?" — the resident's own verdict, one
     # per account per request, private. It is the one signal the City's data
     # cannot carry: the record says closed; the person says whether it was.
+
+    @router.put("/api/threads/{case}/{other}")
+    def thread_vote(case: str, other: str, body: ThreadVote, request: Request, actor: str = Depends(gate)):
+        """Is `other` about the same thing as `case`? One view per person per
+        pair; `related: null` withdraws it. Everyone's votes move everyone's
+        scores, a little each."""
+        if not CASE_ID.match(case) or not CASE_ID.match(other):
+            raise HTTPException(400, "that is not a case number")
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            try:
+                threads.vote(conn, user_id=user_id, case_a=case, case_b=other, related=body.related)
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+            tallies = threads.votes(conn, case, [other]).get(other, {"related": 0, "not_related": 0})
+        return {"case": case, "other": other, "my_vote": body.related, "votes": tallies}
 
     @router.get("/api/feedback/{case}")
     def feedback_get(case: str, request: Request, actor: str = Depends(gate)):
