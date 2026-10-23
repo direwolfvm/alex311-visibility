@@ -293,8 +293,8 @@ async function vote(id, value) {
 function drawMap() {
   if (!map) {
     map = L.map('map', {scrollWheelZoom: false});
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      {attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19}).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {attribution: '&copy; OpenStreetMap contributors', maxZoom: 19}).addTo(map);
   }
   markers.forEach(m => m.remove()); markers = [];
   const pts = [];
