@@ -580,3 +580,23 @@ DO $$ BEGIN
     GRANT SELECT, INSERT, UPDATE, DELETE ON thread_feedback TO alex311_app;
   END IF;
 END $$;
+
+-- Support (alex311.db.set_stance): a signed-in person's view of somebody
+-- else's request — "I support this" or "I do not" — one per person per
+-- request, shown to everyone only as counts. No text: a public note would
+-- need moderation (decided 2026-09-15), a count does not. Goes with the
+-- account.
+CREATE TABLE IF NOT EXISTS request_stances (
+    user_id             TEXT NOT NULL REFERENCES portal_users (user_id) ON DELETE CASCADE,
+    service_request_id  TEXT NOT NULL,
+    stance              TEXT NOT NULL CHECK (stance IN ('support', 'oppose')),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, service_request_id)
+);
+CREATE INDEX IF NOT EXISTS request_stances_case_idx ON request_stances (service_request_id);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON request_stances TO alex311_app;
+  END IF;
+END $$;

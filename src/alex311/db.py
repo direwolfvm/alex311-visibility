@@ -625,6 +625,64 @@ def public_scores(conn: psycopg.Connection, *, service_request_id: str) -> list[
         (service_request_id,)).fetchall()
 
 
+# ------------------------------------------------------------------ support
+
+class OwnRequest(ValueError):
+    """You cannot support your own request; it is yours."""
+
+
+def set_stance(conn: psycopg.Connection, *, user_id: str, service_request_id: str,
+               stance: str | None) -> dict:
+    """Record (or, with None, withdraw) one person's support for a request
+    somebody else sent. Returns the person's stance and the public tally."""
+    if stance not in ("support", "oppose", None):
+        raise ValueError("stance must be support, oppose or null")
+    mine = conn.execute(
+        """SELECT 1 FROM request_links WHERE user_id = %s AND service_request_id = %s
+            AND relation = 'mine'""", (user_id, service_request_id)).fetchone()
+    if mine:
+        raise OwnRequest("that request is yours; support is for other people's")
+    if stance is None:
+        conn.execute("DELETE FROM request_stances WHERE user_id = %s AND service_request_id = %s",
+                     (user_id, service_request_id))
+    else:
+        conn.execute(
+            """INSERT INTO request_stances (user_id, service_request_id, stance)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (user_id, service_request_id) DO UPDATE
+                 SET stance = EXCLUDED.stance, updated_at = now()""",
+            (user_id, service_request_id, stance))
+    conn.commit()
+    return {"stance": stance} | stance_tally(conn, service_request_id=service_request_id)
+
+
+def my_stance(conn: psycopg.Connection, *, user_id: str, service_request_id: str) -> str | None:
+    row = conn.execute("SELECT stance FROM request_stances WHERE user_id = %s AND service_request_id = %s",
+                       (user_id, service_request_id)).fetchone()
+    return row["stance"] if row else None
+
+
+def stance_tally(conn: psycopg.Connection, *, service_request_id: str) -> dict:
+    """How many support and how many do not. Counts only: never who."""
+    row = conn.execute(
+        """SELECT count(*) FILTER (WHERE stance = 'support') AS support,
+                  count(*) FILTER (WHERE stance = 'oppose') AS oppose
+             FROM request_stances WHERE service_request_id = %s""", (service_request_id,)).fetchone()
+    return {"support": row["support"], "oppose": row["oppose"]}
+
+
+def stance_tallies(conn: psycopg.Connection, service_request_ids: list[str]) -> dict[str, dict]:
+    if not service_request_ids:
+        return {}
+    rows = conn.execute(
+        """SELECT service_request_id,
+                  count(*) FILTER (WHERE stance = 'support') AS support,
+                  count(*) FILTER (WHERE stance = 'oppose') AS oppose
+             FROM request_stances WHERE service_request_id = ANY(%s)
+            GROUP BY service_request_id""", (service_request_ids,)).fetchall()
+    return {r["service_request_id"]: {"support": r["support"], "oppose": r["oppose"]} for r in rows}
+
+
 def delete_account(conn: psycopg.Connection, *, user_id: str) -> bool:
     """Remove an account and everything hanging off it: sessions, links,
     verdicts (shared or not), watches, devices. The cascade does the work.

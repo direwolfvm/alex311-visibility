@@ -204,6 +204,10 @@ def _identify(request: Request, pool_getter,
     raise Unauthenticated()
 
 
+class StanceBody(BaseModel):
+    stance: str | None = None
+
+
 class ThreadVote(BaseModel):
     related: bool | None = None
 
@@ -697,6 +701,31 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
     # "Was this issue actually addressed?" — the resident's own verdict, one
     # per account per request, private. It is the one signal the City's data
     # cannot carry: the record says closed; the person says whether it was.
+
+    @router.get("/api/stance/{case}")
+    def stance_state(case: str, request: Request, actor: str = Depends(gate)):
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            return {"case": case, "stance": adb.my_stance(conn, user_id=user_id, service_request_id=case),
+                    "relation": adb.link_state(conn, user_id=user_id, service_request_id=case)}
+
+    @router.put("/api/stance/{case}")
+    def stance_set(case: str, body: StanceBody, request: Request, actor: str = Depends(gate)):
+        """Support, or do not support, somebody else's request. One per
+        person; `stance: null` withdraws it. Shown to everyone as counts."""
+        if not CASE_ID.match(case):
+            raise HTTPException(400, "that is not a case number")
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            if conn.execute("SELECT 1 FROM service_requests WHERE service_request_id = %s", (case,)).fetchone() is None:
+                raise HTTPException(404, "no such request in the mirror")
+            try:
+                out = adb.set_stance(conn, user_id=user_id, service_request_id=case, stance=body.stance)
+            except adb.OwnRequest as e:
+                raise HTTPException(409, str(e))
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+        return {"case": case} | out
 
     @router.put("/api/threads/{case}/{other}")
     def thread_vote(case: str, other: str, body: ThreadVote, request: Request, actor: str = Depends(gate)):
