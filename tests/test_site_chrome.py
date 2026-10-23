@@ -23,13 +23,15 @@ PAGES = {
     "login": ROOT / "login.html",
     "privacy": ROOT / "static/privacy.html",
     "support": ROOT / "static/support.html",
+    "threads": ROOT / "static/threads.html",
 }
 HTML = {name: path.read_text() for name, path in PAGES.items()}
 
 # What the bar offers, in order. Explore and Analytics are panels of the
 # dashboard, so they are buttons there and links everywhere else; the text and
 # the destination are what a reader actually compares.
-ITEMS = [("Explore", "/explore"), ("Analytics", "/explore#analytics"), ("Report an issue", "/submit"),
+ITEMS = [("Explore", "/explore"), ("Analytics", "/explore#analytics"), ("Issue threads", "/threads"),
+         ("Report an issue", "/submit"),
          ("My requests", "/submit/my"), ("Admin", "/submit/admin")]
 
 TOKENS = ("--bg", "--panel", "--ink", "--muted", "--accent", "--border")

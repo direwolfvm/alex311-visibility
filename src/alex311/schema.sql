@@ -559,3 +559,24 @@ DO $$ BEGIN
     GRANT USAGE, SELECT ON SEQUENCE registry_events_event_id_seq TO alex311_app;
   END IF;
 END $$;
+
+-- Issue threads (alex311.threads): what people said about whether two
+-- requests are about the same thing. One row per person per pair, the pair
+-- stored in sorted order so (A,B) and (B,A) are the same row. Goes with the
+-- account; nothing else about the person is here.
+CREATE TABLE IF NOT EXISTS thread_feedback (
+    user_id     TEXT NOT NULL REFERENCES portal_users (user_id) ON DELETE CASCADE,
+    case_a      TEXT NOT NULL,
+    case_b      TEXT NOT NULL,
+    related     BOOLEAN NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, case_a, case_b),
+    CHECK (case_a < case_b)
+);
+CREATE INDEX IF NOT EXISTS thread_feedback_a_idx ON thread_feedback (case_a);
+CREATE INDEX IF NOT EXISTS thread_feedback_b_idx ON thread_feedback (case_b);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'alex311_app') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON thread_feedback TO alex311_app;
+  END IF;
+END $$;

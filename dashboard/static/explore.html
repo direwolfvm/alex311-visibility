@@ -265,6 +265,7 @@
       <button role="tab" id="tab-btn-analytics" data-tab="analytics"
               aria-selected="false" aria-controls="tab-analytics" tabindex="-1">Analytics</button>
     </div>
+    <a class="tab-link" href="/threads">Issue threads</a>
     <!-- A link, not a tab: it goes to another page rather than swapping a panel
          here, and calling it a tab would promise keyboard behavior it cannot
          honor. It sits outside the tablist for the same reason. -->
@@ -560,7 +561,8 @@ async function loadRows(append = false) {
 
 async function loadTrend() {
   const data = await (await fetch('/api/trend?' + params({ interval: 'week' }))).json();
-  const periods = [...new Set(data.rows.map(r => r.period))].sort();
+  // the server lists every period in the range, including the empty ones
+  const periods = data.periods || [...new Set(data.rows.map(r => r.period))].sort();
   const cats = [...new Set(data.rows.map(r => r.category))];
   cats.sort((a, b) => (a === 'Other') - (b === 'Other'));
   const bag = {};
