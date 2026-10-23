@@ -7,16 +7,22 @@ lets people correct it.
 
 ## How a match is scored (`src/alex311/threads.py`)
 
-Candidates are every request within 400 m and a year of the starting one
+Candidates are every request within 250 m and a year of the starting one
 (plus anything the City linked to it, wherever it is). Each is scored 0–1
 from four signals, weighted 35 / 25 / 25 / 15:
 
 | signal | what | how |
 |---|---|---|
-| where | distance | `exp(−d / 150 m)`: 1 at the same spot, ½ at ~100 m, ~0 at 400 m |
+| where | distance | `exp(−d / 50 m)`: 1 at the same spot, ½ at ~35 m, 0.13 at 100 m |
 | what kind | request type | 1 for the same type, 0.4 for the same department, else 0 |
 | wording | the two descriptions | TF-IDF cosine, with idf taken from the candidates around this request, so a word every neighbour uses counts for little |
 | when | days apart | `exp(−days / 30)` |
+
+Distance is also a rule, not only a signal: same-issue reports are very
+local, so **beyond 80 m a match must be described alike** (wording ≥ 0.25) or
+it is not offered at all. Without this, "same type, last month" alone cleared
+the threshold anywhere in the circle. On 40 random starts the median match
+is now 13 m away and 97% are within 100 m.
 
 A signal that cannot be measured (no coordinates, no description) is left
 out and the rest re-weighted, rather than counted as "unlike". A pair the

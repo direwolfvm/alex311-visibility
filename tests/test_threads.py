@@ -27,9 +27,26 @@ def req(id="26-1", lat=38.805, long=-77.047, name="Pothole", code="TESPOTH", des
 
 def test_nearer_is_more_and_a_block_away_is_little():
     assert T.proximity(0) == 1.0
-    assert 0.45 < T.proximity(100) < 0.55
-    assert T.proximity(400) < 0.1
+    assert 0.45 < T.proximity(35) < 0.55                       # half a block away is half
+    assert T.proximity(100) < 0.15 and T.proximity(250) < 0.01
     assert T.proximity(None) is None
+
+
+def test_far_apart_means_not_the_same_thing_unless_the_words_say_so():
+    """Same type and the same week is not enough from 150 m away — a
+    neighbourhood gets several potholes — but the same type, the same week
+    and the same story is."""
+    a = req(desc="Deep pothole by the bus stop, cars swerving into the bike lane")
+    far = req(id="26-2", lat=38.805 + 150 / 111_000, desc="Loose dog in the park barking at kids")
+    text = T.TextModel({"26-1": a["description"], "26-2": far["description"], "26-3": a["description"]})
+    s, why = T.score_pair(a, far, text)
+    assert s == 0.0 and why["too_far"] and 140 < why["distance_m"] < 160
+    alike = req(id="26-3", lat=38.805 + 150 / 111_000, desc=a["description"])
+    s, why = T.score_pair(a, alike, text)
+    assert s > T.THRESHOLD and "too_far" not in why
+    near = req(id="26-2", lat=38.805 + 40 / 111_000, desc=None)
+    s, why = T.score_pair(a, near, T.TextModel({"26-1": a["description"], "26-2": None}))
+    assert s > T.THRESHOLD and "too_far" not in why           # next door needs no words
     d = T.distance_m(38.805, -77.047, 38.806, -77.047)
     assert 105 < d < 118                                       # a thousandth of a degree of latitude
 
@@ -113,7 +130,7 @@ def conn():
         (IDS[0], "Pothole", "TESPOTH", 38.8050, -77.0470, "Big pothole in the right lane by the bus stop", NOW),
         (IDS[1], "Pothole", "TESPOTH", 38.8051, -77.0471, "Pothole right lane near bus stop, cars swerving", NOW - timedelta(days=3)),
         (IDS[2], "Pothole", "TESPOTH", 38.8049, -77.0469, "Deep hole in the road at the corner", NOW - timedelta(days=40)),
-        (IDS[3], "Sidewalk Repair", "TESSIDE", 38.8053, -77.0468, "Sidewalk slab lifted by a tree root, trip hazard", NOW - timedelta(days=10)),
+        (IDS[3], "Sidewalk Repair", "TESSIDE", 38.8052, -77.0469, "Sidewalk slab lifted by a tree root, trip hazard", NOW - timedelta(days=10)),
         (IDS[4], "Rodent", "CODRODEN", 38.8300, -77.0900, "Rats in the alley behind the restaurant", NOW),
         (IDS[5], "Pothole", "TESPOTH", 38.8050, -77.0470, "Pothole at the bus stop again", NOW - timedelta(days=500)),
     ]
@@ -135,7 +152,8 @@ def conn():
 def test_a_thread_finds_the_corner_and_leaves_the_rest(conn):
     t = T.thread(conn, IDS[0])
     got = [r["service_request_id"] for r in t["related"]]
-    assert got[:2] == [IDS[1], IDS[2]]                        # the two other reports of the hole, best first
+    assert got[0] == IDS[1] and IDS[2] in got                 # the two other reports of the hole, best first
+    # (real requests from the mirror may sit between them; the corner is a real one)
     assert IDS[4] not in got                                   # across town
     assert IDS[5] not in got                                   # outside the time window
     assert IDS[3] in got                                       # next door, same department: offered, lower
