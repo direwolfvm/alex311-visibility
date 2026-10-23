@@ -316,3 +316,12 @@ requests. Needs an SMTP provider first.
 - **Firebase is a dependency the City's data is not.** If it goes away, sign-in
   goes away; nothing about the mirror or the filing path depends on it, and the
   session cookie keeps signed-in users working through an outage.
+
+## Addendum 2026-10-23: support
+
+Signed-in people can mark somebody else's request **support** / **do not
+support** (`request_stances`, one per person per request, changeable,
+withdrawable; never on a request they sent). Everyone sees the counts on the
+record page; nobody sees who. Deliberately a count and not a comment, for
+the same reason ratings have no public notes: a public note needs
+moderation and a count does not. Goes with the account on deletion.

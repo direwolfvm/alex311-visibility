@@ -395,10 +395,12 @@ def request_detail(service_request_id: str):
         from alex311 import db as adb
         scores = adb.public_scores(conn, service_request_id=service_request_id)
         conn.rollback()
+        support = adb.stance_tally(conn, service_request_id=service_request_id)
     row["media"] = media
     row["related"] = related
     row["resident_scores"] = [{"score": s["score"], "relation": s["relation"],
                                "status_at_rating": s["status_at_rating"]} for s in scores]
+    row["support"] = support                   # counts only; who is nobody's business
     row["report_url"] = Alex311Client.deep_link(service_request_id)
     return row
 
