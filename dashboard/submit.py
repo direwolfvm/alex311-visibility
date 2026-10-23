@@ -467,7 +467,7 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
         if _wants_html(request):
             return RedirectResponse("/submit/login", status_code=303)
         return JSONResponse({"detail": exc.detail}, status_code=401,
-                            headers={"WWW-Authenticate": 'Basic realm="Alex311 (beta)"'})
+                            headers={"WWW-Authenticate": 'Basic realm="Alex311 Reborn"'})
 
     app.include_router(public)
 

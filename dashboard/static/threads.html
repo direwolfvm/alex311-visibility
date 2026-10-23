@@ -55,6 +55,8 @@
 
   .wrap { max-width:1120px; margin:0 auto; padding:18px 18px 70px; }
   .lede { color:var(--muted); margin:0 0 14px; max-width:68ch; }
+  .notice { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:8px;
+            padding:10px 13px; margin:0 0 16px; font-size:14px; max-width:78ch; }
   .start { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 18px; }
   .start input { font:inherit; padding:9px 12px; border:1px solid var(--border); border-radius:8px;
                  min-width:200px; font-family:ui-monospace,"SF Mono",Menlo,monospace; }
@@ -129,9 +131,9 @@
   <nav class="tabs" aria-label="Views">
     <a class="tab-link" href="/explore">Explore</a>
     <a class="tab-link" href="/explore#analytics">Analytics</a>
-    <a class="tab-link" href="/threads" aria-current="page">Issue threads</a>
-    <a class="tab-link" href="/submit">Report an issue
-      <span class="tab-tag">beta</span></a>
+    <a class="tab-link" href="/threads" aria-current="page">Issue threads
+      <span class="tab-tag">experimental</span></a>
+    <a class="tab-link" href="/submit">Report an issue</a>
     <a class="tab-link" href="/submit/my" id="nav-my" hidden>My requests</a>
     <a class="tab-link" href="/submit/admin" id="nav-admin" hidden>Admin</a>
   </nav>
@@ -142,6 +144,11 @@
   <p class="lede">One pothole gets reported five times. Start from any request and this finds the
     others that are probably about the same thing — by where they are, what kind they are, how
     they are described, and when — then lets you say whether it got it right.</p>
+  <p class="notice"><b>Experimental.</b> The matching is a first attempt and will be refined: it
+    judges by distance, request type, a rough comparison of the wording, and timing, and it will
+    be wrong sometimes — pairing reports that are not the same issue, or missing ones that are.
+    Nothing here is the City's view; the City links requests only when its staff mark a duplicate.
+    Your related / not related votes are what will make it better.</p>
 
   <form class="start" id="start">
     <label class="sr-only" for="case">Case number</label>
@@ -245,7 +252,8 @@ function render() {
       </div>
       ${voteBox(r)}
     </li>`).join('');
-  $('method').innerHTML = `Looked at <b>${T.considered}</b> requests within ${T.radius_m} m and ${Math.round(T.window_days / 30)} months. `
+  $('method').innerHTML = `Looked at <b>${T.considered}</b> requests within ${T.radius_m} m and ${Math.round(T.window_days / 30)} months; `
+    + `beyond ${T.near_m} m a request has to be described alike to count. `
     + `Weights: where ${pct(T.weights.proximity)}, what kind ${pct(T.weights.category)}, wording ${pct(T.weights.text)}, when ${pct(T.weights.time)}. `
     + `Votes move a pair's score by 15 points each, up to 45.`;
   $('legend').innerHTML = [c.service_name, ...rel.map(r => r.service_name)].filter((v, i, a) => v && a.indexOf(v) === i)

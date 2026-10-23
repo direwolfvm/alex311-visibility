@@ -37,9 +37,18 @@ def test_the_three_things_get_equal_room():
 
 
 def test_reporting_is_described_honestly():
-    """It really files with the City and really is in beta; both are said."""
+    """It really files with the City, and it is no longer called beta anywhere."""
     assert "real City case number" in HOME
-    assert re.search(r'<a href="/submit">Report an issue</a>\s*<span class="tab-tag">beta', HOME)
+    assert re.search(r'<a href="/submit">Report an issue</a>', HOME)
+    assert "beta" not in HOME.lower() or "tab-tag {" in HOME          # the style may remain; the label is gone
+    assert not re.search(r'tab-tag">\s*beta', HOME)
+
+
+def test_issue_threads_is_marked_experimental():
+    """It is a first attempt at matching and says so, on the tab and on the page."""
+    assert re.search(r'href="/threads">Issue threads\s*<span class="tab-tag">experimental', HOME)
+    page = " ".join((ROOT / "dashboard/static/threads.html").read_text().split())
+    assert "<b>Experimental.</b>" in page and "will be refined" in page and "will be wrong sometimes" in page
 
 
 def test_rating_is_described_the_way_the_record_page_does_it():

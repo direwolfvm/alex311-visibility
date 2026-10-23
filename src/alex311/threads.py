@@ -8,12 +8,18 @@ mirror holds, and lets people say whether the guess was right.
 
 Four signals, each scored 0..1, combined with weights that add to one:
 
-  proximity   how near (exp decay, half at ~100 m; nothing beyond `RADIUS_M`)
+  proximity   how near (exp decay, half at ~35 m; nothing beyond `RADIUS_M`)
   category    the same request type, or the same department
   text        TF-IDF cosine over the two descriptions (idf from the
               candidates around this request, so "tree" counts for little in
               a cluster of tree reports and a lot among potholes)
   time        how close in time (exp decay, half at a month)
+
+Same-issue reports are very local — the same pothole, the same block —
+so distance is also a rule, not just a signal: beyond `NEAR_M` a match must
+be described alike (`FAR_NEEDS_TEXT`) or it is not offered at all, however
+recent and whatever its type. Without that, "same type, last month" alone
+passed the threshold anywhere inside the circle.
 
 On top of that: a request the City itself marked as a duplicate of (or the
 parent of) another is related to it, full stop; and what people said —
@@ -33,7 +39,10 @@ import re
 from collections import Counter
 from datetime import timedelta
 
-RADIUS_M = 400              # candidates come from inside this circle
+RADIUS_M = 250              # candidates come from inside this circle
+NEAR_M = 80                 # beyond this, a match must also read alike...
+FAR_NEEDS_TEXT = 0.25       # ...this much (TF-IDF cosine)
+PROXIMITY_SCALE_M = 50      # exp(-d / 50): 1 at the spot, 0.37 at 50 m, 0.13 at 100 m
 WINDOW_DAYS = 365           # and from inside this many days either side
 MAX_CANDIDATES = 400
 MAX_RELATED = 12
@@ -61,7 +70,7 @@ def distance_m(lat1, lon1, lat2, lon2) -> float | None:
 
 
 def proximity(d: float | None) -> float | None:
-    return None if d is None else math.exp(-d / 150.0)
+    return None if d is None else math.exp(-d / PROXIMITY_SCALE_M)
 
 
 def category(a: dict, b: dict) -> float:
@@ -262,6 +271,9 @@ def score_pair(a: dict, b: dict, text: TextModel) -> tuple[float, dict]:
            "city_linked": city_linked(a, b)}
     if why["city_linked"]:
         s = max(s, 0.95)
+    elif d is not None and d > NEAR_M and (parts["text"] or 0.0) < FAR_NEEDS_TEXT:
+        s = 0.0                              # too far apart to be the same thing, unless the words say so
+        why["too_far"] = True
     return s, why
 
 
@@ -299,7 +311,7 @@ def thread(conn, case: str, *, user_id: str | None = None) -> dict | None:
             if s >= PAIR_THRESHOLD:
                 edges.append({"a": r1["service_request_id"], "b": r2["service_request_id"], "score": round(s, 3)})
     return {"center": _public(seed), "related": related, "edges": edges,
-            "considered": len(cands), "radius_m": RADIUS_M, "window_days": WINDOW_DAYS,
+            "considered": len(cands), "radius_m": RADIUS_M, "near_m": NEAR_M, "window_days": WINDOW_DAYS,
             "weights": WEIGHTS}
 
 
