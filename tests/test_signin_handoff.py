@@ -36,9 +36,11 @@ def test_open_in_the_app_carries_the_whole_query_on_the_apps_scheme():
     assert "If you asked to sign in from the app on\n        this phone, open the link there." in LOGIN   # no promise it is installed
 
 
-def test_the_app_leads_on_an_iphone_and_both_show_everywhere():
-    assert "/iPhone|iPad|iPod/.test(navigator.userAgent)" in LOGIN
-    assert "classList.toggle('app-first', onIOS)" in LOGIN and "classList.toggle('lead', onIOS)" in LOGIN
+def test_the_app_leads_on_a_phone_and_both_show_everywhere():
+    """iPhone, iPad or Android: the app first; elsewhere the browser first;
+    both offered everywhere, and nothing promised about the app being installed."""
+    assert "/iPhone|iPad|iPod|Android/.test(navigator.userAgent)" in LOGIN
+    assert "classList.toggle('app-first', onPhone)" in LOGIN and "classList.toggle('lead', onPhone)" in LOGIN
     assert 'id="choice-app"' in LOGIN and 'id="choice-here"' in LOGIN
     # the choice comes before the page's long explanation, so a phone shows it without scrolling
     assert LOGIN.index('id="link-choice"') < LOGIN.index('class="explain"')
@@ -80,4 +82,4 @@ def test_the_wait_is_until_the_oldest_send_leaves_the_window_or_the_spacing_pass
 
 
 def test_the_email_points_app_users_at_their_phone():
-    assert "Using the Alex311 Reborn app on an iPhone? Open this link on that phone." in AUTH
+    assert "Using the Alex311 Reborn app on your phone? Open this link on that phone." in AUTH   # iPhone or Android

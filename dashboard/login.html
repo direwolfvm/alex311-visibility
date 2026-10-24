@@ -216,17 +216,19 @@ const linkParams = new URLSearchParams(location.search);
 const hasLink = linkParams.get('mode') === 'signIn' && !!linkParams.get('oobCode');
 const askedHere = (() => { try { return localStorage.getItem('alex311.signin.email'); } catch { return null; } })();
 if (hasLink && !askedHere) {
-  const onIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  // a phone that could have the app — iPhone, iPad or Android — gets the app first
+  const onPhone = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
   $('link-choice').hidden = false;
-  $('link-choice').classList.toggle('app-first', onIOS);
-  $('open-app').classList.toggle('lead', onIOS);
+  $('link-choice').classList.toggle('app-first', onPhone);
+  $('open-app').classList.toggle('lead', onPhone);
   // whichever comes first is the plain question; the other is the "instead"
-  $('app-h').textContent = onIOS ? 'Signing in to the Alex311 Reborn app?' : 'Signing in to the Alex311 Reborn app instead?';
-  $('here-h').textContent = onIOS ? 'Signing in on this browser instead?' : 'Sign in on this browser';
+  $('app-h').textContent = onPhone ? 'Signing in to the Alex311 Reborn app?' : 'Signing in to the Alex311 Reborn app instead?';
+  $('here-h').textContent = onPhone ? 'Signing in on this browser instead?' : 'Sign in on this browser';
   $('link-choice').style.marginBottom = '16px';
-  // The same query, on the app's own scheme — reverse-DNS on its bundle id, which nobody else
-  // will claim. Not alex311://: that is the City's official app's scheme, iOS does not arbitrate
-  // between two apps claiming one, and the button opened theirs.
+  // The same query, on the app's own scheme — reverse-DNS on the iOS bundle id, which the
+  // Android app registers too, and which nobody else will claim. Not alex311://: that is the
+  // City's official app's scheme, iOS does not arbitrate between two apps claiming one, and the
+  // button opened theirs. location.search is passed through as is, still encoded.
   $('open-app').href = 'com.herbertindustries.alex311-reborn://signin' + location.search;
 }
 

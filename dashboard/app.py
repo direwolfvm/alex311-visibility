@@ -728,6 +728,34 @@ def apple_app_site_association():
         headers={"Cache-Control": "public, max-age=3600"})
 
 
+@app.get("/.well-known/assetlinks.json")
+def android_asset_links():
+    """What lets Android open this site's links in the native app (App Links).
+
+    Android fetches it at exactly this path, over HTTPS, with no redirect,
+    and wants a JSON list. It names the app's package and the SHA-256
+    fingerprint(s) of the certificate that signs the installed app — with
+    Play App Signing, the app-signing certificate, not the upload key. The
+    statement cannot narrow paths; the app's manifest does that, and it is
+    the Android side's job to keep the digest's confirm and unsubscribe
+    links, the account pages and the API in the browser.
+
+    ANDROID_PACKAGE and ANDROID_SHA256_CERT_FINGERPRINTS (comma-separated)
+    configure it. Either unset, this is a 404 and links open in the browser
+    as before. Fingerprints are public; nothing private is needed here.
+    """
+    package = os.environ.get("ANDROID_PACKAGE", "").strip()
+    prints = [f.strip().upper() for f in os.environ.get("ANDROID_SHA256_CERT_FINGERPRINTS", "").split(",")
+              if f.strip()]
+    if not package or not prints:
+        raise HTTPException(404, "no Android app is associated with this site")
+    return JSONResponse(
+        [{"relation": ["delegate_permission/common.handle_all_urls"],
+          "target": {"namespace": "android_app", "package_name": package,
+                     "sha256_cert_fingerprints": prints}}],
+        headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/api/healthz")
 def healthz():
     with pool.connection() as conn:
