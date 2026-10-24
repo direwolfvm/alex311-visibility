@@ -13,8 +13,9 @@
 # one client version, and a mismatch fails at run time, not at build time.
 FROM mcr.microsoft.com/playwright/python:v1.61.0-noble
 
-# The base image lags on security fixes: take Ubuntu's (openssl) and drop to a
-# patched virtualenv, which the image ships and the worker never uses.
+# The base image lags on security fixes: take Ubuntu's (openssl) and move to
+# patched virtualenv and filelock, which the image ships and the worker never
+# uses (filelock: CVE-2026-112940; drop the pin once the base carries >= 4.2.1).
 RUN apt-get update && apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir --break-system-packages --upgrade "virtualenv>=21.7.13" "filelock>=4.2.1"
