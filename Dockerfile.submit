@@ -17,7 +17,7 @@ FROM mcr.microsoft.com/playwright/python:v1.61.0-noble
 # patched virtualenv, which the image ships and the worker never uses.
 RUN apt-get update && apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir --break-system-packages --upgrade "virtualenv>=21.7.13"
+    && pip install --no-cache-dir --break-system-packages --upgrade "virtualenv>=21.7.13" "filelock>=4.2.1"
 
 WORKDIR /app
 # Dependencies come from uv.lock, as in the dashboard image.
