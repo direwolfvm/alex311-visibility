@@ -292,6 +292,20 @@ Unset, the path is a 404 and links open in Safari as before. Apple caches the
 file for a day or more; after a change, reinstall the app (or use the
 `?mode=developer` associated-domain form on a development build) to see it.
 
+## 5a⅞a. The Android app: App Links
+
+`/.well-known/assetlinks.json` is served the same way as Apple's file, on
+every host without a redirect, and is a 404 until both of these are set on
+the service (fingerprints are public configuration; use `--update-env-vars`):
+
+```bash
+gcloud run services update alex311-dashboard --region=$REGION \
+    --update-env-vars=ANDROID_PACKAGE=com.herbertindustries.alex311,ANDROID_SHA256_CERT_FINGERPRINTS=<sha256>[,<sha256>]
+```
+
+With Play App Signing use the app-signing certificate's fingerprint. What
+the Android side needs from here is in `docs/android-app.md`.
+
 ## 5a⅞. The public pages: /privacy and /support
 
 App Review and the public open these without signing in; the App Store listing
