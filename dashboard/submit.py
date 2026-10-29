@@ -114,6 +114,9 @@ class FirebaseSession(BaseModel):
     id_token: str
 
 
+NOTE_LIMIT = 2000        # a private note with a rating
+
+
 class FeedbackBody(BaseModel):
     """A resident's verdict. `score` 1–5, or null for "not sure"."""
     score: int | None = None
@@ -145,6 +148,8 @@ class DeviceBody(BaseModel):
 class ValidateBody(BaseModel):
     service_code: str
     answers: dict = {}
+    #: the "Additional information" text, checked against the City's length limit
+    description: str | None = None
 
 
 
@@ -757,10 +762,13 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
             raise HTTPException(400, "that is not a case number")
         if body.score is not None and not 1 <= body.score <= 5:
             raise HTTPException(400, "score is 1 to 5, or nothing for not sure")
+        if len(body.note.strip()) > NOTE_LIMIT:            # refused, never cut
+            raise HTTPException(422, f"the note is {len(body.note.strip()):,} characters; "
+                                     f"the limit is {NOTE_LIMIT:,}")
         user_id = _account(request)
         with pool_getter().connection() as conn:
             saved = adb.save_feedback(conn, user_id=user_id, service_request_id=case,
-                                      score=body.score, note=body.note.strip()[:2000],
+                                      score=body.score, note=body.note.strip(),
                                       share_score=body.share_score)
         return {"case": case, "feedback": saved}
 
@@ -946,7 +954,7 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
         s = R.get_service(R.load_registry(), body.service_code)
         if not s:
             raise HTTPException(404, "unknown service code")
-        return R.validate(s, body.answers)
+        return R.validate(s, body.answers, body.description)
 
     def _submitter(request: Request) -> str | None:
         """Which account is making this request, from the portal session.
@@ -970,6 +978,13 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
         real attempts, and an audit trail holding only the refusals explains
         nothing. Nothing here reaches the City — the relay stays gated.
         """
+        # The City's form would silently keep the first thousand characters of
+        # any longer text; say so now rather than file a report cut short.
+        if (n := R.too_long(body.description)) is not None:
+            raise HTTPException(422, "Additional information: " + R.length_message(n))
+        for k, v in (body.answers or {}).items():
+            if (n := R.too_long(v)) is not None:
+                raise HTTPException(422, f"Answer {k}: " + R.length_message(n))
         submitter_id = _submitter(request)
         key = abuse.normalize_address(body.address)
         proposed = abuse.Event(

@@ -431,6 +431,9 @@ async def _run(*, service_code: str, address: str, description: str, answers: di
                 return result
 
             # description box, then on to contact and review
+            if len(description) > 1000:
+                # refused at precheck since 2026-10-29; only an older queued request gets here
+                log.warning("description is %d characters; the City's form keeps 1000", len(description))
             ta = pg.locator('textarea[aria-label="Additional Information"], '
                             'textarea[placeholder="Additional Information"]').first
             if await ta.count():

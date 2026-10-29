@@ -51,3 +51,15 @@ administrator adopts it; a request type the City retires is removed without
 waiting. Either way `version` changes, and that is the only signal a client
 needs. Responses may be cached for five minutes (`Cache-Control`), so a
 client follows an adoption within about that long.
+
+## Text length
+
+`/registry/full` carries `limits: {"text": 1000}`. The City's form keeps at
+most 1,000 characters in any multi-line text box — the "Additional
+Information" description and free-text answers — and silently drops the
+rest, so the server refuses anything longer rather than file it cut short:
+`POST /validate` (which now also takes `description`) returns an error for
+the field, and `POST /precheck` answers `422` with a message saying how much
+to cut. A client should count characters as the person types and stop them
+at the check, as the website does. (Added 2026-10-29, after a 2,529-character
+report reached the City as 995.)
