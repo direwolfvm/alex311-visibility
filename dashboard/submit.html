@@ -75,6 +75,12 @@
   .rule.hard { color:var(--bad); } .rule.adv { color:var(--warn); } .rule.info { color:var(--muted); }
   .opt.hard { border-color:#fecaca; background:#fff7f7; }
   .hint { font-size:12px; color:var(--muted); margin-top:4px; }
+  /* how much of the City's 1,000 characters a box has used */
+  .count { font-size:12px; color:var(--muted); text-align:right; margin-top:2px; min-height:1em;
+           font-variant-numeric:tabular-nums; }
+  .count.near { color:#b45309; }
+  .count.over { color:#b91c1c; font-weight:600; }
+  textarea.over { border-color:#b91c1c; outline-color:#b91c1c; }
   .composite { display:flex; gap:8px; } .composite input { flex:1; }
   .filing-head { font-size:14px; margin:22px 0 4px; padding-top:18px;
                  border-top:1px solid var(--border); }
@@ -209,7 +215,9 @@
     <div id="map" style="margin-top:8px"></div>
     <div id="dupes"></div>
     <label class="hint" style="display:block;margin-top:10px">Additional information</label>
-    <textarea id="desc" placeholder="Anything else the City should know"></textarea>
+    <textarea id="desc" placeholder="Anything else the City should know" data-limit="1000"
+              aria-describedby="desc-count"></textarea>
+    <div class="count" id="desc-count" aria-live="polite"></div>
     <label class="hint" for="photos" style="display:block;margin-top:10px">Photos (optional — up to 3; sent to the
       City with your request, then deleted here)</label>
     <input type="file" id="photos" accept="image/*,.heic,.heif" multiple>
@@ -356,7 +364,8 @@ function inputHtml(q, key) {
     const d = v || {};
     return `<div class="composite"><input type="date" data-key="${key}" data-part="date" value="${esc(d.date||'')}"><input type="time" data-key="${key}" data-part="time" value="${esc(d.time||'')}"></div>`;
   }
-  return `<textarea data-key="${key}" rows="2">${esc(v||'')}</textarea>`;
+  return `<textarea data-key="${key}" rows="2" data-limit="${TEXT_LIMIT}" aria-describedby="count-${key}">${esc(v||'')}</textarea>
+    <div class="count" id="count-${key}" aria-live="polite"></div>`;
 }
 // Almost every date question on these forms asks when something happened, and
 // the answer is nearly always "just now" — a missed collection, a noise
@@ -605,12 +614,28 @@ function summary() {
   lines.push(`Additional information: ${$('desc').value.trim()||'—'}`);
   return lines.join('\n');
 }
+// ---------- the City's length limit, counted as you type ----------
+// The City's form keeps the first 1,000 characters of a text box and quietly
+// drops the rest. No maxlength here — a paste would be cut just as quietly —
+// so the count says where you are and the check refuses what would be cut.
+const TEXT_LIMIT = 1000;
+function countChars(el) {
+  const out = document.getElementById(el.getAttribute('aria-describedby'));
+  if (!out) return;
+  const n = el.value.trim().length, limit = +el.dataset.limit || TEXT_LIMIT;
+  el.classList.toggle('over', n > limit);
+  out.className = 'count' + (n > limit ? ' over' : n > limit * 0.9 ? ' near' : '');
+  out.textContent = n > limit ? `${n.toLocaleString()} / ${limit.toLocaleString()} — the City's form keeps only ${limit.toLocaleString()} characters; shorten by ${(n - limit).toLocaleString()}`
+                  : n > limit * 0.5 ? `${n.toLocaleString()} / ${limit.toLocaleString()}` : '';
+}
+document.addEventListener('input', e => { if (e.target.matches('textarea[data-limit]')) countChars(e.target); });
+
 function renderResult() {
   const v = state.valid; const box = $('result');
   if (!v) { box.innerHTML = ''; $('review').hidden = true; $('copy').hidden = true; $('official').classList.add('disabled'); return; }
   let h = '';
   if (v.blocking.length) h += `<div class="box bad"><b>The City won't accept this online:</b><ul>${v.blocking.map(b=>`<li>Q${b.order} “${esc(b.option)}” — ${esc(b.message||'the City’s form rejects this answer without giving a reason')}</li>`).join('')}</ul></div>`;
-  if (v.errors.length) h += `<div class="box bad"><b>Please fix:</b><ul>${v.errors.map(e=>`<li><a href="#q-${e.question}">Q${e.order}</a> — ${esc(e.message)}</li>`).join('')}</ul></div>`;
+  if (v.errors.length) h += `<div class="box bad"><b>Please fix:</b><ul>${v.errors.map(e=>`<li><a href="${e.question === 'description' ? '#desc' : '#q-' + e.question}">${e.question === 'description' ? 'Additional information' : 'Q' + e.order}</a> — ${esc(e.message)}</li>`).join('')}</ul></div>`;
   const said = list => list.filter(a => (a.message || '').trim());   // a rule with no text has nothing to show
   const adv = said(v.advisories), notes = said(v.info);
   if (adv.length) h += `<div class="box warn"><b>Before you submit:</b><ul>${adv.map(a=>`<li>${esc(a.message)}</li>`).join('')}</ul></div>`;
@@ -648,7 +673,7 @@ async function precheck() {
         address: $('address').value.trim(), city_address: state.cityAddress,
         lat: state.lat, long: state.long,
         description: $('desc').value.trim(), answers: state.answers})});
-    state.attempt = await r.json();
+    state.attempt = r.ok ? await r.json() : null;
     state.photosFor = null; syncPhotos();
     showPolicy();
   } catch { state.attempt = null; }
@@ -657,7 +682,8 @@ async function precheck() {
 $('validate').addEventListener('click', async () => {
   if (!state.svc) return;
   state.valid = await (await fetch('/submit/api/validate', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ service_code: state.svc.service_code, answers: state.answers }) })).json();
+    body: JSON.stringify({ service_code: state.svc.service_code, answers: state.answers,
+                           description: $('desc').value.trim() }) })).json();
   await precheck();
   renderResult(); $('check').scrollIntoView({behavior:'smooth', block:'start'});
 });

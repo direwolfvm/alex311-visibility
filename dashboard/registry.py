@@ -37,6 +37,27 @@ SCHEMA = 1
 
 TTL_SECONDS = 60
 
+# The City's form caps every multi-line text box — "Additional Information"
+# and free-text questions alike — at 1,000 characters (maxlength="1000", read
+# off the live form 2026-10-29). Typing more does not fail: the box silently
+# keeps the first thousand, so a longer report reaches the City cut off. The
+# check happens here instead, where the resident can still do something
+# about it. Single-line answers (a unit number) are held to the same number;
+# nothing real comes close.
+TEXT_LIMIT = 1000
+
+
+def too_long(value) -> int | None:
+    """The length of a text answer the City would cut, or None."""
+    if isinstance(value, str) and len(value.strip()) > TEXT_LIMIT:
+        return len(value.strip())
+    return None
+
+
+def length_message(n: int) -> str:
+    return (f"The City's form keeps at most {TEXT_LIMIT:,} characters here and would cut the rest; "
+            f"this is {n:,}. Please shorten it by {n - TEXT_LIMIT:,}.")
+
 _provider = None                 # () -> {"version", "registry"} | None, set by the web service
 _lock = threading.Lock()
 _held: dict | None = None        # {"at", "version", "registry", "source"}
@@ -127,6 +148,7 @@ def full_payload(gzipped: bool = False) -> bytes:
         reg = cur["registry"]
         body = json.dumps({"version": cur["version"], "schema": SCHEMA,
                            "generated": reg["generated"], "sources": reg.get("sources"),
+                           "limits": {"text": TEXT_LIMIT},
                            "services": reg["services"]}, separators=(",", ":")).encode()
         if gzipped:
             body = gzip.compress(body, 6, mtime=0)
@@ -178,7 +200,7 @@ def visible_questions(service: dict, answers: dict) -> list[dict]:
     return out
 
 
-def validate(service: dict, answers: dict) -> dict:
+def validate(service: dict, answers: dict, description: str | None = None) -> dict:
     """Return {ok, errors, blocking, advisories, info} for a set of answers.
 
     errors    — required-but-empty or not-an-allowed-option (field-level)
@@ -186,6 +208,8 @@ def validate(service: dict, answers: dict) -> dict:
     advisories/info — guidance to show, non-blocking
     """
     errors, blocking, advisories, info = [], [], [], []
+    if (n := too_long(description)) is not None:
+        errors.append({"question": "description", "order": 0, "message": length_message(n)})
     for q in visible_questions(service, answers):
         key = _qkey(q)
         v = answers.get(key)
@@ -194,6 +218,9 @@ def validate(service: dict, answers: dict) -> dict:
         if empty:
             if required:
                 errors.append({"question": key, "order": q["order"], "message": "This question is required."})
+            continue
+        if (n := too_long(v)) is not None:
+            errors.append({"question": key, "order": q["order"], "message": length_message(n)})
             continue
         opts = {o["value"]: o for o in q["options"]}
         if opts:
