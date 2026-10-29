@@ -365,7 +365,10 @@ def request_detail(service_request_id: str):
                       agency_responsible, owner, parent_service_request_id,
                       duplicate_parent_service_request_id, media_count,
                       requested_datetime, expected_datetime, last_updated_datetime,
-                      closed_datetime, canceled_datetime, enriched_at
+                      closed_datetime, canceled_datetime, enriched_at,
+                      -- when this mirror last heard from the City about it,
+                      -- by the list pass or a detail read, whichever is later
+                      GREATEST(last_ingested_at, enriched_at) AS mirrored_at
                FROM service_requests WHERE service_request_id = %s""",
             (service_request_id,),
         ).fetchone()

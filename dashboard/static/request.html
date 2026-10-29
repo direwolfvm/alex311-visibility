@@ -174,6 +174,12 @@
   .share > span { flex:1; }
   .share .map-note { display:block; margin-top:2px; max-width:60ch; }
   /* following is a state of the case, so it lives beside the case number */
+  .refresh-one { display:block; margin-top:4px; font-size:13px; }
+  .refresh-one button { border:1px solid var(--border); background:var(--panel); color:var(--accent);
+                        border-radius:99px; padding:3px 12px; font:inherit; font-size:13px; cursor:pointer; }
+  .refresh-one button:hover { border-color:var(--accent); }
+  .refresh-one button[disabled] { opacity:.6; cursor:default; }
+  .refresh-one .msg { color:var(--muted); display:block; margin-top:3px; }
   .follow { display:inline-flex; align-items:center; gap:6px; font-size:13px; }
   .follow button { border:1px solid var(--border); background:var(--panel); color:var(--accent);
                    border-radius:99px; padding:3px 12px; font:inherit; font-size:13px; cursor:pointer; }
@@ -242,6 +248,17 @@ const CASE = decodeURIComponent(location.pathname.replace(/^\/r\//, ''));
 
 const day = v => v ? String(v).slice(0, 10) : null;
 const stamp = v => v ? String(v).replace('T', ' ').slice(0, 16) + ' UTC' : null;
+// "updated 12 minutes ago", with the exact time on hover: when this mirror
+// last heard from the City about this request, not when the City last changed it
+function ago(v) {
+  const s = Math.max(0, (Date.now() - new Date(v)) / 1000);
+  if (s < 90) return 'just now';
+  if (s < 5400) return `${Math.round(s / 60)} minutes ago`;
+  if (s < 129600) return `${Math.round(s / 3600)} hours ago`;
+  return `${Math.round(s / 86400)} days ago`;
+}
+const mirrored = v => v ? `updated ${ago(v)} <small style="color:var(--muted);display:block">${stamp(v)}</small>`
+                        : 'not yet read in full';
 const bytes = n => n == null ? '' : n < 1024 ? `${n} B`
   : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
 
@@ -282,6 +299,8 @@ function facts(d) {
     ['Priority', esc(d.priority)],
     ['Reported via', esc(d.origin || d.source)],
     ['ZIP', esc(d.zipcode)],
+    ['In this mirror', `<span id="mirrored">${mirrored(d.mirrored_at)}</span>
+       <span id="refresh-one" class="refresh-one"></span>`],
   ].filter(([, v]) => v);
   return `<dl class="facts">${rows.map(([k, v]) =>
     `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
@@ -520,6 +539,35 @@ fetch(`/api/request/${encodeURIComponent(CASE)}`)
       : `<section class="card"><h2>Could not load it</h2><p class="empty">${esc(e.message)}</p></section>`;
   });
 
+// --------------------------------------------------------------- refresh
+// Ask the City about this one request now. Signed in only; a request heard
+// about in the last two minutes is answered from the mirror.
+function drawRefresh(user) {
+  const box = document.getElementById('refresh-one');
+  if (!box) return;
+  if (!user) { box.innerHTML = `<a href="/submit/login">Sign in</a> to refresh it from the City`; return; }
+  box.innerHTML = `<button type="button" id="refresh-btn">Refresh from the City</button>
+    <span class="msg" id="refresh-msg" role="status" aria-live="polite"></span>`;
+  document.getElementById('refresh-btn').addEventListener('click', async () => {
+    const b = document.getElementById('refresh-btn'), msg = document.getElementById('refresh-msg');
+    const was = (window.__record || {}).status;
+    b.disabled = true; msg.textContent = 'Asking the City…';
+    try {
+      const r = await fetch(`/submit/api/refresh/${encodeURIComponent(CASE)}`, {method: 'POST'});
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) { msg.textContent = out.detail || `That did not work (HTTP ${r.status}).`; b.disabled = false; return; }
+      if (!out.found) { msg.textContent = 'The City has no record by this number right now.'; b.disabled = false; return; }
+      // re-read the whole record, so everything on the page is what the City just said
+      const d = await (await fetch(`/api/request/${encodeURIComponent(CASE)}`)).json();
+      render(d);
+      drawRefresh(user); drawFollow(user); drawVerdict(user); drawStance(user); drawWatch(user, d);
+      document.getElementById('refresh-msg').textContent = !out.asked_city
+        ? 'Already up to date — it was read from the City moments ago.'
+        : d.status !== was ? `Updated: the City now says ${d.status}.` : 'Up to date: nothing has changed at the City.';
+    } catch { msg.textContent = 'Could not reach the server just now.'; b.disabled = false; }
+  });
+}
+
 // ---------------------------------------------------------------- follow
 // A pointer from an account to this case: "following" is anyone who cares,
 // "mine" only ever comes from the worker when the City hands back a number.
@@ -665,7 +713,7 @@ fetch('/submit/api/whoami').then(r => r.ok ? r.json() : {user: null})
   .then(({user}) => {
     // the record renders first; the follow box waits for it
     const tick = () => document.getElementById('follow')
-      ? (drawFollow(user), drawVerdict(user), drawStance(user), drawWatch(user, window.__record || {})) : setTimeout(tick, 200);
+      ? (drawRefresh(user), drawFollow(user), drawVerdict(user), drawStance(user), drawWatch(user, window.__record || {})) : setTimeout(tick, 200);
     tick(); if (user) $('nav-my').hidden = false;
   if (user && user.role === 'admin') $('nav-admin').hidden = false; })
   .catch(() => {});

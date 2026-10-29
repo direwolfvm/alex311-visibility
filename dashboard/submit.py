@@ -578,6 +578,43 @@ h1{{font-size:20px;margin:0 0 10px}}a{{color:#1d4ed8}}</style></head>
                 results = refresh.refresh_cases(conn, client, cases)
         return {"results": results, "skipped": max(0, len(links) - len(cases))}
 
+    # One case from its own page. The City is asked once; a case this mirror
+    # heard about in the last couple of minutes is answered from the mirror,
+    # however many people press, and a person may ask a handful of times in
+    # ten minutes. Signed-in only, like the My requests refresh: the City's
+    # portal is somebody else's server.
+    RECORD_FRESH_SECONDS = 120
+    RECORD_PRESSES, RECORD_WINDOW = 6, 600.0
+
+    @router.post("/api/refresh/{case}")
+    def refresh_one(case: str, request: Request, actor: str = Depends(gate)):
+        """Ask the City about this one request now and fold the answer into the mirror."""
+        if not CASE_ID.match(case):
+            raise HTTPException(400, "that is not a case number")
+        user_id = _account(request)
+        with pool_getter().connection() as conn:
+            row = conn.execute(
+                """SELECT status, GREATEST(last_ingested_at, enriched_at) AS mirrored_at,
+                          GREATEST(last_ingested_at, enriched_at) > now() - make_interval(secs => %s) AS fresh
+                     FROM service_requests WHERE service_request_id = %s""",
+                (RECORD_FRESH_SECONDS, case)).fetchone()
+            if row and row["fresh"]:
+                return {"case": case, "asked_city": False, "found": True,
+                        "status": row["status"], "mirrored_at": row["mirrored_at"]}
+            if not _allow(f"refresh-one:{user_id}", RECORD_PRESSES, RECORD_WINDOW):
+                raise HTTPException(429, "you have refreshed several requests just now; "
+                                         "give the City a few minutes")
+            with Alex311Client() as client:
+                (result,) = refresh.refresh_cases(conn, client, [case], limit=1)
+            if result["error"]:
+                raise HTTPException(502, f"the City did not answer: {result['error']}")
+            after = conn.execute(
+                "SELECT status, GREATEST(last_ingested_at, enriched_at) AS mirrored_at "
+                "FROM service_requests WHERE service_request_id = %s", (case,)).fetchone()
+        return {"case": case, "asked_city": True, "found": result["found"],
+                "status": after["status"] if after else None,
+                "mirrored_at": after["mirrored_at"] if after else None}
+
     @router.get("/api/link/{case}")
     def link_state(case: str, request: Request, actor: str = Depends(gate)):
         user_id = _account(request)
