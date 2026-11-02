@@ -63,3 +63,15 @@ the field, and `POST /precheck` answers `422` with a message saying how much
 to cut. A client should count characters as the person types and stop them
 at the check, as the website does. (Added 2026-10-29, after a 2,529-character
 report reached the City as 995.)
+
+## A refusal that applies only after certain answers
+
+An option's `rule` may carry `when`: a list of `{question, option}` pairs.
+A `hard_stop` with `when` blocks **only if every pair is currently
+selected**; on any other path, show its message as an advisory and let the
+person go on. (The City's Sewer form refuses "Street/Main Line" after
+"Backup – Not Weather Related" and "No" to "inside your house?", and accepts
+it after "Missing or Broken Manhole Cover".) A `hard_stop` without `when`
+blocks everywhere, as before. A client that ignores `when` over-blocks, which
+is what it did before 2026-11-02; the server's `/validate` honours it either
+way. Added without a `schema` bump for that reason.

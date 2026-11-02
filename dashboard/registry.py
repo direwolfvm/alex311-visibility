@@ -207,6 +207,10 @@ def validate(service: dict, answers: dict, description: str | None = None) -> di
     blocking  — chosen options the wizard hard-stops on (with the redirect text)
     advisories/info — guidance to show, non-blocking
     """
+    def selected(key, value):
+        v = answers.get(key)
+        return v == value or (isinstance(v, list) and value in v)
+
     errors, blocking, advisories, info = [], [], [], []
     if (n := too_long(description)) is not None:
         errors.append({"question": "description", "order": 0, "message": length_message(n)})
@@ -236,8 +240,13 @@ def validate(service: dict, answers: dict, description: str | None = None) -> di
                     continue
                 rule = o.get("rule") or {}
                 item = {"question": key, "order": q["order"], "option": c, "message": rule.get("message", "")}
-                if rule.get("type") == "hard_stop":
+                if rule.get("type") == "hard_stop" and all(
+                        selected(w["question"], w["option"]) for w in rule.get("when") or []):
                     blocking.append(item)
+                elif rule.get("type") == "hard_stop":
+                    # refused after other answers than these; on this path the
+                    # City's web form has taken it, so say it, do not block
+                    advisories.append(item)
                 elif rule.get("type") == "advisory":
                     advisories.append(item)
                 elif rule.get("type") == "info":

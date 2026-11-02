@@ -312,7 +312,29 @@ def candidate(conn, catalog: list[dict]) -> dict:
     mined = json.loads(registry_store.data_file(registry_store.MINED_NAME).read_text())
     rules = rules_in_use(conn)
     live = {t["service_code"] for t in catalog}
-    return registry_build.build(catalog, mined, {"categories": [c for k, c in rules.items() if k in live]})
+    return registry_build.build(catalog, mined, {"categories": [c for k, c in rules.items() if k in live]},
+                                web_answers=web_answers(conn))
+
+
+WEB_EVIDENCE_DAYS = 90
+
+
+def web_answers(conn, days: int = WEB_EVIDENCE_DAYS) -> dict[tuple[str, str], set[str]]:
+    """(service_code, question_code) -> answers recent records show going
+    through the City's own web form. Only the web form counts: staff typing a
+    phone call can enter answers the form would refuse."""
+    from .registry_drift import fetch_attribute_rows, is_web
+    out: dict[tuple[str, str], set[str]] = {}
+    for row in fetch_attribute_rows(conn, days):
+        if not is_web(row):
+            continue
+        for attr in row["attrs"] or []:
+            for v in attr.get("values") or []:
+                ans = (v.get("answer_value") or v.get("answer") or "").strip()
+                if attr.get("code") and ans:
+                    out.setdefault((row["service_code"], attr["code"]), set()).add(ans)
+    conn.commit()
+    return out
 
 
 # ----------------------------------------------------------- standing aside
