@@ -65,8 +65,24 @@ def rule_for(p):
     return None
 
 
-def build(catalog: list[dict], mined: list[dict], wizard: dict, generated: str | None = None) -> dict:
-    """The registry for `catalog`, from `mined` rows and `wizard` = {"categories": [...]}."""
+LIST_KINDS = ("radio", "select", "checkbox", "radio-role", "dropdown")
+
+
+def build(catalog: list[dict], mined: list[dict], wizard: dict, generated: str | None = None,
+          web_answers: dict | None = None) -> dict:
+    """The registry for `catalog`, from `mined` rows and `wizard` = {"categories": [...]}.
+
+    `web_answers` maps (service_code, question_code) to the answers recent
+    records show going through the City's web form. A walk tries every
+    option of a question, but only along one path through the form, so a
+    refusal it sees may hold only after the earlier answers it gave. When the
+    web form's own records show a "refused" answer going through, the rule is
+    scoped: `when` lists the earlier answers it was seen after, and it blocks
+    only there. (The Sewer form refuses "Street/Main Line" after "Backup", and
+    takes it after "Missing or Broken Manhole Cover".) A refusal on the first
+    question has no path to scope to, so it becomes advisory.
+    """
+    web_answers = web_answers or {}
     mined_by_name = {}
     for r in mined:
         mined_by_name.setdefault(r["service_name"], []).append(r)
@@ -80,6 +96,7 @@ def build(catalog: list[dict], mined: list[dict], wizard: dict, generated: str |
         wiz = wiz_by_code.get(code)
         questions = []
         used_mined = set()
+        walked_path: list[dict] = []          # the answers the walk gave, in order, as registry keys
 
         if wiz and not wiz.get("error"):
             for wq in wiz["questions"]:
@@ -96,10 +113,18 @@ def build(catalog: list[dict], mined: list[dict], wizard: dict, generated: str |
                 vocab = set((m or {}).get("answer_vocab") or [])
                 rendered = wq.get("options") or []
                 opts = []
+                qkey = (m or {}).get("code") or wq.get("code") or f"q{wq['order']}"
+                went_through = web_answers.get((code, qkey), set())
                 for o in rendered:
                     p = wq["probes"].get(o, {})
+                    rule = rule_for(p) if "error" not in p else None
+                    if rule and rule["type"] == "hard_stop" and o in went_through:
+                        if walked_path:
+                            rule = dict(rule, when=[dict(a) for a in walked_path])
+                        else:
+                            rule = dict(rule, type="advisory")
                     opts.append({"value": o, "rendered": True, "seen_in_data": o in vocab,
-                                 "rule": rule_for(p) if "error" not in p else None,
+                                 "rule": rule,
                                  "reveals": p.get("reveals", []),
                                  "probe_error": p.get("error")})
                 for o in sorted(vocab - set(rendered)):
@@ -114,6 +139,8 @@ def build(catalog: list[dict], mined: list[dict], wizard: dict, generated: str |
                     "presence_pct": (m or {}).get("pct"), "options": opts,
                     "parts": wq.get("parts"), "source": "wizard+data" if m else "wizard",
                 })
+                if wq.get("input") in LIST_KINDS and wq.get("chosen") not in (None, "filled"):
+                    walked_path.append({"question": qkey, "option": wq["chosen"]})
             banners = [b for b in wiz.get("banners", []) if not COUNTER.search(b)]
         else:
             banners = []

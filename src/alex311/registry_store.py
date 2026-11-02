@@ -174,6 +174,10 @@ def diff(old: dict, new: dict) -> list[str]:
                                f"→{rb.get('type') or 'no rule'}")
                 elif _norm(ra.get("message")) != _norm(rb.get("message")):
                     out.append(f"rule_message_changed {where} {v!r}")
+                if ra.get("type") == rb.get("type") and (ra.get("when") or []) != (rb.get("when") or []):
+                    after = "; ".join(f"{w['question']} = {w['option']}" for w in rb.get("when") or [])
+                    out.append(f"rule_scope_changed {where} {v!r}: now only after {after}" if after
+                               else f"rule_scope_changed {where} {v!r}: now on every path")
     return out
 
 

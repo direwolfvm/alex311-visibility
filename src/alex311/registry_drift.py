@@ -158,8 +158,16 @@ def observed(rows: list[dict]) -> dict[str, dict]:
     for row in rows:
         if not is_web(row):
             continue
-        svc = out.setdefault(row["service_code"], {"rows": 0, "questions": {}})
+        svc = out.setdefault(row["service_code"], {"rows": 0, "questions": {}, "records": []})
         svc["rows"] += 1
+        # each record's own answers, so a rule scoped to earlier answers is
+        # checked against records that gave them
+        mine: dict[str, set[str]] = {}
+        for attr in row["attrs"] or []:
+            if attr.get("code"):
+                mine[attr["code"]] = {(v.get("answer_value") or v.get("answer") or "").strip()
+                                      for v in attr.get("values") or []} - {""}
+        svc["records"].append((row.get("requested_datetime"), mine))
         for attr in row["attrs"] or []:
             code = attr.get("code")
             if not code:
@@ -239,6 +247,21 @@ def data_drift(rows: list[dict], registry: dict, min_rows: int = 5) -> list[Find
                     out.append(Finding("option_added", code,
                                        f"{qcode}: answer {value!r} is not an option in the registry",
                                        {"question": qcode, "option": value}))
+                elif (o.get("rule") or {}).get("type") == "hard_stop" and (o["rule"].get("when")):
+                    # refused only after certain earlier answers: contradicted
+                    # only by a web record that gave those answers and this one
+                    on_path = [at for at, mine in svc["records"]
+                               if value in mine.get(qcode, set())
+                               and all(w["option"] in mine.get(w["question"], set()) for w in o["rule"]["when"])
+                               and not (crawled and at and at <= crawled)]
+                    if on_path:
+                        last = max(a for a in on_path if a) if any(on_path) else None
+                        out.append(Finding("rule_contradicted", code,
+                                           f"{qcode}: {value!r} is refused after "
+                                           + ", ".join(f"{w['option']!r}" for w in o["rule"]["when"])
+                                           + f" but went through the web form that way"
+                                           + (f" on {last:%Y-%m-%d}" if last else ""),
+                                           {"question": qcode, "option": value, "when": o["rule"]["when"]}))
                 elif (o.get("rule") or {}).get("type") == "hard_stop":
                     # The wizard rejects this answer, yet a wizard submission
                     # carries it. Only records submitted *after* the crawl can
