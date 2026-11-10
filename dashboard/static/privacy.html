@@ -192,13 +192,13 @@
 
 <main class="wrap doc" id="main">
   <h2>Privacy</h2>
-  <p class="dated">For the Alex311 Reborn website (alex311-reborn.com, formerly alex311visibility.me) and the Alex311 Reborn iPhone app.
-    Effective October 23, 2026.</p>
+  <p class="dated">For the Alex311 Reborn website (alex311-reborn.com, formerly alex311visibility.me) and the Alex311 Reborn
+    apps for iPhone and Android. Effective November 9, 2026.</p>
 
   <div class="short">
     <p><b>The short version.</b> You can browse without an account. Google Analytics counts visits
-      to the website and which pages are used; that is the only tracking, and it is described
-      below. An account holds an id, not a profile. When you send a report, the City of Alexandria gets
+      to the website and which pages are used; that is the only tracking, it is on the website only,
+      and it is described below. The apps carry no analytics. An account holds an id, not a profile. When you send a report, the City of Alexandria gets
       your contact details and photos because it requires them — and this site deletes its copies
       once the City has filed the request. There is no advertising, no tracking and no selling of
       anything. You can delete your account, and everything with it, at any time.</p>
@@ -216,14 +216,16 @@
     measurements go to Google under Google's own privacy policy. This site has not turned on
     Google's advertising features, and it does not send Google anything you type, your account id,
     or the contents of a report. Blocking analytics with a browser setting or extension breaks
-    nothing here. The iPhone app does not include Google Analytics. Like
+    nothing here. Neither app includes Google Analytics, and the Android app includes no
+    crash-reporting or advertising tools either. Like
     any website, the servers that host this one (Google Cloud) log each request's IP address and
     browser for a short time, for security and troubleshooting. Pages load map tiles from
     OpenStreetMap and a few open-source libraries from public content networks (unpkg, jsDelivr);
     those services see your IP address when your browser fetches from them.</p>
 
   <h3>An account</h3>
-  <p>You sign in with Apple, Google, or a link or code emailed to you. Sign-in is handled by
+  <p>You sign in with Apple (iPhone app), Google, or a link or code emailed to you; the Android app
+    offers Google or an emailed link or code. Sign-in is handled by
     Google's Identity Platform, which keeps the email address you sign in with. What this site keeps
     for an account is:</p>
   <ul>
@@ -255,9 +257,21 @@
     after 7 days. What remains is a record that a request was sent — its type, place and
     description, the City's case number, and the checks made to prevent abuse — without your name,
     email, phone or photos.</p>
-  <p>The iPhone app asks for your location only to suggest the address of a report or show
-    requests near you, and only while you use it. A location reaches this site when you choose
-    it for a report or search nearby; it is not tracked or kept as a history.</p>
+  <p>The apps ask for your location only to suggest the address of a report or show requests near
+    you, and only while the app is open — never in the background. A location reaches this site
+    when you choose it for a report or search nearby; it is not tracked or kept as a history. On
+    Android you can give approximate or precise location, or none and pick a place on the map
+    instead.</p>
+  <p>In the Android app, photos come from the system photo picker or the camera, so the app sees
+    only the pictures you choose. The location and device data a phone puts in a photo are removed
+    on the phone before it is uploaded, and again by this site when it stores it.</p>
+
+  <h3>On your phone</h3>
+  <p>The Android app keeps your sign-in session, any report you have started but not sent, and
+    the contact details it remembers for filing — only if you ask it to — on the phone, encrypted
+    with a key held in the phone's secure hardware. None of it is included in phone backups, so it
+    is not copied to Google's backup service or to another device. Signing out removes the session;
+    uninstalling the app removes all of it.</p>
 
   <h3>Following, rating and watching</h3>
   <ul>
@@ -268,6 +282,10 @@
     <li><b>Notes</b> you write with a rating are private. They are never shown to anyone else.</li>
     <li><b>Watches</b> — request types, addresses or map areas you asked to hear about. An address
       is often a home, so these are visible only to you.</li>
+    <li><b>Support</b> — whether you support another resident's request. Everyone sees how many do;
+      no one sees who.</li>
+    <li><b>Issue threads</b> — whether you marked two requests as related. Votes are counted
+      together; no one sees who voted.</li>
   </ul>
 
   <h3>Email and notifications</h3>
@@ -275,12 +293,16 @@
     <li><b>Sign-in emails</b> go to the address you type, and nowhere else.</li>
     <li><b>The daily digest</b> is off unless you turn it on, goes only to an address you
       confirmed, and every one has a link that stops it.</li>
-    <li><b>Push notifications</b> in the app, if you allow them, tell you when a request you sent
-      or follow changes. For that the site keeps the device token Apple gives the app. It is
+    <li><b>Push notifications</b> in the iPhone app, if you allow them, tell you when a request you
+      sent or follow changes. For that the site keeps the device token Apple gives the app. It is
       removed when you sign out or delete your account, or when Apple reports it no longer valid.</li>
+    <li><b>Notifications in the Android app</b> work without a push token: nothing about your phone
+      is registered with this site. While you are signed in, the app itself checks your requests
+      about every three hours (when Android allows it) and, if you allowed notifications, tells you
+      on the phone when one has changed.</li>
   </ul>
-  <p>Email is delivered by Mailgun and notifications by Apple; each receives only what it needs
-    to deliver the message.</p>
+  <p>Email is delivered by Mailgun and iPhone notifications by Apple; each receives only what it
+    needs to deliver the message.</p>
 
   <h3>What is never done</h3>
   <p>No advertising. No tracking across apps or websites. No profile of you: Google Analytics
@@ -291,10 +313,11 @@
 
   <h3>Deleting your account</h3>
   <p>On the website, open <a href="/submit/account">your account page</a> and choose
-    <b>Delete my account</b>. In the app, open <b>Account</b> and choose <b>Delete account</b>.
-    Either removes, immediately: the account, its sign-in record, your list, your ratings and
-    notes (including any score you chose to show), your watches, your digest address, and your
-    registered devices.</p>
+    <b>Delete my account</b>. In the iPhone app, open <b>Account</b> and choose <b>Delete account</b>;
+    in the Android app, open <b>Account</b> and choose <b>Delete my account</b>. Any of these
+    removes, immediately: the account, its sign-in record, your list, your ratings and notes
+    (including any score you chose to show), your watches, your support and issue-thread votes,
+    your digest address, and your registered devices (iPhones; the Android app registers none).</p>
   <p>Two things are outside this site's reach: requests already filed with the City are the
     City's records, and the record that a request was sent (without your contact details)
     is kept as described above.</p>
