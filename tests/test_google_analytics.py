@@ -28,5 +28,5 @@ def test_the_privacy_page_tells_the_truth_about_it():
     assert "no cookies are set" not in text and "no analytics or advertising code" not in text
     assert "Google Analytics" in text and "_ga" in text
     assert "does not send Google anything you type, your account id, or the contents of a report" in text
-    assert "The iPhone app does not include Google Analytics" in text
+    assert "Neither app includes Google Analytics" in text            # iPhone and Android
     assert "No advertising. No tracking across apps or websites." in text

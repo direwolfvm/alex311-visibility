@@ -54,8 +54,28 @@ def test_the_privacy_page_says_what_the_app_store_listing_needs_it_to():
         "Delete my account", "Delete account",                    # website and app
         "its sign-in record",
         "not directed to children under 13",
+        # the Android app (2026-11-09)
+        "apps for iPhone and Android",
+        "the Android app offers Google or an emailed link or code",
+        "Neither app includes Google Analytics",
+        "no crash-reporting or advertising tools",
+        "only while the app is open",
+        "approximate or precise location",
+        "system photo picker or the camera",
+        "None of it is included in phone backups",
+        "work without a push token",
+        "about every three hours",
+        "Delete my account . In the iPhone app",
+        "(iPhones; the Android app registers none)",
     ):
         assert must in text, must
+
+
+def test_the_policy_date_and_the_recorded_version_agree():
+    from alex311 import firebase_auth as fb
+    from datetime import datetime
+    stated = re.search(r"Effective (\w+ \d+, \d{4})", PRIVACY).group(1)
+    assert datetime.strptime(stated, "%B %d, %Y").strftime("%Y-%m-%d") == fb.POLICY_VERSION
     assert "mailto:{{PRIVACY_EMAIL}}" in PRIVACY
 
 

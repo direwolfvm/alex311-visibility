@@ -4,6 +4,11 @@
 #   health job:           python -m alex311.health
 FROM python:3.12.15-slim
 
+# The base image lags on Debian's security fixes (apt and zlib, November 2026):
+# take them at build time rather than wait for a new python tag.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 # Dependencies come from uv.lock, the same versions CI tests and audits, not
 # whatever pip resolves on the day of the build.

@@ -33,7 +33,7 @@ from dataclasses import dataclass
 
 log = logging.getLogger("alex311.firebase_auth")
 
-POLICY_VERSION = "2026-10-03"      # the date on /privacy
+POLICY_VERSION = "2026-11-09"      # the date on /privacy
 
 
 @dataclass(frozen=True)
