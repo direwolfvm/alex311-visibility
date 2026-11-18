@@ -2,7 +2,7 @@
 #   dashboard (default):  uvicorn dashboard.app:app
 #   ingest job:           python -m alex311.ingest incremental
 #   health job:           python -m alex311.health
-FROM python:3.12.15-slim
+FROM python:3.12.16-slim
 
 # The base image lags on Debian's security fixes (apt and zlib, November 2026):
 # take them at build time rather than wait for a new python tag.
